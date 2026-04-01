@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
           const invited = await multiRoleAvailabilityService.isUserInvitedToEvent(e.id, user.id);
           if (invited) invitedIds.add(e.id);
         } catch (err) {
-          console.error('Error determining invitations for event', e.id, err);
+          logger.error('Error determining invitations for event', e.id, err);
         }
       }
       setInvitedEventIds(invitedIds);
@@ -87,7 +88,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
         .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) {
-        console.error('Error loading user availability:', error);
+        logger.error('Error loading user availability:', error);
         return;
       }
 
@@ -112,7 +113,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
 
       setUserAvailability(availability);
     } catch (error) {
-      console.error('Error in loadUserAvailability:', error);
+      logger.error('Error in loadUserAvailability:', error);
     }
   };
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
@@ -150,7 +151,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
         .in('event_id', eventIds);
 
       if (error) {
-        console.error('Error loading performance categories:', error);
+        logger.error('Error loading performance categories:', error);
         return;
       }
 
@@ -168,7 +169,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
 
       setPerformanceCategoryNames(categoryMap);
     } catch (error) {
-      console.error('Error in loadPerformanceCategoryNames:', error);
+      logger.error('Error in loadPerformanceCategoryNames:', error);
     }
   };
 
@@ -192,7 +193,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
             };
           }
         } catch (error) {
-          console.log(`Failed to load weather for event ${event.id}:`, error);
+          logger.log(`Failed to load weather for event ${event.id}:`, error);
         }
       }
     }
@@ -213,7 +214,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       
       setEventTimeContexts(contexts);
     } catch (error) {
-      console.error('Error loading event time contexts:', error);
+      logger.error('Error loading event time contexts:', error);
     }
   };
 

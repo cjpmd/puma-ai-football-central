@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export const FacilityCalendar: React.FC<FacilityCalendarProps> = ({ clubId, faci
 
       setBookings(transformedBookings);
     } catch (error: any) {
-      console.error('Error loading facility bookings:', error);
+      logger.error('Error loading facility bookings:', error);
       toast({
         title: 'Error',
         description: 'Failed to load facility bookings',

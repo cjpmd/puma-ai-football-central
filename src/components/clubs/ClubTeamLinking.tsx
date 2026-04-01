@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,7 +93,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       setAvailableTeams(available);
       setYearGroups(yearGroupsData || []);
     } catch (error: any) {
-      console.error('Error loading teams:', error);
+      logger.error('Error loading teams:', error);
       toast({
         title: 'Error',
         description: 'Failed to load teams',
@@ -131,7 +132,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       loadTeams();
       onTeamLinked?.();
     } catch (error: any) {
-      console.error('Error linking team:', error);
+      logger.error('Error linking team:', error);
       toast({
         title: 'Error',
         description: 'Failed to link team to club',
@@ -167,7 +168,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       loadTeams();
       onTeamLinked?.();
     } catch (error: any) {
-      console.error('Error unlinking team:', error);
+      logger.error('Error unlinking team:', error);
       toast({
         title: 'Error',
         description: 'Failed to unlink team from club',
@@ -221,7 +222,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       loadTeams();
       onTeamLinked?.();
     } catch (error: any) {
-      console.error('Error creating team:', error);
+      logger.error('Error creating team:', error);
       toast({ title: 'Error', description: error.message || 'Failed to create team', variant: 'destructive' });
     } finally {
       setIsCreating(false);
@@ -245,7 +246,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       loadTeams();
       onTeamLinked?.();
     } catch (error: any) {
-      console.error('Error assigning team to year group:', error);
+      logger.error('Error assigning team to year group:', error);
       toast({
         title: 'Error',
         description: 'Failed to assign team to year group',
@@ -271,7 +272,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       loadTeams();
       onTeamLinked?.();
     } catch (error: any) {
-      console.error('Error removing team from year group:', error);
+      logger.error('Error removing team from year group:', error);
       toast({
         title: 'Error',
         description: 'Failed to remove team from year group',

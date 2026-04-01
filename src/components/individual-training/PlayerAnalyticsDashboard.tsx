@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,7 @@ export const PlayerAnalyticsDashboard: React.FC<PlayerAnalyticsDashboardProps> =
       setAnalytics(analyticsData);
       setCorrelations(correlationsData);
     } catch (error) {
-      console.error('Error loading player data:', error);
+      logger.error('Error loading player data:', error);
       toast.error('Failed to load player analytics');
     } finally {
       setLoading(false);

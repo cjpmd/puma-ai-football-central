@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,7 +63,7 @@ export const UserTeamManagement = () => {
     
     // Listen for invitation deletions to update the view
     const handleInvitationDeleted = (event: CustomEvent) => {
-      console.log('Invitation deleted event received:', event.detail);
+      logger.log('Invitation deleted event received:', event.detail);
       loadData(); // Refresh the data to remove deleted invitations
     };
     
@@ -76,7 +77,7 @@ export const UserTeamManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('=== LOADING COMPREHENSIVE USER DATA AS GLOBAL ADMIN ===');
+      logger.log('=== LOADING COMPREHENSIVE USER DATA AS GLOBAL ADMIN ===');
       
       // Load teams first
       const { data: teamsData, error: teamsError } = await supabase
@@ -85,10 +86,10 @@ export const UserTeamManagement = () => {
         .order('name');
 
       if (teamsError) {
-        console.error('Error loading teams:', teamsError);
+        logger.error('Error loading teams:', teamsError);
         throw teamsError;
       }
-      console.log('Teams loaded:', teamsData?.length || 0);
+      logger.log('Teams loaded:', teamsData?.length || 0);
 
       // Load all user-team relationships
       const { data: userTeamsData, error: userTeamsError } = await supabase
@@ -97,10 +98,10 @@ export const UserTeamManagement = () => {
         .order('created_at', { ascending: false });
 
       if (userTeamsError) {
-        console.error('Error loading user teams:', userTeamsError);
+        logger.error('Error loading user teams:', userTeamsError);
         throw userTeamsError;
       }
-      console.log('User teams loaded:', userTeamsData?.length || 0);
+      logger.log('User teams loaded:', userTeamsData?.length || 0);
 
       // Load all profiles (should work now with updated RLS policy)
       const { data: profilesData, error: profilesError } = await supabase
@@ -109,10 +110,10 @@ export const UserTeamManagement = () => {
         .order('created_at', { ascending: false });
 
       if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
+        logger.error('Error loading profiles:', profilesError);
         throw profilesError;
       }
-      console.log('Profiles loaded:', profilesData?.length || 0);
+      logger.log('Profiles loaded:', profilesData?.length || 0);
 
       // Load pending invitations
       const { data: invitationsData, error: invitationsError } = await supabase
@@ -121,9 +122,9 @@ export const UserTeamManagement = () => {
         .order('created_at', { ascending: false });
 
       if (invitationsError) {
-        console.error('Error loading invitations:', invitationsError);
+        logger.error('Error loading invitations:', invitationsError);
       }
-      console.log('Invitations loaded:', invitationsData?.length || 0);
+      logger.log('Invitations loaded:', invitationsData?.length || 0);
 
       // Create comprehensive user map
       const allUserIds = new Set<string>();
@@ -196,11 +197,11 @@ export const UserTeamManagement = () => {
         invitationStatus: user.invitationStatus!
       }));
 
-      console.log('Processed users:', processedUsers.length);
+      logger.log('Processed users:', processedUsers.length);
       
       // Check for the specific user we're looking for
       const specificUser = processedUsers.find(u => u.id === 'c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0');
-      console.log('Found specific user c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0:', specificUser);
+      logger.log('Found specific user c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0:', specificUser);
 
       // Transform pending invitations with team names
       const transformedInvitations: PendingInvitation[] = [];
@@ -230,7 +231,7 @@ export const UserTeamManagement = () => {
       setPendingInvitations(transformedInvitations);
       
     } catch (error: any) {
-      console.error('Error loading data:', error);
+      logger.error('Error loading data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load data: ' + error.message,
@@ -243,7 +244,7 @@ export const UserTeamManagement = () => {
 
   const acceptInvitation = async (invitationId: string, email: string) => {
     try {
-      console.log('Accepting invitation:', invitationId, 'for email:', email);
+      logger.log('Accepting invitation:', invitationId, 'for email:', email);
       
       // Update invitation status to accepted
       const { error: updateError } = await supabase
@@ -263,7 +264,7 @@ export const UserTeamManagement = () => {
       // Reload data to refresh the view
       loadData();
     } catch (error: any) {
-      console.error('Error accepting invitation:', error);
+      logger.error('Error accepting invitation:', error);
       toast({
         title: 'Error',
         description: 'Failed to accept invitation: ' + error.message,
@@ -274,7 +275,7 @@ export const UserTeamManagement = () => {
 
   const createProfileForUser = async (invitation: PendingInvitation) => {
     try {
-      console.log('Creating profile for user from invitation:', invitation);
+      logger.log('Creating profile for user from invitation:', invitation);
       
       // Create a new user profile
       const { error: profileError } = await supabase
@@ -299,7 +300,7 @@ export const UserTeamManagement = () => {
       await acceptInvitation(invitation.id, invitation.email);
       
     } catch (error: any) {
-      console.error('Error creating profile:', error);
+      logger.error('Error creating profile:', error);
       toast({
         title: 'Error',
         description: 'Failed to create profile: ' + error.message,
@@ -340,7 +341,7 @@ export const UserTeamManagement = () => {
       setSelectedRole('');
       loadData();
     } catch (error: any) {
-      console.error('Error adding user to team:', error);
+      logger.error('Error adding user to team:', error);
       toast({
         title: 'Error',
         description: 'Failed to add user to team: ' + error.message,
@@ -369,7 +370,7 @@ export const UserTeamManagement = () => {
 
       loadData();
     } catch (error: any) {
-      console.error('Error removing user from team:', error);
+      logger.error('Error removing user from team:', error);
       toast({
         title: 'Error',
         description: 'Failed to remove user from team: ' + error.message,
@@ -395,7 +396,7 @@ export const UserTeamManagement = () => {
       setEditingAssignment(null);
       loadData();
     } catch (error: any) {
-      console.error('Error updating user role:', error);
+      logger.error('Error updating user role:', error);
       toast({
         title: 'Error',
         description: 'Failed to update user role: ' + error.message,
@@ -422,7 +423,7 @@ export const UserTeamManagement = () => {
       setEditValue('');
       loadData();
     } catch (error: any) {
-      console.error('Error updating user roles:', error);
+      logger.error('Error updating user roles:', error);
       toast({
         title: 'Error',
         description: 'Failed to update user roles: ' + error.message,
@@ -433,7 +434,7 @@ export const UserTeamManagement = () => {
 
   const updateUserProfile = async (userId: string, field: 'name' | 'email', value: string) => {
     try {
-      console.log('Updating user profile:', { userId, field, value });
+      logger.log('Updating user profile:', { userId, field, value });
       
       const { error } = await supabase
         .from('profiles')
@@ -453,7 +454,7 @@ export const UserTeamManagement = () => {
       setEditValue('');
       loadData();
     } catch (error: any) {
-      console.error('Error updating user profile:', error);
+      logger.error('Error updating user profile:', error);
       toast({
         title: 'Error',
         description: 'Failed to update user profile: ' + error.message,
@@ -464,7 +465,7 @@ export const UserTeamManagement = () => {
 
   const fixUserName = async (userId: string, email: string) => {
     try {
-      console.log('Fixing user name for:', userId, email);
+      logger.log('Fixing user name for:', userId, email);
       
       // First try to get name from invitations
       const { data: invitations, error: invitationError } = await supabase
@@ -507,7 +508,7 @@ export const UserTeamManagement = () => {
       // Reload data to refresh the view
       loadData();
     } catch (error: any) {
-      console.error('Error fixing user name:', error);
+      logger.error('Error fixing user name:', error);
       toast({
         title: 'Error',
         description: 'Failed to fix user name: ' + error.message,

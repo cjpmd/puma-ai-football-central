@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
 
-  console.log('AvailabilityDrivenSquadManagement render:', {
+  logger.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
     eventId,
     currentTeamIndex,
@@ -90,7 +91,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   // Notify parent component when squad changes
   useEffect(() => {
     if (!loading && onSquadChange) {
-      console.log('Notifying parent of squad change:', squadPlayersFormatted);
+      logger.log('Notifying parent of squad change:', squadPlayersFormatted);
       onSquadChange(squadPlayersFormatted);
     }
   }, [squadPlayersFormatted, loading, onSquadChange]);
@@ -105,11 +106,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   const handleAddToSquad = useCallback(async (player: any) => {
     try {
-      console.log('Adding player to squad:', player.id);
+      logger.log('Adding player to squad:', player.id);
       await assignPlayerToSquad(player.id, 'player');
       toast.success(`${player.name} added to squad`);
     } catch (error: any) {
-      console.error('Error adding player to squad:', error);
+      logger.error('Error adding player to squad:', error);
       toast.error(`Failed to add ${player.name}: ${error.message}`);
     }
   }, [assignPlayerToSquad]);
@@ -117,7 +118,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   const handleRemoveFromSquad = useCallback(async (playerId: string) => {
     try {
       const playerName = squadPlayers.find(p => p.id === playerId)?.name || 'Player';
-      console.log('Removing player from squad:', playerId);
+      logger.log('Removing player from squad:', playerId);
       await removePlayerFromSquad(playerId);
       toast.success(`${playerName} removed from squad`);
       
@@ -129,7 +130,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         }
       }
     } catch (error: any) {
-      console.error('Error removing player from squad:', error);
+      logger.error('Error removing player from squad:', error);
       const playerName = squadPlayers.find(p => p.id === playerId)?.name || 'Player';
       toast.error(`Failed to remove ${playerName}: ${error.message}`);
     }
@@ -147,7 +148,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       const playerName = actualPlayerId ? squadPlayers.find(p => p.id === actualPlayerId)?.name : 'None';
       toast.success(`Captain updated: ${playerName}`);
     } catch (error: any) {
-      console.error('Error updating captain:', error);
+      logger.error('Error updating captain:', error);
       toast.error('Failed to update captain');
     }
   }, [onCaptainChange, squadPlayers]);

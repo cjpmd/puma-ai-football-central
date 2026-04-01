@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,7 +77,7 @@ export const StaffAssignmentHelper: React.FC<StaffAssignmentHelperProps> = ({
       
       onSuccess?.();
     } catch (error) {
-      console.error('Error assigning staff:', error);
+      logger.error('Error assigning staff:', error);
       toast({
         title: "Error",
         description: "Failed to assign staff to event",

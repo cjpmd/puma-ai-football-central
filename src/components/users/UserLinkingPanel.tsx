@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,7 @@ export const UserLinkingPanel: React.FC = () => {
 
       setUnlinkedUsers(unlinked);
     } catch (error) {
-      console.error('Error loading unlinked users:', error);
+      logger.error('Error loading unlinked users:', error);
       toast.error('Failed to load unlinked users');
     }
   };
@@ -149,7 +150,7 @@ export const UserLinkingPanel: React.FC = () => {
 
       setAvailableEntities(entities);
     } catch (error) {
-      console.error('Error loading available entities:', error);
+      logger.error('Error loading available entities:', error);
       toast.error('Failed to load available entities');
     }
   };
@@ -277,7 +278,7 @@ export const UserLinkingPanel: React.FC = () => {
       loadUnlinkedUsers();
       loadAvailableEntities();
     } catch (error: any) {
-      console.error('Error linking user:', error);
+      logger.error('Error linking user:', error);
       toast.error(error.message || 'Failed to link user');
     } finally {
       setIsLoading(false);

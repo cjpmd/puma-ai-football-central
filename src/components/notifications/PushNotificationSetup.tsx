@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +36,7 @@ export const PushNotificationSetup: React.FC = () => {
         toast.error('Push notification permission denied. You can enable it in your device settings.');
       }
     } catch (error) {
-      console.error('Error requesting push permissions:', error);
+      logger.error('Error requesting push permissions:', error);
       toast.error('Failed to setup push notifications');
     } finally {
       setIsRequesting(false);
@@ -52,7 +53,7 @@ export const PushNotificationSetup: React.FC = () => {
         toast.error('Failed to send test notification');
       }
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      logger.error('Error sending test notification:', error);
       toast.error('Failed to send test notification');
     } finally {
       setIsTesting(false);

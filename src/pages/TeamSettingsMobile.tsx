@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
@@ -102,7 +103,7 @@ export default function TeamSettingsMobile() {
 
       setTeam(transformedTeam);
     } catch (error: any) {
-      console.error('Error loading team:', error);
+      logger.error('Error loading team:', error);
       toast({
         title: 'Error',
         description: 'Failed to load team settings',

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -101,7 +102,7 @@ export const NotificationHistory: React.FC = () => {
       setNotifications(filteredData);
       calculateStats(filteredData);
     } catch (error) {
-      console.error('Error loading notification history:', error);
+      logger.error('Error loading notification history:', error);
       toast.error('Failed to load notification history');
     } finally {
       setLoading(false);
@@ -142,7 +143,7 @@ export const NotificationHistory: React.FC = () => {
       calculateStats([]);
       toast.success('Notification history cleared');
     } catch (error) {
-      console.error('Error clearing history:', error);
+      logger.error('Error clearing history:', error);
       toast.error('Failed to clear history');
     }
   };

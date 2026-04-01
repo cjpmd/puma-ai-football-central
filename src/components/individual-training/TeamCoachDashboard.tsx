@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,7 @@ export const TeamCoachDashboard: React.FC<TeamCoachDashboardProps> = ({
       setCoachingInsights(insights);
       setTeamPlayers(players);
     } catch (error) {
-      console.error('Error loading team data:', error);
+      logger.error('Error loading team data:', error);
       toast.error('Failed to load team training data');
     } finally {
       setLoading(false);
@@ -101,7 +102,7 @@ export const TeamCoachDashboard: React.FC<TeamCoachDashboardProps> = ({
       toast.success('Team analytics summary updated');
       loadTeamData();
     } catch (error) {
-      console.error('Error generating team summary:', error);
+      logger.error('Error generating team summary:', error);
       toast.error('Failed to generate team summary');
     }
   };
@@ -112,7 +113,7 @@ export const TeamCoachDashboard: React.FC<TeamCoachDashboardProps> = ({
       toast.success('Insight marked as addressed');
       loadTeamData();
     } catch (error) {
-      console.error('Error marking insight as addressed:', error);
+      logger.error('Error marking insight as addressed:', error);
       toast.error('Failed to update insight');
     }
   };

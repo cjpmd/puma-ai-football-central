@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +40,7 @@ export const PlayerKitTracking: React.FC<PlayerKitTrackingProps> = ({ player }) 
       setLoading(true);
 
       if (!player.team_id) {
-        console.error('No team_id provided for player kit tracking');
+        logger.error('No team_id provided for player kit tracking');
         setKitIssues([]);
         setLoading(false);
         return;
@@ -72,7 +73,7 @@ export const PlayerKitTracking: React.FC<PlayerKitTrackingProps> = ({ player }) 
 
       setKitIssues(playerKitIssues);
     } catch (error: any) {
-      console.error('Error loading player kit issues:', error);
+      logger.error('Error loading player kit issues:', error);
       setKitIssues([]);
     } finally {
       setLoading(false);

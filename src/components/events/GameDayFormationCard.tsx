@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { useLongPress } from '@/hooks/useLongPress';
 import { GameDayPlayerEventMenu } from './GameDayPlayerEventMenu';
@@ -170,7 +171,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       onEventCreated(newEvent);
       await playerMatchStatsService.updateEventPlayerStats(eventId);
     } catch (error) {
-      console.error('Error creating match event:', error);
+      logger.error('Error creating match event:', error);
       toast.error('Failed to record event');
     }
   };
@@ -180,7 +181,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       await playerMatchStatsService.updateEventPlayerStats(eventId);
       toast.success('Event deleted');
     } catch (error) {
-      console.error('Error updating stats after delete:', error);
+      logger.error('Error updating stats after delete:', error);
     }
   };
 
@@ -204,7 +205,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       
       onEventCreated(newEvent);
     } catch (error) {
-      console.error('Error creating substitution:', error);
+      logger.error('Error creating substitution:', error);
       toast.error("Failed to create substitution");
     }
   };

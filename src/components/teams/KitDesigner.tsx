@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,7 +83,7 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
 
   const handleSave = () => {
     if (!isSaving) {
-      console.log('Saving kit designs:', designs);
+      logger.log('Saving kit designs:', designs);
       onSave(designs);
     }
   };

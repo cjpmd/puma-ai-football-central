@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ useEffect(() => {
           .not('staff_id', 'is', null);
         
         if (invError) {
-          console.error('Error loading event invitations:', invError);
+          logger.error('Error loading event invitations:', invError);
           throw invError;
         }
         
@@ -80,14 +81,14 @@ useEffect(() => {
           
           // If no invitations exist at all, it's an "everyone" event - load all staff
           if (!anyInvitations || anyInvitations.length === 0) {
-            console.log('No invitations found - loading all team staff (everyone invited)');
+            logger.log('No invitations found - loading all team staff (everyone invited)');
             const { data: consolidatedStaff, error } = await supabase
               .rpc('get_consolidated_team_staff', { p_team_id: teamId });
             if (error) throw error;
             staffToLoad = transformStaffData(consolidatedStaff || []);
           } else {
             // Invitations exist but none for staff
-            console.log('Event has invitations but no staff invited');
+            logger.log('Event has invitations but no staff invited');
             staffToLoad = [];
           }
         } else {
@@ -126,7 +127,7 @@ useEffect(() => {
 
       setStaff(staffToLoad);
     } catch (error) {
-      console.error('Error loading team staff:', error);
+      logger.error('Error loading team staff:', error);
       toast.error('Failed to load staff data');
     } finally {
       setLoading(false);
@@ -207,7 +208,7 @@ useEffect(() => {
           availabilityStatus: staffStatus?.status || 'pending' 
         };
       } catch (error) {
-        console.error('Error loading availability for staff:', staffMember.name, error);
+        logger.error('Error loading availability for staff:', staffMember.name, error);
         updatedStaff[i] = { ...staffMember, availabilityStatus: 'pending' };
       }
     }
@@ -254,7 +255,7 @@ useEffect(() => {
             await loadStaffAvailability();
           }
         } catch (error) {
-          console.error('Error creating staff availability record:', error);
+          logger.error('Error creating staff availability record:', error);
         }
       }
     }
@@ -275,7 +276,7 @@ useEffect(() => {
       toast.success(`Availability notification sent to ${staffMember.name}`);
       await loadStaffAvailability();
     } catch (error) {
-      console.error('Error sending notification:', error);
+      logger.error('Error sending notification:', error);
       toast.error('Failed to send notification');
     }
   };

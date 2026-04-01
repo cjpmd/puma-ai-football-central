@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -119,7 +120,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
       
       onTeamDeleted?.();
     } catch (error) {
-      console.error('Error deleting team:', error);
+      logger.error('Error deleting team:', error);
       toast.error('Failed to delete team');
     } finally {
       setIsDeleting(false);
@@ -234,7 +235,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
           }
         }
       } catch (error) {
-        console.error('Error loading team selections:', error);
+        logger.error('Error loading team selections:', error);
       }
     };
 
@@ -258,7 +259,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         .maybeSingle();
 
       if (sessionError || !session) {
-        console.log('No training session found for event:', event.id);
+        logger.log('No training session found for event:', event.id);
         setTrainingDrills([]);
         return;
       }
@@ -287,7 +288,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
 
       setTrainingDrills(formattedDrills);
     } catch (error) {
-      console.error('Error loading training drills:', error);
+      logger.error('Error loading training drills:', error);
       setTrainingDrills([]);
     }
   };

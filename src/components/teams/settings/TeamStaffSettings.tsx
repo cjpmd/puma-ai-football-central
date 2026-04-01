@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +37,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
   const { user } = useAuth();
 
   useEffect(() => {
-    console.log('TeamStaffSettings: Loading staff for team:', team?.id);
+    logger.log('TeamStaffSettings: Loading staff for team:', team?.id);
     if (team?.id) {
       loadStaffFromDatabase();
     }
@@ -44,7 +45,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
 
   const loadStaffFromDatabase = async () => {
     try {
-      console.log('TeamStaffSettings: Starting to load staff for team:', team.id);
+      logger.log('TeamStaffSettings: Starting to load staff for team:', team.id);
       setLoading(true);
       
       const { data, error } = await supabase
@@ -53,15 +54,15 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         .eq('team_id', team.id);
 
       if (error) {
-        console.error('TeamStaffSettings: Error loading staff:', error);
+        logger.error('TeamStaffSettings: Error loading staff:', error);
         throw error;
       }
 
-      console.log('TeamStaffSettings: Loaded staff data:', data);
+      logger.log('TeamStaffSettings: Loaded staff data:', data);
 
       if (data && Array.isArray(data)) {
         const staffMembers: TeamStaff[] = data.map(record => {
-          console.log('TeamStaffSettings: Processing staff record:', record);
+          logger.log('TeamStaffSettings: Processing staff record:', record);
           return {
             id: record.id,
             name: record.name || '',
@@ -76,7 +77,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
           };
         });
         
-        console.log('TeamStaffSettings: Processed staff members:', staffMembers);
+        logger.log('TeamStaffSettings: Processed staff members:', staffMembers);
         setStaff(staffMembers);
         
         if (staffMembers.length > 0) {
@@ -86,7 +87,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         setStaff([]);
       }
     } catch (error) {
-      console.error('TeamStaffSettings: Error in loadStaffFromDatabase:', error);
+      logger.error('TeamStaffSettings: Error in loadStaffFromDatabase:', error);
       toast({
         title: 'Error',
         description: 'Failed to load team staff. Please try again.',
@@ -108,7 +109,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
 
     try {
-      console.log('TeamStaffSettings: Inviting new staff member:', newStaff);
+      logger.log('TeamStaffSettings: Inviting new staff member:', newStaff);
       
       await userInvitationService.inviteUser({
         email: newStaff.email,
@@ -117,7 +118,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         teamId: team.id
       });
       
-      console.log('TeamStaffSettings: Staff invitation sent successfully');
+      logger.log('TeamStaffSettings: Staff invitation sent successfully');
       
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       setIsInvitingStaff(false);
@@ -127,7 +128,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         description: `Invitation sent to ${newStaff.name} at ${newStaff.email}`,
       });
     } catch (error: any) {
-      console.error('TeamStaffSettings: Error in handleInviteStaff:', error);
+      logger.error('TeamStaffSettings: Error in handleInviteStaff:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to send invitation',
@@ -147,7 +148,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
 
     try {
-      console.log('TeamStaffSettings: Updating staff member:', editingStaff.id, newStaff);
+      logger.log('TeamStaffSettings: Updating staff member:', editingStaff.id, newStaff);
       
       const { error } = await supabase
         .from('team_staff')
@@ -161,11 +162,11 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         .eq('id', editingStaff.id);
 
       if (error) {
-        console.error('TeamStaffSettings: Error updating staff:', error);
+        logger.error('TeamStaffSettings: Error updating staff:', error);
         throw error;
       }
       
-      console.log('TeamStaffSettings: Staff member updated successfully');
+      logger.log('TeamStaffSettings: Staff member updated successfully');
       await loadStaffFromDatabase();
       
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
@@ -176,7 +177,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         description: `${newStaff.name} has been updated`,
       });
     } catch (error: any) {
-      console.error('TeamStaffSettings: Error in handleUpdateStaff:', error);
+      logger.error('TeamStaffSettings: Error in handleUpdateStaff:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update staff member',
@@ -187,7 +188,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
 
   const handleRemoveStaff = async (staffId: string) => {
     try {
-      console.log('TeamStaffSettings: Removing staff member:', staffId);
+      logger.log('TeamStaffSettings: Removing staff member:', staffId);
       
       const staffMember = staff.find(s => s.id === staffId);
       
@@ -197,11 +198,11 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         .eq('id', staffId);
       
       if (error) {
-        console.error('TeamStaffSettings: Error removing staff member:', error);
+        logger.error('TeamStaffSettings: Error removing staff member:', error);
         throw error;
       }
       
-      console.log('TeamStaffSettings: Staff member removed successfully');
+      logger.log('TeamStaffSettings: Staff member removed successfully');
       await loadStaffFromDatabase();
       
       toast({
@@ -209,7 +210,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         description: `${staffMember?.name} has been removed from ${team.name}`,
       });
     } catch (error: any) {
-      console.error('TeamStaffSettings: Error in handleRemoveStaff:', error);
+      logger.error('TeamStaffSettings: Error in handleRemoveStaff:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to remove staff member',

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { matchEventService } from '@/services/matchEventService';
@@ -87,7 +88,7 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
       }
 
     } catch (error) {
-      console.error('Error loading event details:', error);
+      logger.error('Error loading event details:', error);
     } finally {
       setLoading(false);
     }

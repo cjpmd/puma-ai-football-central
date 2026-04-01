@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,13 +18,13 @@ export const PlayerStatsRebuilder: React.FC = () => {
     setRebuildStatus('idle');
     
     try {
-      console.log('🚀 Starting SAFE database function rebuild...');
+      logger.log('🚀 Starting SAFE database function rebuild...');
       toast.info('Starting safe rebuild using database functions...');
       
       // Use ONLY the safe database function approach
       await playerStatsRebuilder.rebuildAllPlayerStats();
       
-      console.log('✅ Safe rebuild completed successfully');
+      logger.log('✅ Safe rebuild completed successfully');
       setRebuildStatus('success');
       toast.success('Successfully rebuilt all player statistics!');
       
@@ -33,7 +34,7 @@ export const PlayerStatsRebuilder: React.FC = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('Error in safe rebuild:', error);
+      logger.error('Error in safe rebuild:', error);
       setRebuildStatus('error');
       toast.error('Failed to rebuild player statistics. Check console for details.');
     } finally {
@@ -45,7 +46,7 @@ export const PlayerStatsRebuilder: React.FC = () => {
     try {
       toast.info('Debugging Mason vs Ferry positions...');
       
-      console.log('🔍 DEBUGGING MASON VS FERRY ATHLETIC POSITIONS:');
+      logger.log('🔍 DEBUGGING MASON VS FERRY ATHLETIC POSITIONS:');
       
       // Check event_selections for Ferry Athletic matches
       const { data: selections, error: selectionsError } = await supabase
@@ -62,20 +63,20 @@ export const PlayerStatsRebuilder: React.FC = () => {
         .order('events(date)', { ascending: false });
 
       if (selectionsError) {
-        console.error('Error fetching Ferry selections:', selectionsError);
+        logger.error('Error fetching Ferry selections:', selectionsError);
         throw selectionsError;
       }
 
-      console.log(`Found ${selections?.length || 0} Ferry Athletic event selections`);
+      logger.log(`Found ${selections?.length || 0} Ferry Athletic event selections`);
       
       selections?.forEach(selection => {
         const event = selection.events;
-        console.log(`\n=== EVENT: ${event?.title} vs ${event?.opponent} (${event?.date}) ===`);
-        console.log(`Selection ID: ${selection.id}`);
-        console.log(`Team Number: ${selection.team_number}, Period: ${selection.period_number}`);
+        logger.log(`\n=== EVENT: ${event?.title} vs ${event?.opponent} (${event?.date}) ===`);
+        logger.log(`Selection ID: ${selection.id}`);
+        logger.log(`Team Number: ${selection.team_number}, Period: ${selection.period_number}`);
         
         const playerPositions = selection.player_positions as any[];
-        console.log(`Total players in selection: ${playerPositions?.length || 0}`);
+        logger.log(`Total players in selection: ${playerPositions?.length || 0}`);
         
         // Find Mason in this selection
         const masonData = playerPositions?.find(p => 
@@ -84,24 +85,24 @@ export const PlayerStatsRebuilder: React.FC = () => {
         );
         
         if (masonData) {
-          console.log('🎯 MASON FOUND IN SELECTION:');
-          console.log(`  - Position: "${masonData.position}"`);
-          console.log(`  - Minutes: ${masonData.minutes || selection.duration_minutes}`);
-          console.log(`  - Is Substitute: ${masonData.isSubstitute || false}`);
-          console.log(`  - Raw Data:`, JSON.stringify(masonData, null, 2));
+          logger.log('🎯 MASON FOUND IN SELECTION:');
+          logger.log(`  - Position: "${masonData.position}"`);
+          logger.log(`  - Minutes: ${masonData.minutes || selection.duration_minutes}`);
+          logger.log(`  - Is Substitute: ${masonData.isSubstitute || false}`);
+          logger.log(`  - Raw Data:`, JSON.stringify(masonData, null, 2));
         } else {
-          console.log('❌ Mason NOT found in this selection');
+          logger.log('❌ Mason NOT found in this selection');
         }
         
         // Show all positions in this selection for context
-        console.log('\nAll positions in this selection:');
+        logger.log('\nAll positions in this selection:');
         playerPositions?.forEach((player, index) => {
-          console.log(`  ${index + 1}. Player ID: ${player.playerId || player.player_id}, Position: "${player.position}", Minutes: ${player.minutes || selection.duration_minutes}`);
+          logger.log(`  ${index + 1}. Player ID: ${player.playerId || player.player_id}, Position: "${player.position}", Minutes: ${player.minutes || selection.duration_minutes}`);
         });
       });
 
       // Also check what's currently in event_player_stats for Ferry matches
-      console.log('\n🔍 CHECKING EVENT_PLAYER_STATS FOR FERRY MATCHES:');
+      logger.log('\n🔍 CHECKING EVENT_PLAYER_STATS FOR FERRY MATCHES:');
       const { data: stats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
@@ -117,18 +118,18 @@ export const PlayerStatsRebuilder: React.FC = () => {
         .order('events(date)', { ascending: false });
 
       if (statsError) {
-        console.error('Error fetching Ferry stats:', statsError);
+        logger.error('Error fetching Ferry stats:', statsError);
       } else {
-        console.log(`Found ${stats?.length || 0} Ferry stats records for Mason:`);
+        logger.log(`Found ${stats?.length || 0} Ferry stats records for Mason:`);
         stats?.forEach((stat, index) => {
           const event = stat.events;
-          console.log(`  ${index + 1}. ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}, Sub=${stat.is_substitute}, Team=${stat.team_number}, Period=${stat.period_number}`);
+          logger.log(`  ${index + 1}. ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}, Sub=${stat.is_substitute}, Team=${stat.team_number}, Period=${stat.period_number}`);
         });
       }
 
       toast.success('Ferry position debug complete - check console for details');
     } catch (error) {
-      console.error('Error debugging Ferry positions:', error);
+      logger.error('Error debugging Ferry positions:', error);
       toast.error('Ferry debug failed');
     }
   };
@@ -138,7 +139,7 @@ export const PlayerStatsRebuilder: React.FC = () => {
       toast.info('Debugging Mason\'s data...');
       
       // Check event_selections first
-      console.log('🔍 DEBUGGING MASON\'S EVENT SELECTIONS:');
+      logger.log('🔍 DEBUGGING MASON\'S EVENT SELECTIONS:');
       const { data: selections, error: selectionsError } = await supabase
         .from('event_selections')
         .select(`
@@ -151,11 +152,11 @@ export const PlayerStatsRebuilder: React.FC = () => {
         .limit(5);
 
       if (selectionsError) {
-        console.error('Error fetching event selections:', selectionsError);
+        logger.error('Error fetching event selections:', selectionsError);
         throw selectionsError;
       }
 
-      console.log('Mason\'s Event Selections:');
+      logger.log('Mason\'s Event Selections:');
       selections?.forEach(selection => {
         const event = selection.events;
         const playerPositions = selection.player_positions as any[];
@@ -165,12 +166,12 @@ export const PlayerStatsRebuilder: React.FC = () => {
         );
         
         if (masonData) {
-          console.log(`  ${event?.title} vs ${event?.opponent}: Position="${masonData.position}", Minutes=${masonData.minutes || selection.duration_minutes}`);
+          logger.log(`  ${event?.title} vs ${event?.opponent}: Position="${masonData.position}", Minutes=${masonData.minutes || selection.duration_minutes}`);
         }
       });
 
       // Check event_player_stats
-      console.log('🔍 DEBUGGING MASON\'S EVENT PLAYER STATS:');
+      logger.log('🔍 DEBUGGING MASON\'S EVENT PLAYER STATS:');
       const { data: stats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
@@ -183,19 +184,19 @@ export const PlayerStatsRebuilder: React.FC = () => {
         .limit(5);
 
       if (statsError) {
-        console.error('Error fetching event player stats:', statsError);
+        logger.error('Error fetching event player stats:', statsError);
         throw statsError;
       }
 
-      console.log('Mason\'s Event Player Stats:');
+      logger.log('Mason\'s Event Player Stats:');
       stats?.forEach(stat => {
         const event = stat.events;
-        console.log(`  ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}`);
+        logger.log(`  ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}`);
       });
 
       toast.success('Debug complete - check console for details');
     } catch (error) {
-      console.error('Error debugging Mason:', error);
+      logger.error('Error debugging Mason:', error);
       toast.error('Debug failed');
     }
   };

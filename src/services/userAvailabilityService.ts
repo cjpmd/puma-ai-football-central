@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UserAvailabilityStatus {
@@ -9,9 +10,9 @@ export interface UserAvailabilityStatus {
 
 export const userAvailabilityService = {
   async getUserAvailabilityForEvents(userId: string, eventIds?: string[]): Promise<UserAvailabilityStatus[]> {
-    console.log('=== USER AVAILABILITY SERVICE DEBUG ===');
-    console.log('Loading availability for user:', userId);
-    console.log('Event IDs filter:', eventIds);
+    logger.log('=== USER AVAILABILITY SERVICE DEBUG ===');
+    logger.log('Loading availability for user:', userId);
+    logger.log('Event IDs filter:', eventIds);
     
     // Get the player ID linked to this user
     const { data: userPlayer } = await supabase
@@ -21,7 +22,7 @@ export const userAvailabilityService = {
       .maybeSingle();
 
     const playerId = userPlayer?.player_id;
-    console.log('Linked player ID:', playerId);
+    logger.log('Linked player ID:', playerId);
 
     const availability: UserAvailabilityStatus[] = [];
 
@@ -40,7 +41,7 @@ export const userAvailabilityService = {
       const { data: playerAvailability, error: playerError } = await playerQuery;
 
       if (playerError) {
-        console.error('Error loading player availability:', playerError);
+        logger.error('Error loading player availability:', playerError);
       } else {
         (playerAvailability || []).forEach(item => {
           availability.push({
@@ -67,7 +68,7 @@ export const userAvailabilityService = {
     const { data: staffAvailability, error: staffError } = await staffQuery;
 
     if (staffError) {
-      console.error('Error loading staff availability:', staffError);
+      logger.error('Error loading staff availability:', staffError);
     } else {
       (staffAvailability || []).forEach(item => {
         availability.push({
@@ -78,8 +79,8 @@ export const userAvailabilityService = {
       });
     }
 
-    console.log('Final processed availability statuses:', availability);
-    console.log('=== END USER AVAILABILITY SERVICE DEBUG ===');
+    logger.log('Final processed availability statuses:', availability);
+    logger.log('=== END USER AVAILABILITY SERVICE DEBUG ===');
     return availability;
   },
 
@@ -89,7 +90,7 @@ export const userAvailabilityService = {
     status: 'available' | 'unavailable',
     role: 'player' | 'staff' = 'player'
   ): Promise<void> {
-    console.log('Updating availability:', { userId, eventId, status, role });
+    logger.log('Updating availability:', { userId, eventId, status, role });
     
     if (role === 'player') {
       // Get the linked player ID
@@ -160,6 +161,6 @@ export const userAvailabilityService = {
       if (error) throw error;
     }
     
-    console.log('Availability status updated successfully');
+    logger.log('Availability status updated successfully');
   }
 };

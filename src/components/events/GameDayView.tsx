@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +8,7 @@ import { GameDayFormationCard } from './GameDayFormationCard';
 import { GameDayTimeline } from './GameDayTimeline';
 import { GameDaySubstituteBench } from './GameDaySubstituteBench';
 import { useMatchTimer } from '@/hooks/useMatchTimer';
+import { useGameDayRealtime } from '@/hooks/useGameDayRealtime';
 import { matchEventService } from '@/services/matchEventService';
 import { MatchEvent } from '@/types/matchEvent';
 import { ArrowLeft, Play, Pause, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -22,6 +24,11 @@ interface LiveSubstitution {
 export const GameDayView: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
+
+  // Subscribe to live updates — invalidates query cache on any change
+  // so all connected devices (coaches + parents) see goals/subs in real time.
+  useGameDayRealtime(eventId);
+
   const [selectedTeamNumber, setSelectedTeamNumber] = useState<number>(1);
   const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
@@ -172,7 +179,7 @@ export const GameDayView: React.FC = () => {
       const events = await matchEventService.getMatchEvents(eventId);
       setMatchEvents(events);
     } catch (error) {
-      console.error('Error loading match events:', error);
+      logger.error('Error loading match events:', error);
     }
   };
 
@@ -244,7 +251,7 @@ export const GameDayView: React.FC = () => {
           refetchEvent();
         }
       } catch (error) {
-        console.error('Background stats update failed:', error);
+        logger.error('Background stats update failed:', error);
       }
     }, 100);
   };
@@ -258,7 +265,7 @@ export const GameDayView: React.FC = () => {
       const { playerStatsService } = await import('@/services/playerStatsService');
       await playerStatsService.updateEventPlayerStats(eventId!);
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logger.error('Error deleting event:', error);
       toast.error('Failed to delete event');
     }
   };
@@ -297,7 +304,7 @@ export const GameDayView: React.FC = () => {
 
   // Handle errors
   if (eventError || selectionsError) {
-    console.error('GameDayView error', { eventError, selectionsError, eventId });
+    logger.error('GameDayView error', { eventError, selectionsError, eventId });
     return (
       <div className="game-day-container">
         <div className="flex flex-col items-center justify-center h-full text-center px-4 gap-4">

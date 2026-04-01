@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -79,7 +80,7 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
         });
 
       if (validationError) {
-        console.error('Validation error:', validationError);
+        logger.error('Validation error:', validationError);
         toast.error('Validation failed. Please try again.');
         return;
       }
@@ -112,7 +113,7 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
         subscriptionType: 'full_squad'
       });
     } catch (error) {
-      console.error('Error sending invitation:', error);
+      logger.error('Error sending invitation:', error);
       toast.error('Failed to send invitation');
     } finally {
       setIsLoading(false);

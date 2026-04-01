@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -180,7 +181,7 @@ export const UnifiedProfile: React.FC<UnifiedProfileProps> = ({
       }
 
     } catch (error: any) {
-      console.error('Error loading profile data:', error);
+      logger.error('Error loading profile data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load profile data',

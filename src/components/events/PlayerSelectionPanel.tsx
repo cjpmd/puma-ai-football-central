@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -125,7 +126,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       
       setPlayerAvailabilities(availabilityMap);
     } catch (error) {
-      console.error('Error loading player availabilities:', error);
+      logger.error('Error loading player availabilities:', error);
     }
   };
 
@@ -141,7 +142,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         .neq('team_number', teamNumber);
 
       if (error) {
-        console.error('Error checking conflicts:', error);
+        logger.error('Error checking conflicts:', error);
         return;
       }
 
@@ -175,7 +176,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       
       setPlayerConflicts(conflicts);
     } catch (error) {
-      console.error('Error checking player conflicts:', error);
+      logger.error('Error checking player conflicts:', error);
     }
   };
 
@@ -193,7 +194,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       setPlayers(data || []);
     } catch (error) {
-      console.error('Error loading players:', error);
+      logger.error('Error loading players:', error);
     } finally {
       setLoading(false);
     }

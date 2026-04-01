@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,7 +131,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
       setTeamSelections(teamData);
       
     } catch (error) {
-      console.error('Error loading team selections:', error);
+      logger.error('Error loading team selections:', error);
     } finally {
       setLoading(false);
     }
@@ -257,7 +258,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
         scoresData.away = firstTeamResult.opponentScore;
       }
 
-      console.log('Saving scores data:', scoresData);
+      logger.log('Saving scores data:', scoresData);
 
       // Update event with scores
       await onScoreUpdate(event.id, scoresData);
@@ -272,7 +273,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
       });
 
     } catch (error: any) {
-      console.error('Error in handleSave:', error);
+      logger.error('Error in handleSave:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to save match results',

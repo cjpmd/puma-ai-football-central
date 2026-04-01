@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -61,7 +62,7 @@ export const ChildCalendarView: React.FC<ChildCalendarViewProps> = ({ child }) =
 
       setEvents(eventsData || []);
     } catch (error) {
-      console.error('Error loading calendar events:', error);
+      logger.error('Error loading calendar events:', error);
       toast({
         title: 'Error',
         description: 'Failed to load calendar events',

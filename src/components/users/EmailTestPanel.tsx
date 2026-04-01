@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ export const EmailTestPanel: React.FC = () => {
 
     setIsLoading(true);
     try {
-      console.log('Testing email sending to:', testEmail);
+      logger.log('Testing email sending to:', testEmail);
       
       const { data, error } = await supabase.functions.invoke('send-invitation-email', {
         body: {
@@ -31,14 +32,14 @@ export const EmailTestPanel: React.FC = () => {
       });
 
       if (error) {
-        console.error('Email test error:', error);
+        logger.error('Email test error:', error);
         toast.error(`Email test failed: ${error.message}`);
       } else {
-        console.log('Email test successful:', data);
+        logger.log('Email test successful:', data);
         toast.success('Test email sent successfully!');
       }
     } catch (error) {
-      console.error('Email test exception:', error);
+      logger.error('Email test exception:', error);
       toast.error('Failed to send test email');
     } finally {
       setIsLoading(false);

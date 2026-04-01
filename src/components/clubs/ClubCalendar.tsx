@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +41,7 @@ export const ClubCalendar: React.FC<ClubCalendarProps> = ({
   const loadClubEvents = async () => {
     try {
       setLoading(true);
-      console.log('Loading events for club:', clubId);
+      logger.log('Loading events for club:', clubId);
 
       // Get all teams linked to this club via club_teams table
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -52,18 +53,18 @@ export const ClubCalendar: React.FC<ClubCalendarProps> = ({
         .eq('club_id', clubId);
 
       if (clubTeamsError) {
-        console.error('Error fetching club teams:', clubTeamsError);
+        logger.error('Error fetching club teams:', clubTeamsError);
         throw clubTeamsError;
       }
 
       if (!clubTeams || clubTeams.length === 0) {
-        console.log('No teams linked to this club');
+        logger.log('No teams linked to this club');
         setEvents([]);
         return;
       }
 
       const teamIds = clubTeams.map(ct => ct.team_id);
-      console.log('Team IDs for events:', teamIds);
+      logger.log('Team IDs for events:', teamIds);
 
       // Get all events from linked teams
       const { data: teamEvents, error: eventsError } = await supabase
@@ -78,11 +79,11 @@ export const ClubCalendar: React.FC<ClubCalendarProps> = ({
         .order('start_time', { ascending: true });
 
       if (eventsError) {
-        console.error('Error fetching team events:', eventsError);
+        logger.error('Error fetching team events:', eventsError);
         throw eventsError;
       }
 
-      console.log('Team events data:', teamEvents);
+      logger.log('Team events data:', teamEvents);
 
       if (teamEvents && teamEvents.length > 0) {
         const clubEvents: ClubEvent[] = teamEvents.map(event => ({
@@ -98,14 +99,14 @@ export const ClubCalendar: React.FC<ClubCalendarProps> = ({
           teamId: event.team_id
         }));
 
-        console.log('Processed club events:', clubEvents);
+        logger.log('Processed club events:', clubEvents);
         setEvents(clubEvents);
       } else {
-        console.log('No events found for club teams');
+        logger.log('No events found for club teams');
         setEvents([]);
       }
     } catch (error: any) {
-      console.error('Error loading club events:', error);
+      logger.error('Error loading club events:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load club events',

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { 
   DndContext, 
@@ -112,7 +113,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const gameFormatFormations = getFormationsByFormat(gameFormat as any);
   const mappedNameDisplayOption = mapNameDisplayOption(nameDisplayOption);
 
-  console.log('DragDropFormationEditor render:', {
+  logger.log('DragDropFormationEditor render:', {
     squadPlayers: squadPlayers.length,
     periods: periods.length,
     gameFormat,
@@ -125,7 +126,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const updatedPeriods = periods.map(period => {
       // If period has a formation but no positions, create them
       if (period.formation && (!period.positions || period.positions.length === 0)) {
-        console.log('Creating missing positions for period:', period.id, 'formation:', period.formation);
+        logger.log('Creating missing positions for period:', period.id, 'formation:', period.formation);
         needsUpdate = true;
         return {
           ...period,
@@ -169,7 +170,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     });
 
     if (needsUpdate) {
-      console.log('Syncing periods with updated formation coordinates');
+      logger.log('Syncing periods with updated formation coordinates');
       onPeriodsChange(updatedPeriods);
     }
   }, [periods, gameFormat]);
@@ -268,7 +269,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       
       // Validate that positions were created successfully
       if (!freshPositions || freshPositions.length === 0) {
-        console.error('Failed to create positions for new period');
+        logger.error('Failed to create positions for new period');
         return;
       }
       
@@ -290,10 +291,10 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         captainId: globalCaptainId
       };
 
-      console.log('Adding new period with fresh coordinates:', newPeriod);
+      logger.log('Adding new period with fresh coordinates:', newPeriod);
       onPeriodsChange([...periods, newPeriod]);
     } catch (error) {
-      console.error('Error adding period:', error);
+      logger.error('Error adding period:', error);
     }
   };
 
@@ -339,7 +340,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const updatePeriodFormation = (periodId: string, formation: string) => {
-    console.log('Updating formation for period:', periodId, 'to:', formation);
+    logger.log('Updating formation for period:', periodId, 'to:', formation);
     
     const updatedPeriods = periods.map(period => {
       if (period.id === periodId) {
@@ -362,8 +363,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           ...orphanedPlayerIds
         ];
         
-        console.log('Created new positions for formation:', formation, preservedPositions);
-        console.log('Orphaned players moved to substitutes:', orphanedPlayerIds);
+        logger.log('Created new positions for formation:', formation, preservedPositions);
+        logger.log('Orphaned players moved to substitutes:', orphanedPlayerIds);
         
         return {
           ...period,
@@ -382,7 +383,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const refreshPeriodLayout = (periodId: string) => {
-    console.log('Refreshing layout for period:', periodId);
+    logger.log('Refreshing layout for period:', periodId);
     
     const updatedPeriods = periods.map(period => {
       if (period.id === periodId) {
@@ -401,7 +402,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const updatePeriodDuration = (periodId: string, duration: number) => {
-    console.log('Updating duration for period:', periodId, 'to:', duration);
+    logger.log('Updating duration for period:', periodId, 'to:', duration);
     
     const updatedPeriods = periods.map(period => {
       if (period.id === periodId) {
@@ -415,11 +416,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const createPositionSlots = (formationId: string): PositionSlotType[] => {
     const formationConfig = gameFormatFormations.find(f => f.id === formationId);
     if (!formationConfig) {
-      console.warn('No formation config found for:', formationId);
+      logger.warn('No formation config found for:', formationId);
       return [];
     }
 
-    console.log('Creating position slots for formation:', formationId, formationConfig);
+    logger.log('Creating position slots for formation:', formationId, formationConfig);
 
     return formationConfig.positions.map((pos, index) => {
       const positionData = positions.find(p => p.positionName === pos.position);
@@ -484,7 +485,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       }
       
       const dragId = event.active.id as string;
-      console.log('Drag started with ID:', dragId);
+      logger.log('Drag started with ID:', dragId);
       
       // Extract player ID from drag ID
       let playerId: string;
@@ -501,15 +502,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       const player = squadPlayers.find(p => p.id === playerId);
       
       if (!player) {
-        console.error('Player not found for drag:', playerId);
+        logger.error('Player not found for drag:', playerId);
         setDraggedPlayer(null);
         return;
       }
       
-      console.log('Drag started for player:', player.name, 'with playerId:', playerId);
+      logger.log('Drag started for player:', player.name, 'with playerId:', playerId);
       setDraggedPlayer(player);
     } catch (error) {
-      console.error('Error in handleDragStart:', error);
+      logger.error('Error in handleDragStart:', error);
       setDraggedPlayer(null);
     }
   };
@@ -524,7 +525,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       
       const { active, over } = event;
       
-      console.log('Drag ended:', { 
+      logger.log('Drag ended:', { 
         activeId: active.id, 
         overId: over?.id,
         draggedPlayer: draggedPlayer?.name
@@ -549,7 +550,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       }
       
       if (!over || !playerBeingDragged) {
-        console.log('No drop target or dragged player - cancelling drag');
+        logger.log('No drop target or dragged player - cancelling drag');
         return;
       }
 
@@ -557,7 +558,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       const overId = over.id as string;
       const playerId = playerBeingDragged.id;
 
-      console.log('Processing drop for player:', playerId, 'to target:', overId);
+      logger.log('Processing drop for player:', playerId, 'to target:', overId);
 
     // Extract source period from drag ID
     const getSourcePeriodId = (id: string): string | null => {
@@ -588,10 +589,10 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       const sourcePeriodId = getSourcePeriodId(activeId);
       const targetInfo = getTargetInfo(overId);
 
-      console.log('Drag info:', { sourcePeriodId, targetInfo });
+      logger.log('Drag info:', { sourcePeriodId, targetInfo });
 
       if (!targetInfo.periodId) {
-        console.error('Invalid drop target - no period ID');
+        logger.error('Invalid drop target - no period ID');
         return;
       }
 
@@ -601,7 +602,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         movePlayerToSubstitutes(playerId, targetInfo.periodId, sourcePeriodId);
       }
     } catch (error) {
-      console.error('Error in handleDragEnd:', error);
+      logger.error('Error in handleDragEnd:', error);
       setDraggedPlayer(null);
       try {
         document.documentElement.style.removeProperty('cursor');
@@ -615,7 +616,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const movePlayerToPosition = (playerId: string, targetPeriodId: string, positionIndex: number, sourcePeriodId: string | null) => {
-    console.log('Moving player to position:', { playerId, targetPeriodId, positionIndex, sourcePeriodId });
+    logger.log('Moving player to position:', { playerId, targetPeriodId, positionIndex, sourcePeriodId });
     
     const updatedPeriods = periods.map(period => {
       if (period.id === targetPeriodId) {
@@ -625,7 +626,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         // Handle displaced player (if any)
         const displacedPlayerId = newPositions[positionIndex]?.playerId;
         if (displacedPlayerId && displacedPlayerId !== playerId) {
-          console.log('Displacing player:', displacedPlayerId);
+          logger.log('Displacing player:', displacedPlayerId);
           if (!newSubstitutes.includes(displacedPlayerId)) {
             newSubstitutes.push(displacedPlayerId);
           }
@@ -637,14 +638,14 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           const subIndex = newSubstitutes.indexOf(playerId);
           if (subIndex > -1) {
             newSubstitutes.splice(subIndex, 1);
-            console.log('Removed from substitutes in same period');
+            logger.log('Removed from substitutes in same period');
           }
           
           // Remove from any other position
           newPositions.forEach(pos => {
             if (pos.playerId === playerId) {
               pos.playerId = undefined;
-              console.log('Removed from previous position in same period');
+              logger.log('Removed from previous position in same period');
             }
           });
         }
@@ -652,7 +653,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         // Assign player to new position
         if (newPositions[positionIndex]) {
           newPositions[positionIndex].playerId = playerId;
-          console.log('Assigned to new position');
+          logger.log('Assigned to new position');
         }
         
         return {
@@ -669,7 +670,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         newPositions.forEach(pos => {
           if (pos.playerId === playerId) {
             pos.playerId = undefined;
-            console.log('Removed from source period position');
+            logger.log('Removed from source period position');
           }
         });
         
@@ -677,7 +678,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const subIndex = newSubstitutes.indexOf(playerId);
         if (subIndex > -1) {
           newSubstitutes.splice(subIndex, 1);
-          console.log('Removed from source period substitutes');
+          logger.log('Removed from source period substitutes');
         }
         
         return {
@@ -694,7 +695,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const movePlayerToSubstitutes = (playerId: string, targetPeriodId: string, sourcePeriodId: string | null) => {
-    console.log('Moving player to substitutes:', { playerId, targetPeriodId, sourcePeriodId });
+    logger.log('Moving player to substitutes:', { playerId, targetPeriodId, sourcePeriodId });
     
     const updatedPeriods = periods.map(period => {
       if (period.id === targetPeriodId) {
@@ -705,7 +706,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         newPositions.forEach(pos => {
           if (pos.playerId === playerId) {
             pos.playerId = undefined;
-            console.log('Removed player from position when moving to substitutes');
+            logger.log('Removed player from position when moving to substitutes');
           }
         });
         
@@ -716,7 +717,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         }
         
         newSubstitutes.push(playerId);
-        console.log('Added to substitutes:', playerId);
+        logger.log('Added to substitutes:', playerId);
         
         return {
           ...period,
@@ -785,7 +786,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
   useEffect(() => {
     if (periods.length === 0 && gameFormatFormations.length > 0) {
-      console.log('Auto-creating first period');
+      logger.log('Auto-creating first period');
       addPeriod();
     }
   }, [gameFormatFormations]);
@@ -793,7 +794,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   useEffect(() => {
     periods.forEach(period => {
       if (period.positions.length === 0 && period.formation) {
-        console.log('Auto-creating positions for period:', period.id, 'formation:', period.formation);
+        logger.log('Auto-creating positions for period:', period.id, 'formation:', period.formation);
         updatePeriodFormation(period.id, period.formation);
       }
     });

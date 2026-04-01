@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,7 +99,7 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
       setYearGroups(enrichedYearGroups);
       setTeams(clubTeams);
     } catch (error) {
-      console.error('Error loading year groups:', error);
+      logger.error('Error loading year groups:', error);
       toast({
         title: "Error",
         description: "Failed to load year groups",
@@ -157,7 +158,7 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
       setEditingYearGroup(null);
       loadYearGroups();
     } catch (error) {
-      console.error('Error saving year group:', error);
+      logger.error('Error saving year group:', error);
       toast({
         title: "Error",
         description: "Failed to save year group",
@@ -187,7 +188,7 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
       setDeletingYearGroup(null);
       loadYearGroups();
     } catch (error) {
-      console.error('Error deleting year group:', error);
+      logger.error('Error deleting year group:', error);
       toast({
         title: "Error",
         description: "Failed to delete year group",
@@ -231,7 +232,7 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
 
       loadYearGroups();
     } catch (error: any) {
-      console.error('Error assigning team to year group:', error);
+      logger.error('Error assigning team to year group:', error);
       toast({
         title: 'Error',
         description: 'Failed to assign team to year group',
@@ -256,7 +257,7 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
 
       loadYearGroups();
     } catch (error: any) {
-      console.error('Error removing team from year group:', error);
+      logger.error('Error removing team from year group:', error);
       toast({
         title: 'Error',
         description: 'Failed to remove team from year group',

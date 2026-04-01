@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,12 +17,12 @@ export const DirectCopyRebuilder: React.FC = () => {
     setRebuildStatus('idle');
     
     try {
-      console.log('🚀 Starting DIRECT COPY rebuild - zero complexity...');
+      logger.log('🚀 Starting DIRECT COPY rebuild - zero complexity...');
       toast.info('Starting direct copy rebuild - zero transformations...');
       
       await directCopyRebuilder.rebuildWithDirectCopy();
       
-      console.log('✅ Direct copy rebuild completed successfully');
+      logger.log('✅ Direct copy rebuild completed successfully');
       setRebuildStatus('success');
       toast.success('Direct copy rebuild completed! Positions should now match team selections exactly.');
       
@@ -31,7 +32,7 @@ export const DirectCopyRebuilder: React.FC = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('Error in direct copy rebuild:', error);
+      logger.error('Error in direct copy rebuild:', error);
       setRebuildStatus('error');
       toast.error('Failed to complete direct copy rebuild. Check console for details.');
     } finally {

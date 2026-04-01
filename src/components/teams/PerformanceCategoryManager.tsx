@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +53,7 @@ export const PerformanceCategoryManager: React.FC<PerformanceCategoryManagerProp
       if (error) throw error;
       setCategories(data || []);
     } catch (error) {
-      console.error('Error loading performance categories:', error);
+      logger.error('Error loading performance categories:', error);
       toast({
         title: 'Error',
         description: 'Failed to load performance categories',
@@ -121,7 +122,7 @@ export const PerformanceCategoryManager: React.FC<PerformanceCategoryManagerProp
       loadCategories();
       if (onRefresh) onRefresh();
     } catch (error) {
-      console.error('Error saving performance category:', error);
+      logger.error('Error saving performance category:', error);
       toast({
         title: 'Error',
         description: 'Failed to save performance category',
@@ -146,7 +147,7 @@ export const PerformanceCategoryManager: React.FC<PerformanceCategoryManagerProp
         await playerStatsService.updatePlayerStats(player.id);
       }
     } catch (error) {
-      console.error('Error updating player stats for team:', error);
+      logger.error('Error updating player stats for team:', error);
     }
   };
 
@@ -180,7 +181,7 @@ export const PerformanceCategoryManager: React.FC<PerformanceCategoryManagerProp
       loadCategories();
       if (onRefresh) onRefresh();
     } catch (error) {
-      console.error('Error deleting performance category:', error);
+      logger.error('Error deleting performance category:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete performance category',

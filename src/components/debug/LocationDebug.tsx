@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ export const LocationDebug = () => {
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
 
   const addLog = (message: string) => {
-    console.log(`[LocationDebug] ${message}`);
+    logger.log(`[LocationDebug] ${message}`);
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 

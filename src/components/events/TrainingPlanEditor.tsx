@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -179,7 +180,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
           })) || []);
         }
       } catch (error) {
-        console.error('Error loading training session:', error);
+        logger.error('Error loading training session:', error);
       }
     };
 
@@ -202,7 +203,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   };
 
   const addCustomDrill = () => {
-    console.log('➕ Adding custom drill...');
+    logger.log('➕ Adding custom drill...');
     const newDrill: TrainingSessionDrill = {
       id: `temp-${Date.now()}`,
       custom_drill_name: 'New Custom Drill',
@@ -215,7 +216,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
 
     setSessionDrills([...sessionDrills, newDrill]);
     setExpandedDrills(prev => new Set([...prev, newDrill.id]));
-    console.log('✅ Custom drill added. Total drills:', sessionDrills.length + 1);
+    logger.log('✅ Custom drill added. Total drills:', sessionDrills.length + 1);
   };
 
   const updateDrill = (drillId: string, updates: Partial<TrainingSessionDrill>) => {
@@ -312,7 +313,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   };
 
   const handleSave = async () => {
-    console.log('🚀 Training Plan Save Button Clicked!', { 
+    logger.log('🚀 Training Plan Save Button Clicked!', { 
       eventId, 
       teamId, 
       drillsCount: sessionDrills.length, 
@@ -322,13 +323,13 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
     });
     
     if (!eventId || !teamId) {
-      console.error('❌ Missing required IDs for save:', { eventId, teamId });
+      logger.error('❌ Missing required IDs for save:', { eventId, teamId });
       toast.error('Cannot save: Missing event or team information');
       return;
     }
     
     const success = await saveTrainingSession(eventId, teamId, sessionDrills, equipment);
-    console.log('💾 Save result:', success);
+    logger.log('💾 Save result:', success);
     if (success && onSave) {
       await onSave();
     }

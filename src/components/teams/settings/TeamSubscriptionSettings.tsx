@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,7 +72,7 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
       
       // Note: We're not updating the team object since subscriptionSettings 
       // is not a valid property on the Team type
-      console.log('Subscription settings saved:', subscriptionSettings);
+      logger.log('Subscription settings saved:', subscriptionSettings);
     } catch (error) {
       toast.error('Failed to save subscription settings');
     } finally {

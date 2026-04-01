@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { IndividualTrainingDashboard } from '@/components/individual-training/IndividualTrainingDashboard';
@@ -37,7 +38,7 @@ const IndividualTraining = () => {
         mapped.forEach(p => map.set(p.id, p));
         setTeamPlayers(Array.from(map.values()));
       } catch (e) {
-        console.error('Failed to load team players:', e);
+        logger.error('Failed to load team players:', e);
         setTeamPlayers([]);
       }
     };

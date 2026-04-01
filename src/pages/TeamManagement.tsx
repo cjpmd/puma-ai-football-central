@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,7 @@ const TeamManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('Loading data for view:', currentView);
+      logger.log('Loading data for view:', currentView);
       await Promise.all([
         loadAllClubs(),
         loadTeamsForCurrentRole(),
@@ -87,13 +88,13 @@ const TeamManagement = () => {
 
   const loadClubTeams = async () => {
     if (!clubs || clubs.length === 0) {
-      console.log('No clubs available for loading teams');
+      logger.log('No clubs available for loading teams');
       return;
     }
     
     try {
       const clubIds = clubs.map(club => club.id);
-      console.log('Loading teams for club IDs:', clubIds);
+      logger.log('Loading teams for club IDs:', clubIds);
       
       const { data, error } = await supabase
         .from('teams')
@@ -107,7 +108,7 @@ const TeamManagement = () => {
 
       if (error) throw error;
 
-      console.log('Loaded teams data:', data);
+      logger.log('Loaded teams data:', data);
 
       const convertedTeams: ExtendedTeam[] = (data || []).map(team => ({
         id: team.id,
@@ -136,10 +137,10 @@ const TeamManagement = () => {
         isReadOnly: false // Club admins can edit all teams in their clubs
       }));
 
-      console.log('Converted teams:', convertedTeams.length, 'teams');
+      logger.log('Converted teams:', convertedTeams.length, 'teams');
       setAllTeams(convertedTeams);
     } catch (error) {
-      console.error('Error loading club teams:', error);
+      logger.error('Error loading club teams:', error);
     }
   };
 
@@ -150,7 +151,7 @@ const TeamManagement = () => {
       isReadOnly: true // Parents can only view teams
     }));
     
-    console.log('Parent teams loaded:', convertedTeams.length);
+    logger.log('Parent teams loaded:', convertedTeams.length);
     setAllTeams(convertedTeams);
   };
 
@@ -172,7 +173,7 @@ const TeamManagement = () => {
 
       setAllClubs(convertedClubs);
     } catch (error) {
-      console.error('Error loading clubs:', error);
+      logger.error('Error loading clubs:', error);
     }
   };
 
@@ -220,7 +221,7 @@ const TeamManagement = () => {
 
       setAllTeams(convertedTeams);
     } catch (error) {
-      console.error('Error loading all teams:', error);
+      logger.error('Error loading all teams:', error);
     }
   };
 
@@ -231,7 +232,7 @@ const TeamManagement = () => {
       isReadOnly: false // Team managers can edit their teams
     }));
 
-    console.log('User teams loaded:', convertedTeams.length);
+    logger.log('User teams loaded:', convertedTeams.length);
     setAllTeams(convertedTeams);
   };
 
@@ -277,7 +278,7 @@ const TeamManagement = () => {
 
       setLinkedTeams(convertedTeams);
     } catch (error) {
-      console.error('Error loading linked teams:', error);
+      logger.error('Error loading linked teams:', error);
     }
   };
 
@@ -405,7 +406,7 @@ const TeamManagement = () => {
         description: `${teamData.name} has been created successfully.`,
       });
     } catch (error: any) {
-      console.error('Error creating team:', error);
+      logger.error('Error creating team:', error);
       toast({
         title: 'Error creating team',
         description: error.message,

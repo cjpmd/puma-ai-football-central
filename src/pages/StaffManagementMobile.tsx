@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useMemo } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -148,7 +149,7 @@ export default function StaffManagementMobile() {
 
       setTeamMembers(availableMembers);
     } catch (error) {
-      console.error('Error loading team members:', error);
+      logger.error('Error loading team members:', error);
     }
   };
 

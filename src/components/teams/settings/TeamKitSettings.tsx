@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Team, KitDesigns } from '@/types/team';
 import { KitDesigner } from '../KitDesigner';
@@ -18,7 +19,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const getInitialDesigns = (): Partial<KitDesigns> => {
-    console.log('Getting initial designs for team:', team.name, 'kitDesigns:', team.kitDesigns);
+    logger.log('Getting initial designs for team:', team.name, 'kitDesigns:', team.kitDesigns);
     if (team.kitDesigns) {
       return team.kitDesigns as KitDesigns;
     }
@@ -28,7 +29,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
   const handleSaveDesigns = async (designs: KitDesigns) => {
     setIsSaving(true);
     try {
-      console.log('Saving kit designs:', designs);
+      logger.log('Saving kit designs:', designs);
       
       const { error } = await supabase
         .from('teams')
@@ -39,7 +40,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
         .eq('id', team.id);
 
       if (error) {
-        console.error('Database update error:', error);
+        logger.error('Database update error:', error);
         throw error;
       }
 
@@ -51,7 +52,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
         description: 'Your kit designs have been saved and updated.',
       });
     } catch (error: any) {
-      console.error('Error saving kit designs:', error);
+      logger.error('Error saving kit designs:', error);
       toast({
         title: 'Error saving kit designs',
         description: error.message || 'Failed to save kit designs',

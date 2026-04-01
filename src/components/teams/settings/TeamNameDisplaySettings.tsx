@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -33,7 +34,7 @@ export const TeamNameDisplaySettings: React.FC<TeamNameDisplaySettingsProps> = (
   const handleSave = async () => {
     setSaving(true);
     try {
-      console.log('Saving name display option:', nameDisplayOption, 'for team:', team.id);
+      logger.log('Saving name display option:', nameDisplayOption, 'for team:', team.id);
       
       const { error } = await supabase
         .from('teams')
@@ -44,15 +45,15 @@ export const TeamNameDisplaySettings: React.FC<TeamNameDisplaySettingsProps> = (
         .eq('id', team.id);
 
       if (error) {
-        console.error('Error updating name display setting:', error);
+        logger.error('Error updating name display setting:', error);
         throw error;
       }
 
-      console.log('Name display option saved successfully');
+      logger.log('Name display option saved successfully');
       onUpdate({ nameDisplayOption });
       toast.success('Name display setting updated successfully');
     } catch (error) {
-      console.error('Error updating name display setting:', error);
+      logger.error('Error updating name display setting:', error);
       toast.error('Failed to update name display setting');
     } finally {
       setSaving(false);

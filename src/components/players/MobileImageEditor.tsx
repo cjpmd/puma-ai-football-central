@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
@@ -143,13 +144,13 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
-    console.log('[MobileImageEditor] Image loaded successfully:', img.naturalWidth, 'x', img.naturalHeight);
+    logger.log('[MobileImageEditor] Image loaded successfully:', img.naturalWidth, 'x', img.naturalHeight);
     setImageLoaded(true);
     setImageError(false);
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.error('[MobileImageEditor] Failed to load image:', imageUrl, e);
+    logger.error('[MobileImageEditor] Failed to load image:', imageUrl, e);
     setImageError(true);
     setImageLoaded(false);
   };

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,16 +81,16 @@ export const EnhancedDashboardContent = () => {
 
     try {
       const teamsToUse = allTeams?.length ? allTeams : (teams || []);
-      console.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })));
+      logger.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })));
       
       if (!teamsToUse.length) {
-        console.log('No teams available for loading data');
+        logger.log('No teams available for loading data');
         setLoading(false);
         return;
       }
       
       const teamIds = teamsToUse.map(team => team.id);
-      console.log('Team IDs for queries:', teamIds);
+      logger.log('Team IDs for queries:', teamIds);
       
       // Load players count from all connected teams
       const { count: playersCount } = await supabase
@@ -120,7 +121,7 @@ export const EnhancedDashboardContent = () => {
         .limit(5);
 
       if (upcomingError) {
-        console.error('Error loading upcoming events:', upcomingError);
+        logger.error('Error loading upcoming events:', upcomingError);
       }
 
       const upcomingEvents = upcomingEventsData?.map(event => ({
@@ -150,7 +151,7 @@ export const EnhancedDashboardContent = () => {
         .limit(10);
 
       if (recentError) {
-        console.error('Error loading recent results:', recentError);
+        logger.error('Error loading recent results:', recentError);
       }
 
       // Fetch performance categories for these events
@@ -246,7 +247,7 @@ export const EnhancedDashboardContent = () => {
         .in('event_id', eventIds);
 
       if (availabilityError) {
-        console.error('Error loading existing availability:', availabilityError);
+        logger.error('Error loading existing availability:', availabilityError);
       }
 
       const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {

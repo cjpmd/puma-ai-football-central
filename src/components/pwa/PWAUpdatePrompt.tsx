@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ export function PWAUpdatePrompt() {
           });
         }
       } catch (error) {
-        console.error('Error checking for updates:', error);
+        logger.error('Error checking for updates:', error);
       }
     };
 

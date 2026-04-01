@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
@@ -34,7 +35,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
-import { debugPlayerPositions } from '@/utils/debugPlayerPositions';
 import { positionDebuggingService } from '@/services/positionDebuggingService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,7 +76,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       const history = await availabilityService.getPlayerAvailabilityHistory(player.id);
       setAvailabilityHistory(history);
     } catch (error) {
-      console.error('Error loading availability history:', error);
+      logger.error('Error loading availability history:', error);
       toast.error('Failed to load availability history');
     } finally {
       setLoadingAvailability(false);
@@ -92,7 +92,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player stats refreshed successfully');
     } catch (error) {
-      console.error('Error refreshing stats:', error);
+      logger.error('Error refreshing stats:', error);
       toast.error('Failed to refresh stats');
     } finally {
       setIsRefreshing(false);
@@ -108,7 +108,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player stats regenerated successfully');
     } catch (error) {
-      console.error('Error regenerating stats:', error);
+      logger.error('Error regenerating stats:', error);
       toast.error('Failed to regenerate stats');
     } finally {
       setIsRegenerating(false);
@@ -124,7 +124,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player positions fixed comprehensively');
     } catch (error) {
-      console.error('Error fixing positions:', error);
+      logger.error('Error fixing positions:', error);
       toast.error('Failed to fix positions');
     } finally {
       setIsRegenerating(false);
@@ -140,7 +140,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player stats clean rebuild completed');
     } catch (error) {
-      console.error('Error in clean rebuild:', error);
+      logger.error('Error in clean rebuild:', error);
       toast.error('Failed to perform clean rebuild');
     } finally {
       setIsRegenerating(false);
@@ -153,11 +153,11 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     setIsRegenerating(true);
     try {
       // Use the correct debug function available in the service
-      await debugPlayerPositions(player.id, player.name);
+      await playerStatsService.debugPlayerPositions(player.id, player.name);
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Debug completed for Andrew McDonald');
     } catch (error) {
-      console.error('Error debugging Andrew:', error);
+      logger.error('Error debugging Andrew:', error);
       toast.error('Failed to debug Andrew');
     } finally {
       setIsRegenerating(false);

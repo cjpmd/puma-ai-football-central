@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -84,7 +85,7 @@ export const EnhancedUserManagement = () => {
         .select('user_id, team_id, role, teams!user_teams_team_id_fkey (name)')
         .in('user_id', profileIds);
       if (staffRolesError) {
-        console.error('Error loading staff roles:', staffRolesError);
+        logger.error('Error loading staff roles:', staffRolesError);
       }
 
       for (const profile of profiles) {
@@ -190,7 +191,7 @@ export const EnhancedUserManagement = () => {
 
       setUsers(enhancedUsers);
     } catch (error: any) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
       toast({
         title: 'Error',
         description: 'Failed to load users',

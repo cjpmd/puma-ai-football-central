@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 // VAPID public key for Web Push authentication
@@ -53,7 +54,7 @@ export const webPushService = {
     
     // On iOS, push only works when running as PWA
     if (isIOSSafari()) {
-      console.log('[WebPush] iOS Safari detected - push only works when installed as PWA');
+      logger.log('[WebPush] iOS Safari detected - push only works when installed as PWA');
       return false;
     }
     
@@ -90,7 +91,7 @@ export const webPushService = {
    */
   async initializeWebPush(): Promise<boolean> {
     if (!this.isSupported()) {
-      console.log('[WebPush] Web Push not supported in this browser');
+      logger.log('[WebPush] Web Push not supported in this browser');
       return false;
     }
 
@@ -99,17 +100,17 @@ export const webPushService = {
       const permission = await Notification.requestPermission();
       
       if (permission !== 'granted') {
-        console.log('[WebPush] Notification permission denied');
+        logger.log('[WebPush] Notification permission denied');
         return false;
       }
 
       // Register dedicated push service worker
-      console.log('[WebPush] Registering dedicated push service worker...');
+      logger.log('[WebPush] Registering dedicated push service worker...');
       const registration = await navigator.serviceWorker.register(PUSH_SW_PATH, {
         scope: '/'
       });
       
-      console.log('[WebPush] Push service worker registered:', registration);
+      logger.log('[WebPush] Push service worker registered:', registration);
 
       // Wait for service worker to be ready
       await navigator.serviceWorker.ready;
@@ -119,24 +120,24 @@ export const webPushService = {
       
       if (!subscription) {
         // Create new subscription
-        console.log('[WebPush] Creating new push subscription...');
+        logger.log('[WebPush] Creating new push subscription...');
         const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: applicationServerKey.buffer as ArrayBuffer
         });
-        console.log('[WebPush] New subscription created');
+        logger.log('[WebPush] New subscription created');
       } else {
-        console.log('[WebPush] Using existing subscription');
+        logger.log('[WebPush] Using existing subscription');
       }
 
       // Save subscription to Supabase
       await this.saveSubscription(subscription);
       
-      console.log('[WebPush] Web Push initialized successfully');
+      logger.log('[WebPush] Web Push initialized successfully');
       return true;
     } catch (error) {
-      console.error('[WebPush] Failed to initialize Web Push:', error);
+      logger.error('[WebPush] Failed to initialize Web Push:', error);
       return false;
     }
   },
@@ -149,7 +150,7 @@ export const webPushService = {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('[WebPush] No authenticated user found');
+      logger.error('[WebPush] No authenticated user found');
       return;
     }
 
@@ -166,11 +167,11 @@ export const webPushService = {
       .eq('id', user.id);
 
     if (error) {
-      console.error('[WebPush] Failed to save Web Push subscription:', error);
+      logger.error('[WebPush] Failed to save Web Push subscription:', error);
       throw error;
     }
     
-    console.log('[WebPush] Web Push subscription saved to database');
+    logger.log('[WebPush] Web Push subscription saved to database');
   },
 
   /**
@@ -199,12 +200,12 @@ export const webPushService = {
             .update({ push_token: null })
             .eq('id', user.id);
         }
-        console.log('[WebPush] Unsubscribed successfully');
+        logger.log('[WebPush] Unsubscribed successfully');
       }
       
       return true;
     } catch (error) {
-      console.error('[WebPush] Failed to unsubscribe from Web Push:', error);
+      logger.error('[WebPush] Failed to unsubscribe from Web Push:', error);
       return false;
     }
   },
@@ -217,11 +218,11 @@ export const webPushService = {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.error('[WebPush] No authenticated user');
+        logger.error('[WebPush] No authenticated user');
         return false;
       }
 
-      console.log('[WebPush] Sending test notification...');
+      logger.log('[WebPush] Sending test notification...');
       
       const { error } = await supabase.functions.invoke('send-push-notification', {
         body: {
@@ -232,14 +233,14 @@ export const webPushService = {
       });
 
       if (error) {
-        console.error('[WebPush] Failed to send test notification:', error);
+        logger.error('[WebPush] Failed to send test notification:', error);
         return false;
       }
 
-      console.log('[WebPush] Test notification sent successfully');
+      logger.log('[WebPush] Test notification sent successfully');
       return true;
     } catch (error) {
-      console.error('[WebPush] Error sending test notification:', error);
+      logger.error('[WebPush] Error sending test notification:', error);
       return false;
     }
   }

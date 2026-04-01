@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -78,7 +79,7 @@ export function SessionCreator({
         planned_time: ''
       });
     } catch (error) {
-      console.error('Error creating session:', error);
+      logger.error('Error creating session:', error);
       toast.error('Failed to create training session');
     } finally {
       setLoading(false);

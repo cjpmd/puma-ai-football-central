@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PlayerWithCodes {
@@ -19,7 +20,7 @@ export const playerCodeService = {
       .rpc('verify_player_linking_code', { code: linkingCode });
     
     if (error) {
-      console.error('Error verifying player linking code:', error);
+      logger.error('Error verifying player linking code:', error);
       return null;
     }
     
@@ -45,7 +46,7 @@ export const playerCodeService = {
       .rpc('verify_parent_linking_code', { code: parentCode });
     
     if (error) {
-      console.error('Error verifying parent linking code:', error);
+      logger.error('Error verifying parent linking code:', error);
       return null;
     }
     

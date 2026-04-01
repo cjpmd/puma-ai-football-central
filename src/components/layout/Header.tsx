@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useAuth } from "@/contexts/AuthContext";
 import { UserLoginModal } from "@/components/modals/UserLoginModal";
 import { UserSignupModal } from "@/components/modals/UserSignupModal";
@@ -19,7 +20,7 @@ export function Header() {
                       location.pathname.includes('/events') ||
                       location.pathname.includes('/analytics');
 
-  console.log('Header - showTeamLogo:', showTeamLogo, 'currentTeam:', currentTeam);
+  logger.log('Header - showTeamLogo:', showTeamLogo, 'currentTeam:', currentTeam);
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[calc(theme(spacing.safe-top)+0.75rem)]">

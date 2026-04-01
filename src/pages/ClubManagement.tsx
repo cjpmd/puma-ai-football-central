@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -45,18 +46,18 @@ export const ClubManagement = () => {
 
   const loadLinkedClubs = async () => {
     try {
-      console.log('Loading linked clubs...');
-      console.log('User teams:', teams);
+      logger.log('Loading linked clubs...');
+      logger.log('User teams:', teams);
       
       if (!teams || teams.length === 0) {
-        console.log('No teams available, skipping linked clubs load');
+        logger.log('No teams available, skipping linked clubs load');
         setLinkedClubs([]);
         return;
       }
 
       // Get team IDs that the user has access to
       const teamIds = teams.map(team => team.id);
-      console.log('Team IDs:', teamIds);
+      logger.log('Team IDs:', teamIds);
 
       // Get clubs linked to these teams
       const { data: teamClubRelations, error: teamClubError } = await supabase
@@ -77,15 +78,15 @@ export const ClubManagement = () => {
         .in('team_id', teamIds);
 
       if (teamClubError) {
-        console.error('Error loading team-club relationships:', teamClubError);
+        logger.error('Error loading team-club relationships:', teamClubError);
         return;
       }
 
-      console.log('Team-club relations:', teamClubRelations);
+      logger.log('Team-club relations:', teamClubRelations);
 
       // Filter out clubs that the user already owns
       const ownedClubIds = clubs.map(club => club.id);
-      console.log('Owned club IDs:', ownedClubIds);
+      logger.log('Owned club IDs:', ownedClubIds);
 
       const linkedClubsData = teamClubRelations
         ?.filter(relation => relation.clubs && !ownedClubIds.includes(relation.clubs.id))
@@ -110,16 +111,16 @@ export const ClubManagement = () => {
           index === self.findIndex(c => c.id === club.id)
         ) || [];
 
-      console.log('Processed linked clubs:', linkedClubsData);
+      logger.log('Processed linked clubs:', linkedClubsData);
       setLinkedClubs(linkedClubsData as Club[]);
     } catch (error) {
-      console.error('Error in loadLinkedClubs:', error);
+      logger.error('Error in loadLinkedClubs:', error);
     }
   };
 
   const handleCreateClub = async (clubData: Partial<Club>) => {
     try {
-      console.log('Creating club with data:', clubData);
+      logger.log('Creating club with data:', clubData);
       
       const { data, error } = await supabase.from('clubs').insert([{
         name: clubData.name,
@@ -130,7 +131,7 @@ export const ClubManagement = () => {
 
       if (error) throw error;
 
-      console.log('Club created successfully:', data);
+      logger.log('Club created successfully:', data);
       await refreshUserData();
       setIsClubDialogOpen(false);
       
@@ -139,7 +140,7 @@ export const ClubManagement = () => {
         description: `${clubData.name} has been created successfully.`,
       });
     } catch (error: any) {
-      console.error('Error creating club:', error);
+      logger.error('Error creating club:', error);
       toast({
         title: 'Error creating club',
         description: error.message,
@@ -152,7 +153,7 @@ export const ClubManagement = () => {
     if (!selectedClub?.id) return;
 
     try {
-      console.log('Updating club with data:', clubData);
+      logger.log('Updating club with data:', clubData);
       
       const { error } = await supabase
         .from('clubs')
@@ -166,7 +167,7 @@ export const ClubManagement = () => {
 
       if (error) throw error;
 
-      console.log('Club updated successfully');
+      logger.log('Club updated successfully');
       await refreshUserData();
       setIsClubDialogOpen(false);
       
@@ -175,7 +176,7 @@ export const ClubManagement = () => {
         description: `${clubData.name} has been updated successfully.`,
       });
     } catch (error: any) {
-      console.error('Error updating club:', error);
+      logger.error('Error updating club:', error);
       toast({
         title: 'Error updating club',
         description: error.message,

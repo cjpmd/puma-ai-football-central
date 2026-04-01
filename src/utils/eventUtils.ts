@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { DatabaseEvent } from '@/types/event';
 
 /**
@@ -49,7 +50,7 @@ export const formatTime = (time: string | undefined | null): string => {
       hour12: true 
     });
   } catch (error) {
-    console.error('Error formatting time:', error);
+    logger.error('Error formatting time:', error);
     return time;
   }
 };

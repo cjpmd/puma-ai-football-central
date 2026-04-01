@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -173,7 +174,7 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
           );
           setWeather(weatherData);
         } catch (error) {
-          console.error('Failed to load weather:', error);
+          logger.error('Failed to load weather:', error);
         }
       }
     };
@@ -311,7 +312,7 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
         variant: "default"
       });
     } catch (error) {
-      console.error('PDF generation failed:', error);
+      logger.error('PDF generation failed:', error);
       toast({
         title: "Error",
         description: "Failed to generate PDF",

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { pushNotificationService } from '@/services/pushNotificationService';
@@ -58,7 +59,7 @@ export const usePushNotifications = () => {
         granted = await webPushService.initializeWebPush();
       } else if (platform === 'ios-safari') {
         // Can't initialize on iOS Safari - need to install as PWA first
-        console.log('[Push] iOS Safari detected - please install app as PWA first');
+        logger.log('[Push] iOS Safari detected - please install app as PWA first');
         return false;
       }
       
@@ -66,7 +67,7 @@ export const usePushNotifications = () => {
       setIsInitialized(true);
       return granted;
     } catch (error) {
-      console.error('[Push] Failed to initialize push notifications:', error);
+      logger.error('[Push] Failed to initialize push notifications:', error);
       setIsInitialized(true);
       return false;
     }
@@ -74,12 +75,12 @@ export const usePushNotifications = () => {
 
   const requestPermissions = async (): Promise<boolean> => {
     if (platform === 'none') {
-      console.log('[Push] Push notifications not supported on this platform');
+      logger.log('[Push] Push notifications not supported on this platform');
       return false;
     }
     
     if (platform === 'ios-safari') {
-      console.log('[Push] iOS Safari - please install app as PWA first');
+      logger.log('[Push] iOS Safari - please install app as PWA first');
       return false;
     }
     

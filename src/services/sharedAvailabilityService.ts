@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -11,7 +12,7 @@ export const getLinkedPlayerIds = async (userId: string): Promise<string[]> => {
       .eq('user_id', userId);
     return data?.map(r => r.player_id) || [];
   } catch (error) {
-    console.error('Error getting linked player IDs:', error);
+    logger.error('Error getting linked player IDs:', error);
     return [];
   }
 };
@@ -35,7 +36,7 @@ export const getPlayerAvailabilityForEvents = async (
     
     return data || [];
   } catch (error) {
-    console.error('Error getting player availability:', error);
+    logger.error('Error getting player availability:', error);
     return [];
   }
 };
@@ -74,7 +75,7 @@ export const getSharedUserIds = async (userId: string): Promise<string[]> => {
       }
     }
   } catch (error) {
-    console.error('Error getting shared user IDs:', error);
+    logger.error('Error getting shared user IDs:', error);
   }
   
   return userIds;

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,7 @@ export const ComprehensiveDataIntegrityChecker: React.FC = () => {
   const { toast } = useToast();
 
   const addDebugLog = (message: string) => {
-    console.log(`🔍 ${message}`);
+    logger.log(`🔍 ${message}`);
     setDebugLogs(prev => [...prev, `${new Date().toISOString()}: ${message}`]);
   };
 
@@ -187,7 +188,7 @@ export const ComprehensiveDataIntegrityChecker: React.FC = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       addDebugLog(`❌ ERROR: ${errorMessage}`);
-      console.error('❌ Error during data integrity check:', error);
+      logger.error('❌ Error during data integrity check:', error);
       toast({
         title: 'Check Failed',
         description: `Failed to complete data integrity check: ${errorMessage}`,
@@ -296,7 +297,7 @@ export const ComprehensiveDataIntegrityChecker: React.FC = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       addDebugLog(`❌ CRITICAL FIX ERROR: ${errorMessage}`);
-      console.error('❌ Error during fix process:', error);
+      logger.error('❌ Error during fix process:', error);
       toast({
         title: 'Fix Process Failed',
         description: `Failed to complete fixes: ${errorMessage}`,

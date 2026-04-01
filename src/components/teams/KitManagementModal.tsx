@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -134,7 +135,7 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
         .order('date_issued', { ascending: false });
 
       if (kitError) {
-        console.error('Kit data error:', kitError);
+        logger.error('Kit data error:', kitError);
         setKitIssues([]);
       } else {
         // Transform the data to handle JSON types properly
@@ -157,7 +158,7 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
       setStaff(staffData || []);
       setKitItems(transformedKitItems);
     } catch (error: any) {
-      console.error('Error loading kit data:', error);
+      logger.error('Error loading kit data:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load kit data',
@@ -251,7 +252,7 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
         description: 'Kit issued successfully',
       });
     } catch (error: any) {
-      console.error('Error issuing kit:', error);
+      logger.error('Error issuing kit:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to issue kit',

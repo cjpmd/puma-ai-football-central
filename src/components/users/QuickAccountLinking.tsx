@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,7 @@ export const QuickAccountLinking: React.FC = () => {
 
       if (error) throw error;
 
-      console.log('Available players for linking:', playersData);
+      logger.log('Available players for linking:', playersData);
       setPlayers(playersData || []);
       
       // Auto-select Andrew McDonald if found
@@ -51,12 +52,12 @@ export const QuickAccountLinking: React.FC = () => {
       );
       
       if (andrewMcdonald) {
-        console.log('Found Andrew McDonald:', andrewMcdonald);
+        logger.log('Found Andrew McDonald:', andrewMcdonald);
         setSelectedPlayer(andrewMcdonald.id);
         setSearchTerm(andrewMcdonald.name);
       }
     } catch (error) {
-      console.error('Error loading players:', error);
+      logger.error('Error loading players:', error);
       toast.error('Failed to load players');
     }
   };
@@ -69,7 +70,7 @@ export const QuickAccountLinking: React.FC = () => {
 
     setIsLoading(true);
     try {
-      console.log('Linking account:', {
+      logger.log('Linking account:', {
         userId: user.id,
         playerId: selectedPlayer,
         relationship: linkType
@@ -115,7 +116,7 @@ export const QuickAccountLinking: React.FC = () => {
       window.location.reload();
       
     } catch (error: any) {
-      console.error('Error linking account:', error);
+      logger.error('Error linking account:', error);
       toast.error(error.message || 'Failed to link account');
     } finally {
       setIsLoading(false);

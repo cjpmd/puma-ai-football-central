@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       if (error) throw error;
       setNameDisplayOption((data?.name_display_option as NameDisplayOption) || 'surname');
     } catch (error) {
-      console.error('Error loading team name display setting:', error);
+      logger.error('Error loading team name display setting:', error);
     }
   };
 
@@ -131,7 +132,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       setPlayers(playersData || []);
       setAvailability(availabilityMap);
     } catch (error) {
-      console.error('Error loading players and availability:', error);
+      logger.error('Error loading players and availability:', error);
     } finally {
       setLoading(false);
     }

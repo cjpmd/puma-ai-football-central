@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -125,7 +126,7 @@ export function SessionExecutionMode({
     },
     onError: (error) => {
       toast.error('Failed to complete session');
-      console.error('Error completing session:', error);
+      logger.error('Error completing session:', error);
     },
   });
 

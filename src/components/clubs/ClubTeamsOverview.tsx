@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +50,7 @@ export const ClubTeamsOverview: React.FC<ClubTeamsOverviewProps> = ({
   const loadClubTeamsOverview = async () => {
     try {
       setLoading(true);
-      console.log('Loading club teams overview for club:', clubId);
+      logger.log('Loading club teams overview for club:', clubId);
 
       // Get all teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -61,7 +62,7 @@ export const ClubTeamsOverview: React.FC<ClubTeamsOverviewProps> = ({
         .eq('club_id', clubId);
 
       if (clubTeamsError) {
-        console.error('Error fetching club teams:', clubTeamsError);
+        logger.error('Error fetching club teams:', clubTeamsError);
         throw clubTeamsError;
       }
 
@@ -81,7 +82,7 @@ export const ClubTeamsOverview: React.FC<ClubTeamsOverviewProps> = ({
         .eq('status', 'active');
 
       if (playersError) {
-        console.error('Error fetching players:', playersError);
+        logger.error('Error fetching players:', playersError);
         throw playersError;
       }
 
@@ -92,7 +93,7 @@ export const ClubTeamsOverview: React.FC<ClubTeamsOverviewProps> = ({
         .in('team_id', teamIds);
 
       if (staffError) {
-        console.error('Error fetching staff:', staffError);
+        logger.error('Error fetching staff:', staffError);
         throw staffError;
       }
 
@@ -106,7 +107,7 @@ export const ClubTeamsOverview: React.FC<ClubTeamsOverviewProps> = ({
         .order('date');
 
       if (eventsError) {
-        console.error('Error fetching events:', eventsError);
+        logger.error('Error fetching events:', eventsError);
         throw eventsError;
       }
 
@@ -150,7 +151,7 @@ export const ClubTeamsOverview: React.FC<ClubTeamsOverviewProps> = ({
       });
 
     } catch (error: any) {
-      console.error('Error loading club teams overview:', error);
+      logger.error('Error loading club teams overview:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load club teams overview',

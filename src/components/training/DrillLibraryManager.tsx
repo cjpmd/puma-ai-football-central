@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -143,7 +144,7 @@ export function DrillLibraryManager() {
     },
     onError: (error) => {
       toast.error('Failed to delete drill');
-      console.error('Error deleting drill:', error);
+      logger.error('Error deleting drill:', error);
     },
   });
 

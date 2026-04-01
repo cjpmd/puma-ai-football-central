@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -104,11 +105,11 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
 
       if (error) throw error;
 
-      console.log('AI team builder response:', data);
+      logger.log('AI team builder response:', data);
       setPreviewData(data);
       toast.success('AI team selection generated!');
     } catch (error: any) {
-      console.error('Error generating team:', error);
+      logger.error('Error generating team:', error);
       toast.error(error.message || 'Failed to generate team selection');
     } finally {
       setLoading(false);

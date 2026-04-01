@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -100,7 +101,7 @@ export default function AuthMobile() {
       setShowForgotPassword(false);
       setForgotPasswordEmail('');
     } catch (error: any) {
-      console.error('Password reset error:', error);
+      logger.error('Password reset error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to send reset email',

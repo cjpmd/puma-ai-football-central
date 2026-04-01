@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,7 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
         onLogin();
       }
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       
       await securityService.logSecurityEvent({
         eventType: 'LOGIN_ERROR',

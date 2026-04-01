@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ export const TeamTrainingCoordinator: React.FC<TeamTrainingCoordinatorProps> = (
       setTeamPlayers(players);
       setTeamAnalytics(analytics);
     } catch (error) {
-      console.error('Error loading team data:', error);
+      logger.error('Error loading team data:', error);
       toast.error('Failed to load team training data');
     } finally {
       setLoading(false);
@@ -126,7 +127,7 @@ export const TeamTrainingCoordinator: React.FC<TeamTrainingCoordinatorProps> = (
       toast.success('Analytics generated for player');
       loadTeamData();
     } catch (error) {
-      console.error('Error generating analytics:', error);
+      logger.error('Error generating analytics:', error);
       toast.error('Failed to generate analytics');
     }
   };

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -98,7 +99,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const loadEventData = async () => {
     try {
       setLoading(true);
-      console.log('Loading event data for:', eventId);
+      logger.log('Loading event data for:', eventId);
       
       const { data: eventData, error: eventError } = await supabase
         .from('events')
@@ -107,16 +108,16 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         .single();
 
       if (eventError) {
-        console.error('Error loading event:', eventError);
+        logger.error('Error loading event:', eventError);
         throw eventError;
       }
       
-      console.log('Event data loaded:', eventData);
+      logger.log('Event data loaded:', eventData);
       setEvent(eventData);
       
       // Safely handle the scores data from the database
       const scoresData = eventData?.scores as Scores | null;
-      console.log('Scores data:', scoresData);
+      logger.log('Scores data:', scoresData);
       setScores(scoresData || {});
       
       // Handle POTM by team
@@ -144,7 +145,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         });
       }
     } catch (error: any) {
-      console.error('Error loading event data:', error);
+      logger.error('Error loading event data:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load event data',
@@ -157,7 +158,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
   const loadTeamSelections = async () => {
     try {
-      console.log('Loading team selections for event:', eventId);
+      logger.log('Loading team selections for event:', eventId);
       
       // Get unique team selections with performance categories
       const { data: selections, error } = await supabase
@@ -175,7 +176,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
       if (error) throw error;
 
-      console.log('Raw selections:', selections);
+      logger.log('Raw selections:', selections);
 
       // Create unique teams map to avoid duplicates based on performance category
       const uniqueTeamsMap = new Map();
@@ -233,11 +234,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       }
 
       const teamData = Array.from(uniqueTeamsMap.values()).sort((a, b) => a.teamNumber - b.teamNumber);
-      console.log('Processed team selections:', teamData);
+      logger.log('Processed team selections:', teamData);
       setTeamSelections(teamData);
       
     } catch (error) {
-      console.error('Error loading team selections:', error);
+      logger.error('Error loading team selections:', error);
     }
   };
 
@@ -251,7 +252,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       if (error) throw error;
       setDrillTags(tags || []);
     } catch (error) {
-      console.error('Error loading drill tags:', error);
+      logger.error('Error loading drill tags:', error);
     }
   };
 
@@ -260,7 +261,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       const summary = await matchEventService.getEventMatchEventsSummary(eventId);
       setMatchEventsSummary(summary);
     } catch (error) {
-      console.error('Error loading match events summary:', error);
+      logger.error('Error loading match events summary:', error);
     }
   };
 
@@ -289,7 +290,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         description: `Score updated to ${scoreDescription} from match events`,
       });
     } catch (error: any) {
-      console.error('Error calculating score:', error);
+      logger.error('Error calculating score:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to calculate score',
@@ -314,15 +315,15 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const handleSave = async () => {
     try {
       setSaving(true);
-      console.log('Saving scores:', scores);
-      console.log('Saving POTM by team:', playerOfMatchByTeam);
+      logger.log('Saving scores:', scores);
+      logger.log('Saving POTM by team:', playerOfMatchByTeam);
 
       // Try to update player stats before saving
       try {
         const { playerStatsService } = await import('@/services/playerStatsService');
         await playerStatsService.updateEventPlayerStats(eventId);
       } catch (statsError) {
-        console.warn('Stats update failed, continuing with save:', statsError);
+        logger.warn('Stats update failed, continuing with save:', statsError);
         // Don't block the save
       }
 
@@ -348,7 +349,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         .eq('id', eventId);
 
       if (error) {
-        console.error('Error saving:', error);
+        logger.error('Error saving:', error);
         throw error;
       }
 
@@ -358,7 +359,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       });
       onClose();
     } catch (error: any) {
-      console.error('Error saving post-game report:', error);
+      logger.error('Error saving post-game report:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to save post-game report',

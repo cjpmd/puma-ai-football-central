@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { multiRoleAvailabilityService, type AvailabilityStatus, type UserRole } from '@/services/multiRoleAvailabilityService';
 
@@ -19,7 +20,7 @@ export const useStaffAvailability = (eventId?: string, userId?: string) => {
       setUserRoles(roles);
       setAvailabilityStatuses(statuses);
     } catch (error) {
-      console.error('Error loading user roles and availability:', error);
+      logger.error('Error loading user roles and availability:', error);
     } finally {
       setLoading(false);
     }
@@ -36,7 +37,7 @@ export const useStaffAvailability = (eventId?: string, userId?: string) => {
       await multiRoleAvailabilityService.updateRoleAvailability(eventId, userId, role, status);
       await loadData(); // Refresh data
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       throw error;
     }
   };

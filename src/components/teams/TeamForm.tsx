@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,7 +87,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
       }));
       setYearGroups(transformedData);
     } catch (error) {
-      console.error('Error loading year groups:', error);
+      logger.error('Error loading year groups:', error);
       setYearGroups([]);
     } finally {
       setLoadingYearGroups(false);

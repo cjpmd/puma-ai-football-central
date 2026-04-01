@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -114,7 +115,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
         // If invitations exist for this event but user wasn't invited, exit
         if (anyInvitations && anyInvitations.length > 0) {
-          console.log('User not invited to this event');
+          logger.log('User not invited to this event');
           setAvailabilities([]);
           setLoading(false);
           return;
@@ -194,7 +195,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
         .single();
 
       if (profileError) {
-        console.error('Error loading profile:', profileError);
+        logger.error('Error loading profile:', profileError);
       }
 
       // Get linked player information for player role
@@ -208,7 +209,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
         if (playerData) {
           linkedPlayerData = playerData;
-          console.log('Found linked player:', linkedPlayerData.name);
+          logger.log('Found linked player:', linkedPlayerData.name);
         }
       }
 
@@ -221,10 +222,10 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
         });
       }
 
-      console.log('DEBUG - Event Availability:', availabilityRecords);
+      logger.log('DEBUG - Event Availability:', availabilityRecords);
       setAvailabilities(availabilityRecords);
     } catch (error) {
-      console.error('Error loading availability data:', error);
+      logger.error('Error loading availability data:', error);
       toast.error('Failed to load availability data');
     } finally {
       setLoading(false);
@@ -272,13 +273,13 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
             });
 
             if (rpcError) {
-              console.error('Error removing unavailable player:', rpcError);
+              logger.error('Error removing unavailable player:', rpcError);
             } else {
-              console.log('Player removed from squad and formation:', result);
+              logger.log('Player removed from squad and formation:', result);
             }
           }
         } catch (cleanupError) {
-          console.error('Error removing unavailable player:', cleanupError);
+          logger.error('Error removing unavailable player:', cleanupError);
           // Don't throw - availability was updated, cleanup is secondary
         }
       }
@@ -286,7 +287,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
       const roleLabel = role === 'staff' ? 'Coach' : 'Player';
       toast.success(`${roleLabel} availability set to ${status}`);
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       toast.error(`Failed to update availability`);
     } finally {
       setUpdating(prev => {

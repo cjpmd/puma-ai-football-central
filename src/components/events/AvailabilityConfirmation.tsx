@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ export const AvailabilityConfirmation: React.FC<AvailabilityConfirmationProps> =
       toast.success(`Marked as ${status}`);
       onStatusUpdate();
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       toast.error('Failed to update availability');
     } finally {
       setIsUpdating(false);

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +69,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
   const loadClubStaff = async () => {
     try {
       setLoading(true);
-      console.log('Loading staff for club:', clubId);
+      logger.log('Loading staff for club:', clubId);
 
       // Get all teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -91,7 +92,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       }
 
       const teamIds = clubTeams.map(ct => ct.team_id);
-      console.log('Loading staff for teams:', teamIds);
+      logger.log('Loading staff for teams:', teamIds);
 
       // Get all staff from team_staff table
       const { data: teamStaffData, error: staffError } = await supabase
@@ -120,8 +121,8 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
       if (userTeamsError) throw userTeamsError;
 
-      console.log('Team staff data:', teamStaffData?.length || 0);
-      console.log('User teams data:', userTeamsData?.length || 0);
+      logger.log('Team staff data:', teamStaffData?.length || 0);
+      logger.log('User teams data:', userTeamsData?.length || 0);
 
       // Combine both sources - use a Map to avoid duplicates
       const staffMap = new Map<string, any>();
@@ -184,7 +185,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       });
 
       const staffWithTeams = Array.from(staffMap.values());
-      console.log('Combined staff:', staffWithTeams.length);
+      logger.log('Combined staff:', staffWithTeams.length);
 
       // Calculate team summaries - only count staff who require PVG
       const summaries = staffWithTeams.reduce((acc, member) => {
@@ -218,7 +219,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setStaff(staffWithTeams);
       setTeamSummaries(summaries);
     } catch (error: any) {
-      console.error('Error loading club staff:', error);
+      logger.error('Error loading club staff:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load club staff',
@@ -257,7 +258,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
       setClubStaff(clubStaffData);
     } catch (error: any) {
-      console.error('Error loading club staff:', error);
+      logger.error('Error loading club staff:', error);
     }
   };
 
@@ -361,7 +362,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
       loadClubStaff();
     } catch (error: any) {
-      console.error('Error updating PVG status:', error);
+      logger.error('Error updating PVG status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update PVG status',

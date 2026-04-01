@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,14 +20,14 @@ export const DataIntegrityChecker = () => {
   const handleFullRegeneration = async () => {
     setIsRegenerating(true);
     try {
-      console.log('🔄 Starting full data regeneration...');
+      logger.log('🔄 Starting full data regeneration...');
       await playerStatsService.regenerateAllPlayerStats();
       toast({
         title: 'Success',
         description: 'All player statistics have been regenerated successfully.',
       });
     } catch (error) {
-      console.error('Error during regeneration:', error);
+      logger.error('Error during regeneration:', error);
       toast({
         title: 'Error',
         description: 'Failed to regenerate player statistics. Check console for details.',
@@ -49,14 +50,14 @@ export const DataIntegrityChecker = () => {
 
     setIsDebugging(true);
     try {
-      console.log(`🔍 Debugging player: ${debugPlayerName} (${debugPlayerId})`);
+      logger.log(`🔍 Debugging player: ${debugPlayerName} (${debugPlayerId})`);
       await playerStatsService.debugPlayerPositions(debugPlayerId, debugPlayerName);
       toast({
         title: 'Debug Complete',
         description: `Position debugging complete for ${debugPlayerName}. Check console for details.`,
       });
     } catch (error) {
-      console.error('Error during debug:', error);
+      logger.error('Error during debug:', error);
       toast({
         title: 'Error',
         description: 'Failed to debug player positions. Check console for details.',
@@ -79,14 +80,14 @@ export const DataIntegrityChecker = () => {
 
     setIsDebugging(true);
     try {
-      console.log(`🎯 Starting comprehensive debug and regeneration for: ${debugPlayerName}`);
+      logger.log(`🎯 Starting comprehensive debug and regeneration for: ${debugPlayerName}`);
       await playerStatsService.debugAndRegenerateForPlayer(debugPlayerId, debugPlayerName);
       toast({
         title: 'Debug & Regeneration Complete',
         description: `Complete analysis and regeneration finished for ${debugPlayerName}. Check console for detailed logs.`,
       });
     } catch (error) {
-      console.error('Error during debug and regeneration:', error);
+      logger.error('Error during debug and regeneration:', error);
       toast({
         title: 'Error',
         description: 'Failed to complete debug and regeneration. Check console for details.',

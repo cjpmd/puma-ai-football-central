@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +98,7 @@ export const ClubOfficialForm = ({
       onSuccess();
 
     } catch (error: any) {
-      console.error('Error managing club official:', error);
+      logger.error('Error managing club official:', error);
       toast.error(error.message || 'Failed to manage club official');
     } finally {
       setIsSubmitting(false);

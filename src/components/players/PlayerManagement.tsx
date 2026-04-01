@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,7 +68,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const { data: players = [], isLoading, error } = useQuery({
     queryKey: ['active-players', team.id],
     queryFn: () => {
-      console.log('PlayerManagement: Fetching players for team:', team.id);
+      logger.log('PlayerManagement: Fetching players for team:', team.id);
       return playersService.getActivePlayersByTeamId(team.id);
     },
   });
@@ -181,7 +182,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   });
 
   const handleModalOpen = (modal: string, player: Player) => {
-    console.log(`[PlayerManagement] handleModalOpen: Modal "${modal}" for player "${player.name}"`);
+    logger.log(`[PlayerManagement] handleModalOpen: Modal "${modal}" for player "${player.name}"`);
     setSelectedPlayer(player);
     setActiveModal(modal);
   };
@@ -192,7 +193,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   };
 
   const handleModalClose = () => {
-    console.log("[PlayerManagement] handleModalClose called");
+    logger.log("[PlayerManagement] handleModalClose called");
     setSelectedPlayer(null);
     setActiveModal(null);
   };
@@ -234,18 +235,18 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   };
 
   const handleEditPlayer = (player: Player) => {
-    console.log(`[PlayerManagement] handleEditPlayer called for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleEditPlayer called for player: ${player.name}`);
     setEditingPlayer(player);
     setShowPlayerForm(true);
   };
 
   const handleManageParents = (player: Player) => {
-    console.log(`[PlayerManagement] handleManageParents for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleManageParents for player: ${player.name}`);
     handleModalOpen('parents', player);
   };
   
   const handleRemoveFromSquad = (player: Player) => {
-    console.log(`[PlayerManagement] handleRemoveFromSquad for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleRemoveFromSquad for player: ${player.name}`);
     if (window.confirm(`Are you sure you want to remove ${player.name} from the squad? This usually means they are leaving the team.`)) {
       updatePlayerMutation.mutate({ id: player.id, data: { status: 'inactive' } }); 
        toast({
@@ -256,7 +257,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   };
 
   const handleUpdatePhoto = async (player: Player, file: File) => {
-    console.log(`[PlayerManagement] handleUpdatePhoto for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleUpdatePhoto for player: ${player.name}`);
     if (!player || !file) {
       toast({ title: 'Upload Error', description: 'Player or file missing.', variant: 'destructive' });
       return;
@@ -296,7 +297,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
         }
       });
     } catch (error: any) {
-      console.error('Error uploading photo:', error);
+      logger.error('Error uploading photo:', error);
       toast({
         title: 'Upload Failed',
         description: error.message || 'An unexpected error occurred during photo upload.',
@@ -316,7 +317,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   };
 
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
-    console.log(`[PlayerManagement] handleSaveFunStats for player: ${player.name}`, stats);
+    logger.log(`[PlayerManagement] handleSaveFunStats for player: ${player.name}`, stats);
     updatePlayerMutation.mutate({
       id: player.id,
       data: { funStats: stats }
@@ -324,7 +325,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   };
 
   const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
-    console.log(`[PlayerManagement] handleSavePlayStyle for player: ${player.name}`, playStyles);
+    logger.log(`[PlayerManagement] handleSavePlayStyle for player: ${player.name}`, playStyles);
     updatePlayerMutation.mutate({
       id: player.id,
       data: { playStyle: JSON.stringify(playStyles) } // Ensure playStyle is stringified if stored as JSON string in DB
@@ -332,7 +333,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   };
 
   const handleSaveCardDesign = (player: Player, designId: string) => {
-    console.log(`[PlayerManagement] handleSaveCardDesign for player: ${player.name}`, designId);
+    logger.log(`[PlayerManagement] handleSaveCardDesign for player: ${player.name}`, designId);
     updatePlayerMutation.mutate({
       id: player.id,
       data: { cardDesignId: designId }
@@ -341,37 +342,37 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 
   // New Handlers for Modals
   const handleManageAttributes = (player: Player) => {
-    console.log(`[PlayerManagement] handleManageAttributes for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleManageAttributes for player: ${player.name}`);
     handleModalOpen('attributes', player);
   };
 
   const handleManageObjectives = (player: Player) => {
-    console.log(`[PlayerManagement] handleManageObjectives for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleManageObjectives for player: ${player.name}`);
     handleModalOpen('objectives', player);
   };
 
   const handleManageComments = (player: Player) => {
-    console.log(`[PlayerManagement] handleManageComments for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleManageComments for player: ${player.name}`);
     handleModalOpen('comments', player);
   };
 
   const handleViewStats = (player: Player) => {
-    console.log(`[PlayerManagement] handleViewStats for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleViewStats for player: ${player.name}`);
     handleModalOpen('stats', player);
   };
 
   const handleViewHistory = (player: Player) => {
-    console.log(`[PlayerManagement] handleViewHistory for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleViewHistory for player: ${player.name}`);
     handleModalOpen('history', player);
   };
 
   const handleTransferPlayer = (player: Player) => {
-    console.log(`[PlayerManagement] handleTransferPlayer for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleTransferPlayer for player: ${player.name}`);
     handleModalOpen('transfer', player);
   };
 
   const handleLeaveTeam = (player: Player) => {
-    console.log(`[PlayerManagement] handleLeaveTeam for player: ${player.name}`);
+    logger.log(`[PlayerManagement] handleLeaveTeam for player: ${player.name}`);
     handleModalOpen('leave', player);
   };
 

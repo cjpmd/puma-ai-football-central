@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -84,7 +85,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
 
       setPlayers(playersData || []);
     } catch (error) {
-      console.error('Error loading players:', error);
+      logger.error('Error loading players:', error);
       toast({
         title: "Error",
         description: "Failed to load players",
@@ -245,7 +246,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
       onComplete();
       handleClose();
     } catch (error) {
-      console.error('Error creating teams:', error);
+      logger.error('Error creating teams:', error);
       toast({
         title: "Error",
         description: "Failed to create teams. Please try again.",

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
@@ -63,7 +64,7 @@ export default function ClubDetailsMobile() {
         updatedAt: data.updated_at
       });
     } catch (error: any) {
-      console.error('Error loading club:', error);
+      logger.error('Error loading club:', error);
       toast({
         title: 'Error',
         description: 'Failed to load club details',

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,7 @@ export const DualRoleManagement: React.FC = () => {
 
       setDualRoleUsers(dualUsers);
     } catch (error) {
-      console.error('Error loading dual role users:', error);
+      logger.error('Error loading dual role users:', error);
       toast.error('Failed to load dual role users');
     }
   };
@@ -138,7 +139,7 @@ export const DualRoleManagement: React.FC = () => {
 
       setRoleConflicts(conflicts);
     } catch (error) {
-      console.error('Error detecting role conflicts:', error);
+      logger.error('Error detecting role conflicts:', error);
     }
   };
 
@@ -171,7 +172,7 @@ export const DualRoleManagement: React.FC = () => {
       loadDualRoleUsers();
       detectRoleConflicts();
     } catch (error: any) {
-      console.error('Error resolving conflict:', error);
+      logger.error('Error resolving conflict:', error);
       toast.error(error.message || 'Failed to resolve conflict');
     } finally {
       setIsLoading(false);

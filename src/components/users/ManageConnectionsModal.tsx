@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
 
       setAvailablePlayers(players);
     } catch (error: any) {
-      console.error('Error loading players:', error);
+      logger.error('Error loading players:', error);
     }
   };
 
@@ -113,7 +114,7 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
 
       setConnectedPlayers(players);
     } catch (error: any) {
-      console.error('Error loading connected players:', error);
+      logger.error('Error loading connected players:', error);
     }
   };
 

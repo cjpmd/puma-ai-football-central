@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -65,7 +66,7 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
         .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) {
-        console.error('Error loading user availability:', error);
+        logger.error('Error loading user availability:', error);
         return;
       }
 
@@ -76,7 +77,7 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
 
       setUserAvailability(availability);
     } catch (error) {
-      console.error('Error in loadUserAvailability:', error);
+      logger.error('Error in loadUserAvailability:', error);
     }
   };
 
@@ -102,7 +103,7 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
   const loadClubEvents = async () => {
     try {
       setLoading(true);
-      console.log('Loading events for club:', clubId);
+      logger.log('Loading events for club:', clubId);
 
       // Get all teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -171,7 +172,7 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
 
       setEvents(eventsWithTeams);
     } catch (error: any) {
-      console.error('Error loading club events:', error);
+      logger.error('Error loading club events:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load club events',

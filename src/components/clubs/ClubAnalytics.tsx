@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,7 +39,7 @@ export const ClubAnalytics: React.FC<ClubAnalyticsProps> = ({
   const loadAnalyticsData = async () => {
     try {
       setLoading(true);
-      console.log('Loading analytics for club:', clubId);
+      logger.log('Loading analytics for club:', clubId);
 
       // Get all teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -160,7 +161,7 @@ export const ClubAnalytics: React.FC<ClubAnalyticsProps> = ({
       });
 
     } catch (error: any) {
-      console.error('Error loading analytics:', error);
+      logger.error('Error loading analytics:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load analytics data',

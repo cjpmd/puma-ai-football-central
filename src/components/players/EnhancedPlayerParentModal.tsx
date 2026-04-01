@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,7 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
       const parentData = await playersService.getParentsByPlayerId(player.id);
       setParents(parentData);
     } catch (error) {
-      console.error('Error loading parents:', error);
+      logger.error('Error loading parents:', error);
       toast.error('Failed to load parent information');
     } finally {
       setIsLoading(false);
@@ -83,7 +84,7 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
       loadParents();
       onUpdate();
     } catch (error) {
-      console.error('Error sending parent invitation:', error);
+      logger.error('Error sending parent invitation:', error);
       toast.error('Failed to send parent invitation');
     } finally {
       setIsLoading(false);
@@ -107,7 +108,7 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
       loadParents();
       onUpdate();
     } catch (error) {
-      console.error('Error deleting parent:', error);
+      logger.error('Error deleting parent:', error);
       toast.error('Failed to remove parent');
     } finally {
       setIsLoading(false);

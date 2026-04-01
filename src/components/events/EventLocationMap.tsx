@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,7 +23,7 @@ export const EventLocationMap: React.FC<EventLocationMapProps> = ({
         const { data, error } = await supabase.functions.invoke('mapbox-config');
         
         if (error) {
-          console.error('Mapbox config error:', error);
+          logger.error('Mapbox config error:', error);
           setError('Map configuration not available');
           return;
         }
@@ -33,7 +34,7 @@ export const EventLocationMap: React.FC<EventLocationMapProps> = ({
           setError('Map token not configured');
         }
       } catch (err) {
-        console.error('Error fetching mapbox token:', err);
+        logger.error('Error fetching mapbox token:', err);
         setError('Failed to load map');
       } finally {
         setLoading(false);

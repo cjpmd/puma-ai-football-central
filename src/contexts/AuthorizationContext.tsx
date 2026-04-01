@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,7 +62,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
         .rpc('validate_user_permissions', { p_user_id: user.id });
 
       if (error) {
-        console.error('Error loading user permissions:', error);
+        logger.error('Error loading user permissions:', error);
         setUserPermissions([]);
         return;
       }
@@ -140,7 +141,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setUserPermissions(Array.from(basePermissions));
     } catch (error) {
-      console.error('Error loading user permissions:', error);
+      logger.error('Error loading user permissions:', error);
       setUserPermissions([]);
     } finally {
       setLoading(false);

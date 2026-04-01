@@ -1,10 +1,11 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export const sendParentInvite = async (parentEmail: string, parentName: string, playerName: string) => {
   try {
-    console.log('Sending parent invite to:', parentEmail);
+    logger.log('Sending parent invite to:', parentEmail);
     
     // Check if user already exists
     const { data: existingUser, error: userError } = await supabase
@@ -14,7 +15,7 @@ export const sendParentInvite = async (parentEmail: string, parentName: string, 
       .maybeSingle();
 
     if (userError) {
-      console.error('Error checking for existing user:', userError);
+      logger.error('Error checking for existing user:', userError);
     }
 
     if (existingUser) {
@@ -26,7 +27,7 @@ export const sendParentInvite = async (parentEmail: string, parentName: string, 
 
     // For now, we'll show a message about the invite being sent
     // In a real implementation, you would send an actual email invitation
-    console.log('Would send invitation email to:', parentEmail);
+    logger.log('Would send invitation email to:', parentEmail);
     
     toast.success('Parent Invitation Sent', {
       description: `An invitation has been sent to ${parentEmail} to join and access ${playerName}'s details.`,
@@ -34,7 +35,7 @@ export const sendParentInvite = async (parentEmail: string, parentName: string, 
     
     return true;
   } catch (error) {
-    console.error('Error sending parent invite:', error);
+    logger.error('Error sending parent invite:', error);
     toast.error('Failed to Send Invitation', {
       description: 'There was an error sending the parent invitation. Please try again.',
     });

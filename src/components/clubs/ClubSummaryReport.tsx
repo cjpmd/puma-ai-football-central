@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -112,7 +113,7 @@ export const ClubSummaryReport: React.FC<ClubSummaryReportProps> = ({ clubId, cl
         ageGroups
       });
     } catch (error) {
-      console.error('Error loading club summary:', error);
+      logger.error('Error loading club summary:', error);
     } finally {
       setLoading(false);
     }

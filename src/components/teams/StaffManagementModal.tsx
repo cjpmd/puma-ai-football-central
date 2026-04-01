@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -67,7 +68,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen && team?.id) {
-      console.log('StaffManagementModal: Modal opened for team:', team.id);
+      logger.log('StaffManagementModal: Modal opened for team:', team.id);
       setStaff([]);
       setStaffRequests([]);
       setLoading(true);
@@ -114,7 +115,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       });
       setApprovalRoles(prev => ({ ...prev, ...roles }));
     } catch (error) {
-      console.error('Error loading staff requests:', error);
+      logger.error('Error loading staff requests:', error);
     }
   };
 
@@ -155,7 +156,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
       setTeamMembers(availableMembers);
     } catch (error) {
-      console.error('Error loading team members:', error);
+      logger.error('Error loading team members:', error);
     }
   };
 
@@ -165,13 +166,13 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
   const loadStaff = async () => {
     if (!team?.id) {
-      console.error('StaffManagementModal: No team ID provided');
+      logger.error('StaffManagementModal: No team ID provided');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('StaffManagementModal: Loading staff for team:', team.id);
+      logger.log('StaffManagementModal: Loading staff for team:', team.id);
       
       const { data, error } = await supabase
         .from('team_staff')
@@ -180,11 +181,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('StaffManagementModal: Database error:', error);
+        logger.error('StaffManagementModal: Database error:', error);
         throw error;
       }
 
-      console.log('StaffManagementModal: Raw staff data:', data);
+      logger.log('StaffManagementModal: Raw staff data:', data);
 
       if (data) {
         const staffMembers: TeamStaff[] = data.map(record => ({
@@ -203,13 +204,13 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           updatedAt: record.updated_at
         }));
         
-        console.log('StaffManagementModal: Processed staff:', staffMembers);
+        logger.log('StaffManagementModal: Processed staff:', staffMembers);
         setStaff(staffMembers);
       } else {
         setStaff([]);
       }
     } catch (error: any) {
-      console.error('StaffManagementModal: Error loading staff:', error);
+      logger.error('StaffManagementModal: Error loading staff:', error);
       setStaff([]);
       toast({
         title: 'Error',
@@ -268,7 +269,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
 
     try {
-      console.log('StaffManagementModal: Adding staff member:', newStaff, 'selectedUser:', selectedUser);
+      logger.log('StaffManagementModal: Adding staff member:', newStaff, 'selectedUser:', selectedUser);
 
       let userId = selectedUser?.id || null;
       
@@ -313,11 +314,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           });
         
         if (userTeamsError) {
-          console.error('Error upserting user_teams:', userTeamsError);
+          logger.error('Error upserting user_teams:', userTeamsError);
         }
       }
 
-      console.log('StaffManagementModal: Staff member added successfully');
+      logger.log('StaffManagementModal: Staff member added successfully');
 
       // Reset form and reload
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
@@ -336,7 +337,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         description: message,
       });
     } catch (error: any) {
-      console.error('StaffManagementModal: Error adding staff:', error);
+      logger.error('StaffManagementModal: Error adding staff:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to add staff member',
@@ -356,7 +357,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
 
     try {
-      console.log('StaffManagementModal: Updating staff member:', editingStaff.id, newStaff);
+      logger.log('StaffManagementModal: Updating staff member:', editingStaff.id, newStaff);
       
       const { error } = await supabase
         .from('team_staff')
@@ -370,11 +371,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         .eq('id', editingStaff.id);
 
       if (error) {
-        console.error('StaffManagementModal: Update error:', error);
+        logger.error('StaffManagementModal: Update error:', error);
         throw error;
       }
 
-      console.log('StaffManagementModal: Staff member updated successfully');
+      logger.log('StaffManagementModal: Staff member updated successfully');
 
       await loadStaff();
       
@@ -386,7 +387,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         description: `${newStaff.name} has been updated`,
       });
     } catch (error: any) {
-      console.error('StaffManagementModal: Error updating staff:', error);
+      logger.error('StaffManagementModal: Error updating staff:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update staff member',
@@ -397,7 +398,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
   const handleRemoveStaff = async (staffId: string, staffName: string) => {
     try {
-      console.log('StaffManagementModal: Removing staff member:', staffId);
+      logger.log('StaffManagementModal: Removing staff member:', staffId);
 
       const { error } = await supabase
         .from('team_staff')
@@ -405,11 +406,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         .eq('id', staffId);
       
       if (error) {
-        console.error('StaffManagementModal: Delete error:', error);
+        logger.error('StaffManagementModal: Delete error:', error);
         throw error;
       }
       
-      console.log('StaffManagementModal: Staff member removed successfully');
+      logger.log('StaffManagementModal: Staff member removed successfully');
       
       await loadStaff();
       await loadTeamMembers();
@@ -419,7 +420,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         description: `${staffName} has been removed from the team`,
       });
     } catch (error: any) {
-      console.error('StaffManagementModal: Error removing staff:', error);
+      logger.error('StaffManagementModal: Error removing staff:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to remove staff member',
@@ -473,7 +474,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       await loadStaff();
       await loadStaffRequests();
     } catch (error: any) {
-      console.error('Error approving request:', error);
+      logger.error('Error approving request:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to approve request',
@@ -501,7 +502,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       
       await loadStaffRequests();
     } catch (error: any) {
-      console.error('Error rejecting request:', error);
+      logger.error('Error rejecting request:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to reject request',

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogoUpload } from '@/components/shared/LogoUpload';
@@ -14,7 +15,7 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
   const [logoUrl, setLogoUrl] = useState(team.logoUrl || null);
 
   const handleLogoChange = async (newLogoUrl: string | null) => {
-    console.log('TeamLogoSettings: Logo changed to:', newLogoUrl);
+    logger.log('TeamLogoSettings: Logo changed to:', newLogoUrl);
     
     // Update parent component immediately for UI responsiveness
     onUpdate({ logoUrl: newLogoUrl });

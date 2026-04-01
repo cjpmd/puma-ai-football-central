@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +46,7 @@ export const UserManagement: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      console.log('Loading all users...');
+      logger.log('Loading all users...');
       setLoading(true);
       
       // Load profiles with their staff roles from user_teams
@@ -55,7 +56,7 @@ export const UserManagement: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
+        logger.error('Error loading profiles:', profilesError);
         throw profilesError;
       }
 
@@ -70,7 +71,7 @@ export const UserManagement: React.FC = () => {
         `);
 
       if (staffError) {
-        console.error('Error loading staff roles:', staffError);
+        logger.error('Error loading staff roles:', staffError);
         // Don't throw here, continue without staff roles
       }
 
@@ -90,10 +91,10 @@ export const UserManagement: React.FC = () => {
         };
       });
 
-      console.log('Loaded enhanced users:', enhancedUsers);
+      logger.log('Loaded enhanced users:', enhancedUsers);
       setUsers(enhancedUsers);
     } catch (error) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
       toast({
         title: 'Error',
         description: 'Failed to load users',
@@ -108,7 +109,7 @@ export const UserManagement: React.FC = () => {
     if (!editingUser) return;
 
     try {
-      console.log('Updating user:', editingUser.id, newUserData);
+      logger.log('Updating user:', editingUser.id, newUserData);
       
       const { error } = await supabase
         .from('profiles')
@@ -122,7 +123,7 @@ export const UserManagement: React.FC = () => {
         .eq('id', editingUser.id);
 
       if (error) {
-        console.error('Error updating user:', error);
+        logger.error('Error updating user:', error);
         throw error;
       }
 
@@ -136,7 +137,7 @@ export const UserManagement: React.FC = () => {
         description: 'User updated successfully',
       });
     } catch (error) {
-      console.error('Error updating user:', error);
+      logger.error('Error updating user:', error);
       toast({
         title: 'Error',
         description: 'Failed to update user',
@@ -151,7 +152,7 @@ export const UserManagement: React.FC = () => {
     }
 
     try {
-      console.log('Deleting user:', userId);
+      logger.log('Deleting user:', userId);
       
       const { error } = await supabase
         .from('profiles')
@@ -159,7 +160,7 @@ export const UserManagement: React.FC = () => {
         .eq('id', userId);
 
       if (error) {
-        console.error('Error deleting user:', error);
+        logger.error('Error deleting user:', error);
         throw error;
       }
 
@@ -170,7 +171,7 @@ export const UserManagement: React.FC = () => {
         description: 'User deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete user',
@@ -181,14 +182,14 @@ export const UserManagement: React.FC = () => {
 
   const handleResetPassword = async (userEmail: string) => {
     try {
-      console.log('Sending password reset to:', userEmail);
+      logger.log('Sending password reset to:', userEmail);
       
       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
         redirectTo: `${window.location.origin}/auth`,
       });
 
       if (error) {
-        console.error('Error sending password reset:', error);
+        logger.error('Error sending password reset:', error);
         throw error;
       }
 
@@ -197,7 +198,7 @@ export const UserManagement: React.FC = () => {
         description: `Password reset email sent to ${userEmail}`,
       });
     } catch (error) {
-      console.error('Error sending password reset:', error);
+      logger.error('Error sending password reset:', error);
       toast({
         title: 'Error',
         description: 'Failed to send password reset email',

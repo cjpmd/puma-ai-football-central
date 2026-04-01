@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { availabilityService } from '@/services/availabilityService';
@@ -45,7 +46,7 @@ export const AvailabilityNotificationService: React.FC = () => {
       
       setPendingAvailabilities(pending);
     } catch (error) {
-      console.error('Error loading pending availabilities:', error);
+      logger.error('Error loading pending availabilities:', error);
     } finally {
       setLoading(false);
     }

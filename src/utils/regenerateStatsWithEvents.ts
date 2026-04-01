@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -6,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export async function regenerateAllPlayerStatsWithEvents() {
   try {
-    console.log('Starting regeneration of all player stats with match events...');
+    logger.log('Starting regeneration of all player stats with match events...');
     
     // Get all players
     const { data: players, error: playersError } = await supabase
@@ -15,7 +16,7 @@ export async function regenerateAllPlayerStatsWithEvents() {
     
     if (playersError) throw playersError;
     
-    console.log(`Found ${players?.length || 0} players`);
+    logger.log(`Found ${players?.length || 0} players`);
     
     // Update each player's stats
     for (const player of players || []) {
@@ -24,19 +25,19 @@ export async function regenerateAllPlayerStatsWithEvents() {
           .rpc('update_player_match_stats', { player_uuid: player.id });
         
         if (error) {
-          console.error(`Error updating stats for ${player.name}:`, error);
+          logger.error(`Error updating stats for ${player.name}:`, error);
         } else {
-          console.log(`✓ Updated stats for ${player.name}`);
+          logger.log(`✓ Updated stats for ${player.name}`);
         }
       } catch (err) {
-        console.error(`Failed to update ${player.name}:`, err);
+        logger.error(`Failed to update ${player.name}:`, err);
       }
     }
     
-    console.log('Regeneration complete!');
+    logger.log('Regeneration complete!');
     return { success: true, playersUpdated: players?.length || 0 };
   } catch (error) {
-    console.error('Error regenerating player stats:', error);
+    logger.error('Error regenerating player stats:', error);
     throw error;
   }
 }

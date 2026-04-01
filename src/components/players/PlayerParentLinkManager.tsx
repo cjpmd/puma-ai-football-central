@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,7 @@ export function PlayerParentLinkManager({
         .eq('player_id', playerId);
 
       if (linksError) {
-        console.error('Error fetching user_players:', linksError.code, linksError.message);
+        logger.error('Error fetching user_players:', linksError.code, linksError.message);
         throw linksError;
       }
 
@@ -72,7 +73,7 @@ export function PlayerParentLinkManager({
         .in('id', userIds);
 
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError.code, profilesError.message);
+        logger.error('Error fetching profiles:', profilesError.code, profilesError.message);
         throw profilesError;
       }
 
@@ -92,7 +93,7 @@ export function PlayerParentLinkManager({
 
       setLinkedParents(parents);
     } catch (error: any) {
-      console.error('Error loading linked parents:', error.code, error.message, error);
+      logger.error('Error loading linked parents:', error.code, error.message, error);
       toast({ title: 'Error', description: `Failed to load linked parents: ${error.message || 'Unknown error'}`, variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -112,7 +113,7 @@ export function PlayerParentLinkManager({
       loadLinkedParents();
       onLinksUpdated();
     } catch (error: any) {
-      console.error('Error removing link:', error);
+      logger.error('Error removing link:', error);
       toast({ title: 'Error', description: 'Failed to remove link', variant: 'destructive' });
     }
   };
@@ -227,7 +228,7 @@ export function PlayerParentLinkManager({
       loadLinkedParents();
       onLinksUpdated();
     } catch (error: any) {
-      console.error('Error inviting parent:', error);
+      logger.error('Error inviting parent:', error);
       toast({ title: 'Error', description: error.message || 'Failed to send invitation', variant: 'destructive' });
     } finally {
       setIsInviting(false);

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -83,18 +84,18 @@ const StaffManagement = () => {
 
   const fetchTeamStaff = async (teamId: string) => {
     try {
-      console.log('Fetching team staff for team:', teamId);
+      logger.log('Fetching team staff for team:', teamId);
       
       // Use the consolidated staff function to avoid duplicates
       const { data: consolidatedStaff, error: staffError } = await supabase
         .rpc('get_consolidated_team_staff', { p_team_id: teamId });
 
       if (staffError) {
-        console.error('Error fetching consolidated staff:', staffError);
+        logger.error('Error fetching consolidated staff:', staffError);
         throw staffError;
       }
       
-      console.log('Consolidated staff data:', consolidatedStaff);
+      logger.log('Consolidated staff data:', consolidatedStaff);
 
       // Deduplicate by user_id or email (prefer team_staff entries over user_teams)
       const staffMap = new Map<string, StaffMember>();
@@ -131,7 +132,7 @@ const StaffManagement = () => {
 
       setTeamStaff(Array.from(staffMap.values()));
     } catch (error: any) {
-      console.error('Error in fetchTeamStaff:', error);
+      logger.error('Error in fetchTeamStaff:', error);
       toast.error('Failed to fetch team staff', {
         description: error.message
       });
@@ -157,7 +158,7 @@ const StaffManagement = () => {
 
   const fetchClubStaff = async (clubId: string) => {
     try {
-      console.log('Fetching club staff for club:', clubId);
+      logger.log('Fetching club staff for club:', clubId);
       
       const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
@@ -165,11 +166,11 @@ const StaffManagement = () => {
         .eq('club_id', clubId);
 
       if (userClubsError) {
-        console.error('Error fetching user clubs:', userClubsError);
+        logger.error('Error fetching user clubs:', userClubsError);
         throw userClubsError;
       }
       
-      console.log('User clubs data:', userClubsData);
+      logger.log('User clubs data:', userClubsData);
       
       if (!userClubsData || userClubsData.length === 0) {
         setClubStaff([]);
@@ -183,11 +184,11 @@ const StaffManagement = () => {
         .in('id', userIds);
 
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+        logger.error('Error fetching profiles:', profilesError);
         throw profilesError;
       }
 
-      console.log('Profiles data:', profilesData);
+      logger.log('Profiles data:', profilesData);
       
       const staffMembers: StaffMember[] = userClubsData
         .map(clubUser => {
@@ -207,7 +208,7 @@ const StaffManagement = () => {
       
       setClubStaff(staffMembers);
     } catch (error: any) {
-      console.error('Error in fetchClubStaff:', error);
+      logger.error('Error in fetchClubStaff:', error);
       toast.error('Failed to fetch club staff', {
         description: error.message
       });
@@ -222,7 +223,7 @@ const StaffManagement = () => {
     }
 
     try {
-      console.log('Adding team staff:', formData);
+      logger.log('Adding team staff:', formData);
       
       const { error: addError } = await supabase
         .from('team_staff')
@@ -235,7 +236,7 @@ const StaffManagement = () => {
         });
 
       if (addError) {
-        console.error('Add staff error:', addError);
+        logger.error('Add staff error:', addError);
         throw addError;
       }
 
@@ -244,7 +245,7 @@ const StaffManagement = () => {
       setIsAddStaffDialogOpen(false);
       setFormData({ name: '', email: '', phone: '', role: '' });
     } catch (error: any) {
-      console.error('Error in handleAddTeamStaff:', error);
+      logger.error('Error in handleAddTeamStaff:', error);
       toast.error('Failed to add staff member', {
         description: error.message
       });
@@ -258,7 +259,7 @@ const StaffManagement = () => {
     }
 
     try {
-      console.log('Updating team staff:', editingStaff.id, formData);
+      logger.log('Updating team staff:', editingStaff.id, formData);
       
       // Check if this staff member has a user_id (came from user_teams)
       if (editingStaff.userId) {
@@ -271,7 +272,7 @@ const StaffManagement = () => {
           .eq('id', editingStaff.id);
 
         if (updateError) {
-          console.error('Update user_teams error:', updateError);
+          logger.error('Update user_teams error:', updateError);
           throw updateError;
         }
       } else {
@@ -288,7 +289,7 @@ const StaffManagement = () => {
           .eq('id', editingStaff.id);
 
         if (updateError) {
-          console.error('Update staff error:', updateError);
+          logger.error('Update staff error:', updateError);
           throw updateError;
         }
       }
@@ -299,7 +300,7 @@ const StaffManagement = () => {
       setEditingStaff(null);
       setFormData({ name: '', email: '', phone: '', role: '' });
     } catch (error: any) {
-      console.error('Error in handleEditTeamStaff:', error);
+      logger.error('Error in handleEditTeamStaff:', error);
       toast.error('Failed to update staff member', {
         description: error.message
       });
@@ -313,7 +314,7 @@ const StaffManagement = () => {
     }
 
     try {
-      console.log('Adding club staff:', formData);
+      logger.log('Adding club staff:', formData);
       
       const { data: userData, error: userError } = await supabase
         .from('profiles')
@@ -322,14 +323,14 @@ const StaffManagement = () => {
         .single();
 
       if (userError) {
-        console.error('User lookup error:', userError);
+        logger.error('User lookup error:', userError);
         toast.error('User not found', {
           description: 'This email address is not registered in the system.'
         });
         return;
       }
 
-      console.log('Found user:', userData);
+      logger.log('Found user:', userData);
 
       const { error: addError } = await supabase
         .from('user_clubs')
@@ -340,7 +341,7 @@ const StaffManagement = () => {
         });
 
       if (addError) {
-        console.error('Add staff error:', addError);
+        logger.error('Add staff error:', addError);
         if (addError.code === '23505') {
           toast.error('This user already has this role in the club');
         } else {
@@ -353,7 +354,7 @@ const StaffManagement = () => {
         setFormData({ name: '', email: '', phone: '', role: '' });
       }
     } catch (error: any) {
-      console.error('Error in handleAddClubStaff:', error);
+      logger.error('Error in handleAddClubStaff:', error);
       toast.error('Failed to add staff member', {
         description: error.message
       });
@@ -362,7 +363,7 @@ const StaffManagement = () => {
 
   const handleRemoveTeamStaff = async (staffId: string) => {
     try {
-      console.log('Removing team staff:', staffId);
+      logger.log('Removing team staff:', staffId);
       
       // First try to remove from team_staff table
       const { error: teamStaffError } = await supabase
@@ -385,7 +386,7 @@ const StaffManagement = () => {
       toast.success('Staff member removed successfully');
       fetchTeamStaff(selectedTeam);
     } catch (error: any) {
-      console.error('Error in handleRemoveTeamStaff:', error);
+      logger.error('Error in handleRemoveTeamStaff:', error);
       toast.error('Failed to remove staff member', {
         description: error.message
       });
@@ -394,7 +395,7 @@ const StaffManagement = () => {
 
   const handleRemoveClubStaff = async (userId: string, role: UserRole) => {
     try {
-      console.log('Removing club staff:', { userId, role, selectedClub });
+      logger.log('Removing club staff:', { userId, role, selectedClub });
       
       const { error } = await supabase
         .from('user_clubs')
@@ -404,14 +405,14 @@ const StaffManagement = () => {
         .eq('role', role);
 
       if (error) {
-        console.error('Remove staff error:', error);
+        logger.error('Remove staff error:', error);
         throw error;
       }
 
       toast.success('Staff member removed successfully');
       fetchClubStaff(selectedClub);
     } catch (error: any) {
-      console.error('Error in handleRemoveClubStaff:', error);
+      logger.error('Error in handleRemoveClubStaff:', error);
       toast.error('Failed to remove staff member', {
         description: error.message
       });

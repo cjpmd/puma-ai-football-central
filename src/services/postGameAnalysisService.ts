@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PerformanceAnalysis {
@@ -191,7 +192,7 @@ export class PostGameAnalysisService {
         .slice(0, maxRecommendations);
 
     } catch (error) {
-      console.error('Error getting drill recommendations:', error);
+      logger.error('Error getting drill recommendations:', error);
       return [];
     }
   }

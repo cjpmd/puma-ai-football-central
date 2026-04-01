@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AvailablePlayer } from './useAvailabilityBasedSquad';
@@ -15,7 +16,7 @@ export const useSquadStateRecovery = (teamId: string, eventId: string, teamNumbe
       }
 
       try {
-        console.log(`[Squad Recovery] Starting for team ${teamId}, event ${eventId}, team number ${teamNumber}`);
+        logger.log(`[Squad Recovery] Starting for team ${teamId}, event ${eventId}, team number ${teamNumber}`);
         
         // Get existing squad assignments from team_squads table with team number filtering
         const { data: squadAssignments, error: squadError } = await supabase
@@ -26,13 +27,13 @@ export const useSquadStateRecovery = (teamId: string, eventId: string, teamNumbe
           .eq('team_number', teamNumber || 1);
 
         if (squadError) {
-          console.error('[Squad Recovery] Error fetching squad assignments:', squadError);
+          logger.error('[Squad Recovery] Error fetching squad assignments:', squadError);
           setIsRecovering(false);
           return;
         }
 
         if (!squadAssignments || squadAssignments.length === 0) {
-          console.log('[Squad Recovery] No existing squad assignments found');
+          logger.log('[Squad Recovery] No existing squad assignments found');
           setRecoveredSquadPlayers([]);
           setIsRecovering(false);
           return;
@@ -47,7 +48,7 @@ export const useSquadStateRecovery = (teamId: string, eventId: string, teamNumbe
           .eq('status', 'active');
 
         if (playersError) {
-          console.error('[Squad Recovery] Error fetching player details:', playersError);
+          logger.error('[Squad Recovery] Error fetching player details:', playersError);
           setIsRecovering(false);
           return;
         }
@@ -66,11 +67,11 @@ export const useSquadStateRecovery = (teamId: string, eventId: string, teamNumbe
           };
         }).filter(player => player.availabilityStatus !== 'unavailable'); // Remove unavailable players from squad
 
-        console.log(`[Squad Recovery] Recovered ${recoveredPlayers.length} squad players:`, recoveredPlayers);
+        logger.log(`[Squad Recovery] Recovered ${recoveredPlayers.length} squad players:`, recoveredPlayers);
         setRecoveredSquadPlayers(recoveredPlayers);
         
       } catch (error) {
-        console.error('[Squad Recovery] Unexpected error:', error);
+        logger.error('[Squad Recovery] Unexpected error:', error);
       } finally {
         setIsRecovering(false);
       }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -152,7 +153,7 @@ export const AITrainingBuilderDialog = ({
       setPreview(data);
       toast.success('Training session generated!');
     } catch (error) {
-      console.error('Error generating session:', error);
+      logger.error('Error generating session:', error);
       toast.error('Failed to generate training session');
     } finally {
       setLoading(false);

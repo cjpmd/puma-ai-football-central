@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -124,7 +125,7 @@ export const CoachPlanCreator: React.FC<CoachPlanCreatorProps> = ({
       });
       
     } catch (error) {
-      console.error('Error creating plans:', error);
+      logger.error('Error creating plans:', error);
       toast.error('Failed to create training plans');
     } finally {
       setLoading(false);

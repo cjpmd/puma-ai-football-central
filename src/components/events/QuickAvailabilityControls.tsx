@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -80,7 +81,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
         .single();
 
       if (profileError) {
-        console.error('Error loading profile:', profileError);
+        logger.error('Error loading profile:', profileError);
         return;
       }
 
@@ -93,13 +94,13 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
         .maybeSingle();
 
       if (playerError) {
-        console.log('No player record found for user:', user.id);
+        logger.log('No player record found for user:', user.id);
       } else if (playerData) {
         // Cache the player_id for availability lookups
         setCachedPlayerId(playerData.player_id);
         if (playerData.players) {
           linkedPlayerData = playerData.players;
-          console.log('Found linked player for user:', user.id, 'player:', linkedPlayerData.name, 'playerId:', playerData.player_id);
+          logger.log('Found linked player for user:', user.id, 'player:', linkedPlayerData.name, 'playerId:', playerData.player_id);
         }
       }
 
@@ -110,14 +111,14 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
           photoUrl: undefined, // Will be set per role in rendering
           linkedPlayer: linkedPlayerData
         });
-        console.log('QuickControls - Set user profile:', {
+        logger.log('QuickControls - Set user profile:', {
           id: profileData.id,
           name: profileData.name,
           hasLinkedPlayer: !!linkedPlayerData
         });
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
+      logger.error('Error loading user profile:', error);
     }
   };
 
@@ -168,7 +169,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
       setInvitedRoleSources(invited);
     } catch (error) {
-      console.error('Error loading invited role sources:', error);
+      logger.error('Error loading invited role sources:', error);
       setInvitedRoleSources(new Set());
     }
   };
@@ -185,7 +186,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
       onStatusChange?.(status);
       toast.success(`${role} availability set to ${status}`);
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       toast.error('Failed to update availability');
     } finally {
       setIsUpdating(false);

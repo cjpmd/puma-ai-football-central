@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,7 +71,7 @@ export function IndividualTrainingDashboard({ userId, userPlayers = [] }: Indivi
       setPlanToDelete(null);
     },
     onError: (error) => {
-      console.error('Error deleting plan:', error);
+      logger.error('Error deleting plan:', error);
       toast.error('Failed to delete training plan');
     },
   });

@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { logger } from '@/lib/logger';
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
 import { registerRoute } from 'workbox-routing';
@@ -45,7 +46,7 @@ registerRoute(
 
 // Handle push events - iOS-compatible simplified handler
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received');
+  logger.log('[SW] Push event received');
   
   let title = 'Puma-AI';
   let body = 'You have a new notification';
@@ -54,7 +55,7 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW] Push payload received');
+      logger.log('[SW] Push payload received');
       title = payload.title || title;
       body = payload.body || body;
       notificationData = payload.data || {};
@@ -74,7 +75,7 @@ self.addEventListener('push', (event) => {
     data: notificationData
   };
   
-  console.log('[SW] Showing notification:', title);
+  logger.log('[SW] Showing notification:', title);
   
   event.waitUntil(
     self.registration.showNotification(title, options)
@@ -83,7 +84,7 @@ self.addEventListener('push', (event) => {
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification click:', event.action, event.notification.data);
+  logger.log('[SW] Notification click:', event.action, event.notification.data);
   
   event.notification.close();
   
@@ -120,7 +121,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // Handle notification close
 self.addEventListener('notificationclose', (event) => {
-  console.log('[SW] Notification closed');
+  logger.log('[SW] Notification closed');
 });
 
-console.log('[SW] Service worker loaded with push notification support');
+logger.log('[SW] Service worker loaded with push notification support');

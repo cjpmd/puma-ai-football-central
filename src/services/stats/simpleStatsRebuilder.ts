@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -13,51 +14,51 @@ export const simpleStatsRebuilder = {
    * Complete rebuild with the simplest possible approach
    */
   async rebuildAllStats(): Promise<void> {
-    console.log('🔄 Starting SIMPLE stats rebuild - direct copy from team selections');
+    logger.log('🔄 Starting SIMPLE stats rebuild - direct copy from team selections');
     
     try {
       // Step 1: Clear all existing stats
-      console.log('Step 1: Clearing all existing event_player_stats...');
+      logger.log('Step 1: Clearing all existing event_player_stats...');
       const { error: clearError } = await supabase
         .from('event_player_stats')
         .delete()
         .gte('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
       
       if (clearError) {
-        console.error('Error clearing stats:', clearError);
+        logger.error('Error clearing stats:', clearError);
         throw clearError;
       }
       
-      console.log('✅ Cleared all existing stats');
+      logger.log('✅ Cleared all existing stats');
 
       // Step 2: Get all event selections
-      console.log('Step 2: Getting all event selections...');
+      logger.log('Step 2: Getting all event selections...');
       const { data: selections, error: selectionsError } = await supabase
         .from('event_selections')
         .select('*');
       
       if (selectionsError) {
-        console.error('Error fetching selections:', selectionsError);
+        logger.error('Error fetching selections:', selectionsError);
         throw selectionsError;
       }
 
       if (!selections || selections.length === 0) {
-        console.log('No event selections found');
+        logger.log('No event selections found');
         return;
       }
 
-      console.log(`Found ${selections.length} event selections to process`);
+      logger.log(`Found ${selections.length} event selections to process`);
 
       // Step 3: Process each selection and create stats records
       let totalRecordsCreated = 0;
       
       for (const selection of selections) {
-        console.log(`Processing selection for event ${selection.event_id}`);
+        logger.log(`Processing selection for event ${selection.event_id}`);
         
         const playerPositions = selection.player_positions as any[];
         
         if (!playerPositions || playerPositions.length === 0) {
-          console.log(`No players in selection ${selection.id}`);
+          logger.log(`No players in selection ${selection.id}`);
           continue;
         }
 
@@ -70,7 +71,7 @@ export const simpleStatsRebuilder = {
           const isCaptain = playerId === selection.captain_id;
 
           if (!playerId || !position) {
-            console.log('Skipping player with missing ID or position:', playerPos);
+            logger.log('Skipping player with missing ID or position:', playerPos);
             continue;
           }
 
@@ -91,33 +92,33 @@ export const simpleStatsRebuilder = {
             });
 
           if (insertError) {
-            console.error('Error inserting stat:', insertError);
+            logger.error('Error inserting stat:', insertError);
             continue; // Continue with other players
           }
 
           totalRecordsCreated++;
           
           // Log for verification
-          console.log(`✅ Created stat: Player ${playerId}, Position "${position}", Minutes ${minutes}`);
+          logger.log(`✅ Created stat: Player ${playerId}, Position "${position}", Minutes ${minutes}`);
         }
       }
 
-      console.log(`🎉 Successfully created ${totalRecordsCreated} stat records`);
+      logger.log(`🎉 Successfully created ${totalRecordsCreated} stat records`);
 
       // Step 4: Update player match stats using existing function
-      console.log('Step 4: Updating player match statistics...');
+      logger.log('Step 4: Updating player match statistics...');
       const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
       
       if (updateError) {
-        console.error('Error updating match stats:', updateError);
+        logger.error('Error updating match stats:', updateError);
         throw updateError;
       }
       
-      console.log('✅ Successfully updated all player match statistics');
-      console.log('🎉 SIMPLE REBUILD COMPLETED SUCCESSFULLY');
+      logger.log('✅ Successfully updated all player match statistics');
+      logger.log('🎉 SIMPLE REBUILD COMPLETED SUCCESSFULLY');
       
     } catch (error) {
-      console.error('❌ Error in simple rebuild:', error);
+      logger.error('❌ Error in simple rebuild:', error);
       throw error;
     }
   }

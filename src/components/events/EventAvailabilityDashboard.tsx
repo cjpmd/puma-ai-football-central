@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ export const EventAvailabilityDashboard: React.FC<EventAvailabilityDashboardProp
       const data = await availabilityService.getEventAvailability(event.id);
       setAvailabilities(data as AvailabilityWithProfile[]);
     } catch (error) {
-      console.error('Error loading availabilities:', error);
+      logger.error('Error loading availabilities:', error);
       toast.error('Failed to load availability data');
     } finally {
       setLoading(false);
@@ -57,7 +58,7 @@ export const EventAvailabilityDashboard: React.FC<EventAvailabilityDashboardProp
       toast.success('Availability notifications sent successfully');
       loadAvailabilities();
     } catch (error) {
-      console.error('Error sending notifications:', error);
+      logger.error('Error sending notifications:', error);
       toast.error('Failed to send notifications');
     } finally {
       setSendingNotifications(false);
@@ -80,7 +81,7 @@ export const EventAvailabilityDashboard: React.FC<EventAvailabilityDashboardProp
       toast.success('Test availability record created');
       loadAvailabilities();
     } catch (error) {
-      console.error('Error creating test record:', error);
+      logger.error('Error creating test record:', error);
       toast.error('Failed to create test record');
     }
   };

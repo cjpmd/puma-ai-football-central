@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { Capacitor } from '@capacitor/core';
 import { pushNotificationService } from './pushNotificationService';
 import { webPushService } from './webPushService';
@@ -71,13 +72,13 @@ export const unifiedNotificationService = {
   async initialize(): Promise<boolean> {
     const platform = this.detectPlatform();
     
-    console.log(`Initializing notifications for platform: ${platform}`);
+    logger.log(`Initializing notifications for platform: ${platform}`);
     
     if (platform === 'capacitor') {
       try {
         return await pushNotificationService.initializePushNotifications();
       } catch (error) {
-        console.error('Failed to initialize Capacitor push notifications:', error);
+        logger.error('Failed to initialize Capacitor push notifications:', error);
         return false;
       }
     }
@@ -86,12 +87,12 @@ export const unifiedNotificationService = {
       try {
         return await webPushService.initializeWebPush();
       } catch (error) {
-        console.error('Failed to initialize Web Push notifications:', error);
+        logger.error('Failed to initialize Web Push notifications:', error);
         return false;
       }
     }
     
-    console.log('No notification platform available');
+    logger.log('No notification platform available');
     return false;
   },
 
@@ -116,7 +117,7 @@ export const unifiedNotificationService = {
     if (platform === 'capacitor') {
       // The Capacitor push service doesn't have a direct test method,
       // but we can use the availability notification as a workaround
-      console.log('Test notification for Capacitor - use Edge Function directly');
+      logger.log('Test notification for Capacitor - use Edge Function directly');
       return webPushService.sendTestNotification(); // Uses the same Edge Function
     }
     

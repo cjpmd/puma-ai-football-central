@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,7 +54,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           setAvailabilityHistory(data);
         })
         .catch((error) => {
-          console.error('Error loading availability history:', error);
+          logger.error('Error loading availability history:', error);
           setAvailabilityHistory([]);
         })
         .finally(() => {

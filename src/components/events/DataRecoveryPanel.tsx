@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,7 +39,7 @@ export const DataRecoveryPanel: React.FC = () => {
         toast.error('No event found with that title');
       }
     } catch (error) {
-      console.error('Search error:', error);
+      logger.error('Search error:', error);
       toast.error('Error searching for event data');
     } finally {
       setLoading(false);
@@ -56,7 +57,7 @@ export const DataRecoveryPanel: React.FC = () => {
       await restoreEventSelections(searchResults.event.id, searchResults.selections);
       toast.success('Event selections restored successfully!');
     } catch (error) {
-      console.error('Restore error:', error);
+      logger.error('Restore error:', error);
       toast.error('Error restoring event selections');
     } finally {
       setLoading(false);
@@ -76,7 +77,7 @@ export const DataRecoveryPanel: React.FC = () => {
       // Refresh the search to show updated data
       handleComprehensiveSearch();
     } catch (error) {
-      console.error('Template restore error:', error);
+      logger.error('Template restore error:', error);
       toast.error('Error creating selection from template');
     } finally {
       setLoading(false);
@@ -100,7 +101,7 @@ export const DataRecoveryPanel: React.FC = () => {
       }, 1000);
       
     } catch (error) {
-      console.error('Recovery from stats error:', error);
+      logger.error('Recovery from stats error:', error);
       toast.error(`Failed to recover from stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);

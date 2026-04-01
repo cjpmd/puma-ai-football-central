@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useEffect, useState } from 'react';
 import { Thermometer, Wind, Droplets } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,7 +40,7 @@ export const EventWeatherDisplay: React.FC<EventWeatherDisplayProps> = ({
         });
         
         if (error) {
-          console.error('Weather fetch error:', error);
+          logger.error('Weather fetch error:', error);
           setError('Weather not available');
           return;
         }
@@ -50,7 +51,7 @@ export const EventWeatherDisplay: React.FC<EventWeatherDisplayProps> = ({
           setError(data?.error || 'Weather not available');
         }
       } catch (err) {
-        console.error('Weather fetch error:', err);
+        logger.error('Weather fetch error:', err);
         setError('Failed to load weather');
       } finally {
         setLoading(false);

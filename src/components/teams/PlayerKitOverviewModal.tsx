@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,7 +84,7 @@ export const PlayerKitOverviewModal: React.FC<PlayerKitOverviewModalProps> = ({
       setPlayers(transformedPlayers);
       setKitItems(kitItemsData || []);
     } catch (error: any) {
-      console.error('Error loading kit overview data:', error);
+      logger.error('Error loading kit overview data:', error);
       setPlayers([]);
       setKitItems([]);
     } finally {

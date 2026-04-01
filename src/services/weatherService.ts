@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 interface WeatherData {
@@ -18,20 +19,20 @@ export class WeatherService {
       });
 
       if (error) {
-        console.error('Weather API error:', error);
+        logger.error('Weather API error:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error fetching weather data:', error);
+      logger.error('Error fetching weather data:', error);
       return null;
     }
   }
 
   static async getWeatherForecast(lat: number, lng: number, eventDate: string): Promise<WeatherData | null> {
     try {
-      console.log('Fetching weather forecast for:', { lat, lng, eventDate });
+      logger.log('Fetching weather forecast for:', { lat, lng, eventDate });
       
       const { data, error } = await supabase.functions.invoke('weather-data', {
         body: { 
@@ -42,14 +43,14 @@ export class WeatherService {
       });
 
       if (error) {
-        console.error('Weather forecast API error:', error);
+        logger.error('Weather forecast API error:', error);
         return null;
       }
 
-      console.log('Weather forecast data received:', data);
+      logger.log('Weather forecast data received:', data);
       return data;
     } catch (error) {
-      console.error('Error fetching weather forecast:', error);
+      logger.error('Error fetching weather forecast:', error);
       return null;
     }
   }
@@ -59,10 +60,10 @@ export class WeatherService {
     try {
       // This would typically use Google Geocoding API or similar
       // For now, return null as this would require additional API setup
-      console.log('Postcode geocoding not implemented yet:', postcode);
+      logger.log('Postcode geocoding not implemented yet:', postcode);
       return null;
     } catch (error) {
-      console.error('Error converting postcode to coordinates:', error);
+      logger.error('Error converting postcode to coordinates:', error);
       return null;
     }
   }

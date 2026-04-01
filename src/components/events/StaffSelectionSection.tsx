@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -65,7 +66,7 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
 
       setStaff(transformedStaff);
     } catch (error) {
-      console.error('Error loading team staff:', error);
+      logger.error('Error loading team staff:', error);
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,7 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
           const staffStatus = statuses.find(s => s.role === 'staff');
           availability[staffMember.id] = staffStatus?.status || 'pending';
         } catch (error) {
-          console.error('Error loading availability for staff:', staffMember.name, error);
+          logger.error('Error loading availability for staff:', staffMember.name, error);
           availability[staffMember.id] = 'pending';
         }
       } else {
@@ -113,7 +114,7 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
           );
           await loadStaffAvailability();
         } catch (error) {
-          console.error('Error creating staff availability record:', error);
+          logger.error('Error creating staff availability record:', error);
         }
       }
     }
