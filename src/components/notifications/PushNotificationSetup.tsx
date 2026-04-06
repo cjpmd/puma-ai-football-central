@@ -122,8 +122,8 @@ export const PushNotificationSetup: React.FC = () => {
                 <span className="text-sm">Push notifications are enabled</span>
               </div>
               {isIOS && platform === 'web-push' && (
-                <div className="rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-xs text-amber-800 dark:text-amber-200">
-                  <strong>iOS Note:</strong> Push notifications on iOS work best when the app is open. 
+                <div className="rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-sm text-amber-800 dark:text-amber-200">
+                  <strong>iOS Note:</strong> Push notifications on iOS work best when the app is open.
                   Background notifications may be delayed or not delivered due to iOS limitations.
                 </div>
               )}
@@ -173,7 +173,7 @@ export const PushNotificationSetup: React.FC = () => {
                 )}
               </Button>
               {isIOS && platform === 'web-push' && (
-                <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-sm text-blue-800 dark:text-blue-200 space-y-1">
                   <p><strong>iOS Requirements:</strong></p>
                   <ul className="list-disc list-inside space-y-0.5">
                     <li>iOS 16.4 or later required</li>
@@ -184,7 +184,7 @@ export const PushNotificationSetup: React.FC = () => {
               )}
               <div className="flex items-center justify-between">
                 {platform === 'web-push' && !isIOS && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Enable browser notifications to receive event availability requests.
                   </p>
                 )}

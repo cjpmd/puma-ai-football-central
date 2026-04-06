@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,99 +72,115 @@ export const EnhancedDashboardContent = () => {
     loadLiveData();
   };
 
-  useEffect(() => {
-    loadLiveData();
-  }, [allTeams, connectedPlayers]);
-
-  const loadLiveData = async () => {
+  // Wrap in useCallback so loadLiveData is stable across renders and
+  // the useEffect dependency array is correct.
+  const loadLiveData = useCallback(async () => {
     if (!user) return;
+
+    // Clear stale data immediately so we never show data from the previous team
+    setStats({
+      playersCount: 0,
+      eventsCount: 0,
+      upcomingEvents: [],
+      recentResults: [],
+      pendingAvailability: [],
+    });
+    setLoading(true);
 
     try {
       const teamsToUse = allTeams?.length ? allTeams : (teams || []);
       logger.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })));
-      
+
       if (!teamsToUse.length) {
         logger.log('No teams available for loading data');
         setLoading(false);
         return;
       }
-      
+
       const teamIds = teamsToUse.map(team => team.id);
+      const today = new Date().toISOString().split('T')[0];
       logger.log('Team IDs for queries:', teamIds);
-      
-      // Load players count from all connected teams
-      const { count: playersCount } = await supabase
-        .from('players')
-        .select('*', { count: 'exact', head: true })
-        .in('team_id', teamIds);
 
-      // Load upcoming events count from all teams
-      const { count: eventsCount } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .in('team_id', teamIds)
-        .gte('date', new Date().toISOString().split('T')[0]);
+      // ── Run independent queries in parallel ──────────────────────────
+      const [
+        { count: playersCount },
+        { count: eventsCount },
+        { data: upcomingEventsData, error: upcomingError },
+        { data: recentResultsData, error: recentError },
+      ] = await Promise.all([
+        // Players count
+        supabase
+          .from('players')
+          .select('id', { count: 'exact', head: true })
+          .in('team_id', teamIds)
+          .eq('status', 'active'),
 
-      // Load upcoming events details with team information
-      const { data: upcomingEventsData, error: upcomingError } = await supabase
-        .from('events')
-        .select(`
-          *,
-          teams!inner(
-            id, name, logo_url, kit_designs, club_id,
-            clubs!teams_club_id_fkey(name, logo_url)
-          )
-        `)
-        .in('team_id', teamIds)
-        .gte('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: true })
-        .limit(5);
+        // Upcoming events count
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .in('team_id', teamIds)
+          .gte('date', today),
 
-      if (upcomingError) {
-        logger.error('Error loading upcoming events:', upcomingError);
-      }
+        // Upcoming event details
+        supabase
+          .from('events')
+          .select(`
+            id, title, date, start_time, end_time, type, event_type,
+            opponent, location, scores, team_id,
+            teams!inner(
+              id, name, logo_url, club_id,
+              clubs!teams_club_id_fkey(name, logo_url)
+            )
+          `)
+          .in('team_id', teamIds)
+          .gte('date', today)
+          .order('date', { ascending: true })
+          .limit(5),
+
+        // Recent completed events with scores
+        supabase
+          .from('events')
+          .select(`
+            id, title, date, type, event_type, opponent, scores, team_id,
+            teams!inner(
+              id, name, logo_url, club_id,
+              clubs!teams_club_id_fkey(name, logo_url)
+            )
+          `)
+          .in('team_id', teamIds)
+          .lt('date', today)
+          .not('scores', 'is', null)
+          .order('date', { ascending: false })
+          .limit(10),
+      ]);
+
+      if (upcomingError) logger.error('Error loading upcoming events:', upcomingError);
+      if (recentError)   logger.error('Error loading recent results:', recentError);
 
       const upcomingEvents = upcomingEventsData?.map(event => ({
         ...event,
         team_context: {
-          name: event.teams.name,
-          logo_url: event.teams.logo_url,
-          club_name: event.teams.clubs?.name,
-          club_logo_url: event.teams.clubs?.logo_url
-        }
+          name: (event.teams as any).name,
+          logo_url: (event.teams as any).logo_url,
+          club_name: (event.teams as any).clubs?.name,
+          club_logo_url: (event.teams as any).clubs?.logo_url,
+        },
       })) || [];
 
-      // Load recent completed events with results
-      const { data: recentResultsData, error: recentError } = await supabase
-        .from('events')
-        .select(`
-          *,
-          teams!inner(
-            id, name, logo_url, kit_designs, club_id,
-            clubs!teams_club_id_fkey(name, logo_url)
-          )
-        `)
-        .in('team_id', teamIds)
-        .lt('date', new Date().toISOString().split('T')[0])
-        .not('scores', 'is', null)
-        .order('date', { ascending: false })
-        .limit(10);
-
-      if (recentError) {
-        logger.error('Error loading recent results:', recentError);
-      }
-
-      // Fetch performance categories for these events
+      // Fetch performance categories only once we know which event IDs we need
       const eventIdsForCategories = recentResultsData?.map(e => e.id) || [];
-      const { data: eventSelectionsData } = await supabase
-        .from('event_selections')
-        .select(`
-          event_id,
-          team_number,
-          performance_category_id,
-          performance_categories(name)
-        `)
-        .in('event_id', eventIdsForCategories);
+      const { data: eventSelectionsData } = eventIdsForCategories.length
+        ? await supabase
+            .from('event_selections')
+            .select(`
+              event_id,
+              team_number,
+              performance_category_id,
+              performance_categories(name)
+            `)
+            .in('event_id', eventIdsForCategories)
+        : { data: [] };
 
       // Create a lookup map for performance categories by event_id and team_number
       const categoryMap: Record<string, Record<number, string>> = {};
@@ -184,10 +200,10 @@ export const EnhancedDashboardContent = () => {
         const scores = event.scores as any;
         const eventCategories = categoryMap[event.id] || {};
         const teamContext = {
-          name: event.teams.name,
-          logo_url: event.teams.logo_url,
-          club_name: event.teams.clubs?.name,
-          club_logo_url: event.teams.clubs?.logo_url
+          name: (event.teams as any).name,
+          logo_url: (event.teams as any).logo_url,
+          club_name: (event.teams as any).clubs?.name,
+          club_logo_url: (event.teams as any).clubs?.logo_url,
         };
 
         // Check for multi-team format (team_1, team_2, etc.)
@@ -275,15 +291,21 @@ export const EnhancedDashboardContent = () => {
         pendingAvailability: pendingAvailabilityData
       });
     } catch (error: any) {
+      logger.error('Dashboard loadLiveData error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load dashboard data',
+        description: 'Failed to load dashboard data. Please try refreshing.',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, allTeams, teams, connectedPlayers]);
+
+  useEffect(() => {
+    loadLiveData();
+  }, [loadLiveData]);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);

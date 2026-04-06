@@ -11,6 +11,7 @@ import { useAvailabilityBasedSquad } from '@/hooks/useAvailabilityBasedSquad';
 import { toast } from 'sonner';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { SquadPlayer } from '@/types/teamSelection';
+import { NameDisplayOption } from '@/types/team';
 
 interface AvailabilityDrivenSquadManagementProps {
   teamId: string;
@@ -22,6 +23,7 @@ interface AvailabilityDrivenSquadManagementProps {
   currentTeamIndex?: number;
   initialSquadPlayers?: SquadPlayer[];
   eventType?: string;
+  nameDisplayOption?: NameDisplayOption;
 }
 
 export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquadManagementProps> = ({
@@ -33,6 +35,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   allTeamSelections = [],
   currentTeamIndex = 0,
   eventType,
+  nameDisplayOption = 'fullName',
 }) => {
   const {
     availablePlayers,
@@ -270,7 +273,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className="font-medium text-xs sm:text-sm truncate">{player.name}</span>
+                          <span className="font-medium text-xs sm:text-sm truncate">{formatPlayerName(player.name, nameDisplayOption)}</span>
                           <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
                           {!isTrainingEvent && player.id === localCaptainId && (
                             <Badge className="bg-yellow-500 text-white text-[10px] px-1 h-4">
@@ -349,7 +352,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1 flex-wrap">
-                        <span className="font-medium text-xs sm:text-sm truncate">{player.name}</span>
+                        <span className="font-medium text-xs sm:text-sm truncate">{formatPlayerName(player.name, nameDisplayOption)}</span>
                         <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
                         {isPlayerInOtherTeams(player.id) && (
                           <Badge variant="outline" className="text-blue-600 border-blue-600 text-[10px] px-1 h-4">

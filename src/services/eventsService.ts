@@ -212,11 +212,11 @@ export const eventsService = {
       await supabase.from('event_teams').insert(eventTeams);
     }
     
-    // Create invitations for each event
+    // Create invitations for all recurring events in parallel
     if (invitations && data) {
-      for (const event of data) {
-        await this.createEventInvitations(event.id, eventData.teamId!, invitations);
-      }
+      await Promise.all(
+        data.map(event => this.createEventInvitations(event.id, eventData.teamId!, invitations))
+      );
     }
     
     return { ...data[0], createdCount: data.length };
@@ -635,7 +635,7 @@ export const eventsService = {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('id, title, date, start_time, end_time, type, event_type, team_id, opponent, location, scores, status, home_score, away_score, kit_selection, coach_notes, staff_notes, training_notes, recurring_group_id, created_at, updated_at')
         .eq('id', eventId)
         .single();
         

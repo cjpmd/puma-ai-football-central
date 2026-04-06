@@ -189,21 +189,27 @@ export class TrainingRecommendationService {
   }
 
   private async fetchDrillLibrary(difficulty?: string): Promise<Drill[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+
     let query = supabase
       .from('drills')
       .select(`
-        *,
+        id, name, description, duration_minutes, difficulty_level, is_public, created_by,
         drill_tag_assignments(
-          drill_tags(*)
+          drill_tags(id, name, color)
         )
       `)
-      .or('is_public.eq.true,created_by.eq.' + (await supabase.auth.getUser()).data.user?.id);
+      .or(`is_public.eq.true,created_by.eq.${user?.id ?? 'none'}`);
 
     if (difficulty && difficulty !== 'all') {
       query = query.eq('difficulty_level', difficulty);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    // Cap at 200 drills — scoring is client-side so fetching the full library is fine
+    // up to this limit; beyond that we'd need server-side relevance ranking.
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(200);
     
     if (error) throw error;
 

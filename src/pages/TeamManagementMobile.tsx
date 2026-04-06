@@ -48,29 +48,44 @@ export default function TeamManagementMobile() {
       
       const teamIds = clubTeams.map(t => t.id);
       
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          age_group,
-          logo_url,
-          season_start,
-          season_end,
-          players(count)
-        `)
-        .in('id', teamIds)
-        .order('name');
+      const today = new Date().toISOString().split('T')[0];
+
+      const [{ data, error }, { data: upcomingData }] = await Promise.all([
+        supabase
+          .from('teams')
+          .select(`
+            id,
+            name,
+            age_group,
+            logo_url,
+            season_start,
+            season_end,
+            players(count)
+          `)
+          .in('id', teamIds)
+          .order('name'),
+        supabase
+          .from('events')
+          .select('team_id')
+          .in('team_id', teamIds)
+          .gte('date', today)
+      ]);
 
       if (error) throw error;
-      
+
+      // Count upcoming events per team
+      const upcomingCountByTeam: Record<string, number> = {};
+      (upcomingData || []).forEach((e: any) => {
+        upcomingCountByTeam[e.team_id] = (upcomingCountByTeam[e.team_id] || 0) + 1;
+      });
+
       const transformedTeams: Team[] = (data || []).map((team: any) => ({
         id: team.id,
         name: team.name,
         age_group: team.age_group || 'Unknown',
         logo_url: team.logo_url,
         player_count: team.players?.[0]?.count || 0,
-        upcoming_events: 0, // TODO: Calculate from events
+        upcoming_events: upcomingCountByTeam[team.id] || 0,
         season_start: team.season_start,
         season_end: team.season_end
       }));
