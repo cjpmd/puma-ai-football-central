@@ -7,7 +7,9 @@ import { prepareImageForUpload, isHeicFormat, isSupportedImageFormat, formatFile
 const transformPlayer = (dbPlayer: Record<string, unknown>): Player | null => {
   if (!dbPlayer) return null;
   return {
-    ...dbPlayer,
+    id: dbPlayer.id as string,
+    name: dbPlayer.name as string,
+    team_id: dbPlayer.team_id as string,
     teamId: dbPlayer.team_id as string,
     squadNumber: dbPlayer.squad_number as number,
     dateOfBirth: dbPlayer.date_of_birth as string,
@@ -29,6 +31,9 @@ const transformPlayer = (dbPlayer: Record<string, unknown>): Player | null => {
     objectives: (dbPlayer.objectives as any) || [],
     comments: (dbPlayer.comments as any) || [],
     photoUrl: dbPlayer.photo_url as string,
+    position: dbPlayer.position as string,
+    squad_number: dbPlayer.squad_number as number,
+    photo_url: dbPlayer.photo_url as string,
   } as Player;
 };
 
