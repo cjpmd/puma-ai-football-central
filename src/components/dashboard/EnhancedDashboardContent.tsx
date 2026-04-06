@@ -126,7 +126,7 @@ export const EnhancedDashboardContent = () => {
         supabase
           .from('events')
           .select(`
-            id, title, date, start_time, end_time, type, event_type,
+            id, title, date, start_time, end_time, event_type,
             opponent, location, scores, team_id,
             teams!inner(
               id, name, logo_url, club_id,
@@ -142,7 +142,7 @@ export const EnhancedDashboardContent = () => {
         supabase
           .from('events')
           .select(`
-            id, title, date, type, event_type, opponent, scores, team_id,
+            id, title, date, event_type, opponent, scores, team_id,
             teams!inner(
               id, name, logo_url, club_id,
               clubs!teams_club_id_fkey(name, logo_url)

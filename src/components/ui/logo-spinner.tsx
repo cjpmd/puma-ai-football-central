@@ -16,15 +16,10 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
     lg: 'h-16 w-16'
   };
 
-  // Each path declares --d (stroke length) and an animation-delay via inline style.
-  // The keyframe cycles: invisible → draw in (0-40%) → hold (40-60%) → erase (60-100%) → repeat.
-  // All paths share the same 2 s period but have staggered phase offsets, so the
-  // draw "wave" propagates continuously from the outer boundary inward to the chin.
-
   return (
     <svg
       className={cn(sizeClasses[size], className)}
-      viewBox="0 0 100 96"
+      viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -38,7 +33,7 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
         .lp {
           fill: none;
           stroke: #00C440;
-          stroke-width: 2.2;
+          stroke-width: 2;
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-dasharray: var(--d);
@@ -46,80 +41,112 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
         }
       `}</style>
 
-      {/* 1. Outer silhouette — complete head boundary including both ear spikes */}
+      {/* Outer silhouette — head outline with ear tufts */}
       <path className="lp"
-        style={{ '--d': '340', animationDelay: '0s' } as React.CSSProperties}
-        d="M50,7 L69,13 L84,1 L93,22 L96,43 L95,58 L83,75 L67,89 L54,95 L50,96
-           L46,95 L33,89 L17,75 L5,58 L4,43 L7,22 L16,1 L31,13 Z"
+        style={{ '--d': '320', animationDelay: '0s' } as React.CSSProperties}
+        d="M50,8 L66,14 L82,2 L90,20 L94,40 L92,56 L82,72 L68,84 L56,92 L50,94
+           L44,92 L32,84 L18,72 L8,56 L6,40 L10,20 L18,2 L34,14 Z"
       />
 
-      {/* 2. Crown pentagon — top-of-skull facet between the two inner ear junctions */}
+      {/* Crown — top pentagon between ears */}
       <path className="lp"
-        style={{ '--d': '105', animationDelay: '0.1s' } as React.CSSProperties}
-        d="M31,13 L50,7 L69,13 L65,25 L35,25 Z"
+        style={{ '--d': '100', animationDelay: '0.1s' } as React.CSSProperties}
+        d="M34,14 L50,8 L66,14 L62,26 L38,26 Z"
       />
 
-      {/* 3 & 4. Outer forehead triangles — crown corner → outer-ear junction → brow outer */}
+      {/* Left ear triangle */}
       <path className="lp"
-        style={{ '--d': '62', animationDelay: '0.2s' } as React.CSSProperties}
-        d="M35,25 L7,22 L21,38"
-      />
-      <path className="lp"
-        style={{ '--d': '62', animationDelay: '0.2s' } as React.CSSProperties}
-        d="M65,25 L93,22 L79,38"
+        style={{ '--d': '55', animationDelay: '0.15s' } as React.CSSProperties}
+        d="M34,14 L18,2 L10,20"
       />
 
-      {/* 5 & 6. Inner forehead lines — crown corner → eye-inner vertex → nose-bridge top */}
+      {/* Right ear triangle */}
       <path className="lp"
-        style={{ '--d': '50', animationDelay: '0.3s' } as React.CSSProperties}
-        d="M35,25 L42,33 L50,28"
-      />
-      <path className="lp"
-        style={{ '--d': '50', animationDelay: '0.3s' } as React.CSSProperties}
-        d="M65,25 L58,33 L50,28"
+        style={{ '--d': '55', animationDelay: '0.15s' } as React.CSSProperties}
+        d="M66,14 L82,2 L90,20"
       />
 
-      {/* 7 & 8. Eye diamonds — four-vertex rhombus, one per side */}
+      {/* Left forehead facet — outer ear base to brow */}
       <path className="lp"
-        style={{ '--d': '74', animationDelay: '0.4s' } as React.CSSProperties}
-        d="M21,38 L32,28 L42,33 L32,47 Z"
-      />
-      <path className="lp"
-        style={{ '--d': '74', animationDelay: '0.4s' } as React.CSSProperties}
-        d="M79,38 L68,28 L58,33 L68,47 Z"
+        style={{ '--d': '50', animationDelay: '0.2s' } as React.CSSProperties}
+        d="M38,26 L10,20 L22,38"
       />
 
-      {/* 9. Nose-bridge diamond — vertical rhombus from brow ridge to muzzle centre */}
+      {/* Right forehead facet */}
       <path className="lp"
-        style={{ '--d': '90', animationDelay: '0.5s' } as React.CSSProperties}
-        d="M50,28 L44,52 L50,63 L56,52 Z"
+        style={{ '--d': '50', animationDelay: '0.2s' } as React.CSSProperties}
+        d="M62,26 L90,20 L78,38"
       />
 
-      {/* 10 & 11. Cheek diagonals — eye bottom → muzzle outer  +  eye inner → nose side */}
+      {/* Left inner forehead lines — crown to nose bridge */}
       <path className="lp"
-        style={{ '--d': '55', animationDelay: '0.6s' } as React.CSSProperties}
-        d="M32,47 L17,63 M42,33 L44,52"
-      />
-      <path className="lp"
-        style={{ '--d': '55', animationDelay: '0.6s' } as React.CSSProperties}
-        d="M68,47 L83,63 M58,33 L56,52"
+        style={{ '--d': '40', animationDelay: '0.3s' } as React.CSSProperties}
+        d="M38,26 L44,34 L50,28"
       />
 
-      {/* 12. Muzzle band — W-shaped line forming the whisker-pad top edges */}
+      {/* Right inner forehead lines */}
       <path className="lp"
-        style={{ '--d': '92', animationDelay: '0.7s' } as React.CSSProperties}
-        d="M17,63 L37,69 L44,63 L50,63 L56,63 L63,69 L83,63"
+        style={{ '--d': '40', animationDelay: '0.3s' } as React.CSSProperties}
+        d="M62,26 L56,34 L50,28"
       />
 
-      {/* 13. Lower face & chin — whisker-pad polygon, jaw drops, chin point */}
+      {/* Left eye diamond */}
       <path className="lp"
-        style={{ '--d': '135', animationDelay: '0.8s' } as React.CSSProperties}
-        d="M37,69 L33,82 L50,88 L67,82 L63,69
-           M33,82 L33,89
-           M67,82 L67,89
-           M50,88 L50,96
-           M17,63 L17,75
-           M83,63 L83,75"
+        style={{ '--d': '60', animationDelay: '0.4s' } as React.CSSProperties}
+        d="M22,38 L34,28 L44,34 L34,46 Z"
+      />
+
+      {/* Right eye diamond */}
+      <path className="lp"
+        style={{ '--d': '60', animationDelay: '0.4s' } as React.CSSProperties}
+        d="M78,38 L66,28 L56,34 L66,46 Z"
+      />
+
+      {/* Nose bridge diamond — vertical from brow to muzzle */}
+      <path className="lp"
+        style={{ '--d': '80', animationDelay: '0.5s' } as React.CSSProperties}
+        d="M50,28 L44,50 L50,60 L56,50 Z"
+      />
+
+      {/* Left cheek lines — eye to jaw + inner to nose */}
+      <path className="lp"
+        style={{ '--d': '48', animationDelay: '0.6s' } as React.CSSProperties}
+        d="M34,46 L18,62 M44,34 L44,50"
+      />
+
+      {/* Right cheek lines */}
+      <path className="lp"
+        style={{ '--d': '48', animationDelay: '0.6s' } as React.CSSProperties}
+        d="M66,46 L82,62 M56,34 L56,50"
+      />
+
+      {/* Left side face line */}
+      <path className="lp"
+        style={{ '--d': '35', animationDelay: '0.55s' } as React.CSSProperties}
+        d="M22,38 L8,56 L18,62"
+      />
+
+      {/* Right side face line */}
+      <path className="lp"
+        style={{ '--d': '35', animationDelay: '0.55s' } as React.CSSProperties}
+        d="M78,38 L92,56 L82,62"
+      />
+
+      {/* Muzzle W-band — whisker pad edges */}
+      <path className="lp"
+        style={{ '--d': '80', animationDelay: '0.7s' } as React.CSSProperties}
+        d="M18,62 L38,66 L44,60 L50,60 L56,60 L62,66 L82,62"
+      />
+
+      {/* Lower jaw & chin details */}
+      <path className="lp"
+        style={{ '--d': '120', animationDelay: '0.8s' } as React.CSSProperties}
+        d="M38,66 L34,78 L50,86 L66,78 L62,66
+           M34,78 L32,84
+           M66,78 L68,84
+           M50,86 L50,94
+           M18,62 L18,72
+           M82,62 L82,72"
       />
     </svg>
   );

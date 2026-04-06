@@ -8,28 +8,28 @@ const transformPlayer = (dbPlayer: Record<string, unknown>): Player | null => {
   if (!dbPlayer) return null;
   return {
     ...dbPlayer,
-    teamId: dbPlayer.team_id,
-    squadNumber: dbPlayer.squad_number,
-    dateOfBirth: dbPlayer.date_of_birth,
+    teamId: dbPlayer.team_id as string,
+    squadNumber: dbPlayer.squad_number as number,
+    dateOfBirth: dbPlayer.date_of_birth as string,
     subscriptionType: dbPlayer.subscription_type as 'full_squad' | 'training' | 'trialist',
     subscriptionStatus: dbPlayer.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
     kit_sizes: (dbPlayer.kit_sizes as any) || {},
-    kitSizes: (dbPlayer.kit_sizes as any) || {}, // backward compatibility
+    kitSizes: (dbPlayer.kit_sizes as any) || {},
     matchStats: (dbPlayer.match_stats as any) || {},
-    leaveDate: dbPlayer.leave_date,
-    leaveComments: dbPlayer.leave_comments,
-    cardDesignId: dbPlayer.card_design_id,
+    leaveDate: dbPlayer.leave_date as string,
+    leaveComments: dbPlayer.leave_comments as string,
+    cardDesignId: dbPlayer.card_design_id as string,
     funStats: (dbPlayer.fun_stats as Record<string, number>) || {},
-    playStyle: dbPlayer.play_style,
-    createdAt: dbPlayer.created_at,
-    updatedAt: dbPlayer.updated_at,
+    playStyle: dbPlayer.play_style as string,
+    createdAt: dbPlayer.created_at as string,
+    updatedAt: dbPlayer.updated_at as string,
     type: dbPlayer.type as 'goalkeeper' | 'outfield',
     availability: dbPlayer.availability as 'green' | 'amber' | 'red',
     attributes: (dbPlayer.attributes as any) || [],
     objectives: (dbPlayer.objectives as any) || [],
     comments: (dbPlayer.comments as any) || [],
-    photoUrl: dbPlayer.photo_url, // Added photo_url mapping
-  };
+    photoUrl: dbPlayer.photo_url as string,
+  } as Player;
 };
 
 export const playersService = {
@@ -139,7 +139,7 @@ export const playersService = {
 
     const { error } = await supabase
       .from('players')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString() } as any)
       .eq('id', id);
 
     if (error) {

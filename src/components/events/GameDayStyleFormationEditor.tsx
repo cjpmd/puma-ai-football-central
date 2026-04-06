@@ -602,6 +602,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                         positionIndex={index}
                         kitDesign={kitDesign}
                         goalkeeperKitDesign={goalkeeperKitDesign}
+                        nameDisplayOption={nameDisplayOption}
                       />
                     )}
                   </div>
