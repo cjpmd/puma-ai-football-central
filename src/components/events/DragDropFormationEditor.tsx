@@ -31,6 +31,7 @@ import { SubstituteBench } from './SubstituteBench';
 import { usePositionAbbreviations } from '@/hooks/usePositionAbbreviations';
 import { SquadPlayer, FormationPeriod, PositionSlot as PositionSlotType } from '@/types/teamSelection';
 import { getFormationsByFormat } from '@/utils/formationUtils';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface DragDropFormationEditorProps {
   squadPlayers: SquadPlayer[];
@@ -1029,7 +1030,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     
                     return (
                       <div key={playerId} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <span className="text-sm font-medium">{player.name}</span>
+                        <span className="text-sm font-medium">{formatPlayerName(player.name, nameDisplayOption)}</span>
                         <Badge variant="outline">{minutes}min</Badge>
                       </div>
                     );

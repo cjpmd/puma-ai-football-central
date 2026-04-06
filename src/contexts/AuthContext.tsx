@@ -260,11 +260,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select(`
           role,
           teams!fk_user_teams_team_id (
-            id, name, age_group, season_start, season_end, club_id, 
-            year_group_id, game_format, subscription_type, 
+            id, name, age_group, season_start, season_end, club_id,
+            year_group_id, game_format, subscription_type,
             performance_categories, kit_icons, logo_url, kit_designs,
             manager_name, manager_email, manager_phone, game_duration,
-            header_display_type, header_image_url, created_at, updated_at
+            header_display_type, header_image_url, name_display_option,
+            created_at, updated_at
           )
         `)
         .eq('user_id', userId);
@@ -310,6 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             gameDuration: item.teams.game_duration || 90,
             headerDisplayType: item.teams.header_display_type,
             headerImageUrl: item.teams.header_image_url,
+            nameDisplayOption: item.teams.name_display_option || 'surname',
             createdAt: item.teams.created_at,
             updatedAt: item.teams.updated_at,
             userRole: item.role, // Include user's role for this team
@@ -335,11 +337,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select(`
             club_id,
             teams (
-              id, name, age_group, season_start, season_end, club_id, 
-              year_group_id, game_format, subscription_type, 
+              id, name, age_group, season_start, season_end, club_id,
+              year_group_id, game_format, subscription_type,
               performance_categories, kit_icons, logo_url, kit_designs,
               manager_name, manager_email, manager_phone, game_duration,
-              header_display_type, header_image_url, created_at, updated_at
+              header_display_type, header_image_url, name_display_option,
+              created_at, updated_at
             )
           `)
           .in('club_id', clubIds);
@@ -371,6 +374,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               gameDuration: item.teams.game_duration || 90,
               headerDisplayType: item.teams.header_display_type,
               headerImageUrl: item.teams.header_image_url,
+              nameDisplayOption: item.teams.name_display_option || 'surname',
               createdAt: item.teams.created_at,
               updatedAt: item.teams.updated_at,
               userRole: 'club_member', // Mark as club-based access (no direct team role)

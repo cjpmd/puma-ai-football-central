@@ -227,6 +227,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
                 onPositionChange={handlePositionChange}
                 onCaptainChange={handleCaptainChange}
                 onPlayerRemove={handlePlayerRemove}
+                nameDisplayOption={currentTeam?.nameDisplayOption}
               />
             </div>
           ) : (
