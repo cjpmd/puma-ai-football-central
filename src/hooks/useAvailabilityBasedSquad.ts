@@ -143,56 +143,70 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       let playersWithAvailability = allPlayers;
       if (eventId) {
         try {
-          // Get availability for the event
-          const { data: eventAvailability, error: availabilityError } = await supabase
-            .from('event_availability')
-            .select('user_id, status, role')
-            .eq('event_id', eventId);
+          const playerIds = allPlayers.map(p => p.id);
+
+          // Run both lookups in parallel — they are independent of each other
+          const [
+            { data: eventAvailability, error: availabilityError },
+            { data: userPlayerRelationships, error: relationshipError },
+          ] = await Promise.all([
+            supabase
+              .from('event_availability')
+              .select('user_id, status, role')
+              .eq('event_id', eventId),
+            supabase
+              .from('user_players')
+              .select('user_id, player_id, relationship')
+              .in('player_id', playerIds),
+          ]);
 
           if (availabilityError) {
             logger.warn(`[${contextId}] Error loading event availability:`, availabilityError);
-          } else {
-            logger.log(`[${contextId}] Loaded event availability for ${eventAvailability?.length || 0} user records`);
-            
-            // Get user-player relationships for all players in this team
-            const playerIds = allPlayers.map(p => p.id);
-            const { data: userPlayerRelationships, error: relationshipError } = await supabase
-              .from('user_players')
-              .select('user_id, player_id, relationship')
-              .in('player_id', playerIds);
+          }
+          if (relationshipError) {
+            logger.warn(`[${contextId}] Error loading user-player relationships:`, relationshipError);
+          }
 
-            if (relationshipError) {
-              logger.warn(`[${contextId}] Error loading user-player relationships:`, relationshipError);
-            } else {
-              logger.log(`[${contextId}] Loaded ${userPlayerRelationships?.length || 0} user-player relationships`);
-              
-              // Map availability to players
-              playersWithAvailability = allPlayers.map(player => {
-                // Find user relationships for this player
-                const userRelationships = userPlayerRelationships?.filter(rel => rel.player_id === player.id) || [];
-                
-                // Find availability records for users connected to this player (only check 'player' role)
-                let availabilityStatus: 'available' | 'unavailable' | 'pending' = 'pending';
-                for (const relationship of userRelationships) {
-                  const userAvailability = eventAvailability?.find(a => 
-                    a.user_id === relationship.user_id && a.role === 'player'
-                  );
-                  if (userAvailability) {
-                    if (userAvailability.status === 'available') {
-                      availabilityStatus = 'available';
-                      break;
-                    } else if (userAvailability.status === 'unavailable') {
-                      availabilityStatus = 'unavailable';
-                    }
+          if (!availabilityError && !relationshipError) {
+            logger.log(`[${contextId}] Availability: ${eventAvailability?.length ?? 0} records, Relationships: ${userPlayerRelationships?.length ?? 0}`);
+
+            // Build a Map<playerId, relationship[]> for O(1) lookups instead of
+            // calling .filter() per player (which was O(n²))
+            const relsByPlayer = new Map<string, Array<{ user_id: string; player_id: string }>>();
+            userPlayerRelationships?.forEach(rel => {
+              const list = relsByPlayer.get(rel.player_id) ?? [];
+              list.push(rel);
+              relsByPlayer.set(rel.player_id, list);
+            });
+
+            // Build a Map<userId, availabilityRecord> for O(1) lookups
+            const availByUser = new Map<string, { status: string; role: string }>();
+            eventAvailability?.forEach(a => {
+              // Only store player-role availability; use first match per user
+              if (a.role === 'player' && !availByUser.has(a.user_id)) {
+                availByUser.set(a.user_id, a);
+              }
+            });
+
+            playersWithAvailability = allPlayers.map(player => {
+              const userRelationships = relsByPlayer.get(player.id) ?? [];
+              let availabilityStatus: 'available' | 'unavailable' | 'pending' = 'pending';
+
+              for (const rel of userRelationships) {
+                const userAvail = availByUser.get(rel.user_id);
+                if (userAvail) {
+                  if (userAvail.status === 'available') {
+                    availabilityStatus = 'available';
+                    break; // available wins — no need to check further
+                  } else if (userAvail.status === 'unavailable') {
+                    availabilityStatus = 'unavailable';
+                    // keep checking — another user linked to this player might be available
                   }
                 }
-                
-                return {
-                  ...player,
-                  availabilityStatus
-                };
-              });
-            }
+              }
+
+              return { ...player, availabilityStatus };
+            });
           }
         } catch (error) {
           logger.warn(`[${contextId}] Could not load availability data:`, error);

@@ -66,7 +66,7 @@ export const PWAInstallPrompt: React.FC = () => {
   }
 
   return (
-    <Card className="fixed bottom-20 left-4 right-4 z-50 shadow-lg border-primary/20 md:left-auto md:right-4 md:w-80">
+    <Card className="fixed bottom-24 left-4 right-4 z-50 shadow-lg border-primary/20 md:bottom-4 md:left-auto md:right-4 md:w-80">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

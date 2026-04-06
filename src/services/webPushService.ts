@@ -2,8 +2,8 @@
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
-// VAPID public key for Web Push authentication
-const VAPID_PUBLIC_KEY = 'BE4Vc8geGw97zYpakiIVudhgrdgnU75q-ddHwrsFRUX0NbJHd3VAYClF_kjIFaqwss4LDmryMqreKtnw0xgBvgE';
+// VAPID public key — configure via VITE_VAPID_PUBLIC_KEY environment variable
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
 // Dedicated push service worker path
 const PUSH_SW_PATH = '/sw-push.js';

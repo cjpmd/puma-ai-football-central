@@ -399,13 +399,26 @@ export const enhancedNotificationService = {
 
   async submitRSVPResponse(eventId: string, response: string): Promise<void> {
     try {
-      // This would integrate with your existing availability service
-      logger.log('Submitting RSVP response:', response, 'for event:', eventId);
-      
-      // Implementation would depend on your existing RSVP logic
-      // For now, just log the action
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const status = response === 'yes' ? 'available'
+        : response === 'no' ? 'unavailable'
+        : 'pending';
+
+      const { error } = await supabase.rpc('update_availability_status', {
+        p_event_id: eventId,
+        p_user_id: user.id,
+        p_role: 'player',
+        p_status: status,
+      });
+
+      if (error) throw error;
+
+      logger.log('RSVP response submitted:', status, 'for event:', eventId);
     } catch (error) {
       logger.error('Error submitting RSVP response:', error);
+      throw error;
     }
   },
 

@@ -1105,6 +1105,7 @@ return (
                     allTeamSelections={teamSelections}
                     currentTeamIndex={currentTeamIndex}
                     eventType={event.event_type}
+                    nameDisplayOption={nameDisplayOption as any}
                   />
                 )}
               </TabsContent>

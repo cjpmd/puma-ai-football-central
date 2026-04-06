@@ -65,7 +65,7 @@ export function PWAUpdatePrompt() {
   if (!needRefresh) return null;
 
   return (
-    <Card className="fixed bottom-20 left-4 right-4 z-50 p-4 bg-primary text-primary-foreground shadow-lg border-none md:left-auto md:right-4 md:w-80">
+    <Card className="fixed bottom-24 left-4 right-4 z-50 p-4 bg-primary text-primary-foreground shadow-lg border-none md:bottom-4 md:left-auto md:right-4 md:w-80">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <RefreshCw className="h-5 w-5 animate-spin" />

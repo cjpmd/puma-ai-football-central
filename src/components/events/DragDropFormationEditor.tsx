@@ -611,7 +611,9 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         document.body.style.removeProperty('touch-action');
         // @ts-ignore
         document.body.style.removeProperty('overscroll-behavior');
-      } catch (e) {}
+      } catch (cleanupError) {
+        logger.warn('Error cleaning up drag state:', cleanupError);
+      }
     }
   };
 
