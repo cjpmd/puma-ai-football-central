@@ -31,6 +31,7 @@ import { getFormationsByFormat } from '@/utils/formationUtils';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { PlayerShirtFallback } from '@/components/shared/PlayerShirtFallback';
 import { KitDesign } from '@/types/team';
+import { formatPlayerName } from '@/utils/nameUtils';
 import FPLPitch from './FPLPitch';
 
 interface GameDayStyleFormationEditorProps {
@@ -501,22 +502,6 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
     })).sort((a, b) => b.minutes - a.minutes);
   };
 
-  // Get player display name
-  const getPlayerDisplayName = (player: SquadPlayer): string => {
-    const name = player.name || '';
-    switch (nameDisplayOption) {
-      case 'firstName':
-        return name.split(' ')[0] || name;
-      case 'surname':
-        const parts = name.split(' ');
-        return parts[parts.length - 1] || name;
-      case 'initials':
-        return name.split(' ').map(n => n[0]).join('').toUpperCase();
-      default:
-        return name;
-    }
-  };
-
   // Auto-create first period if none exist
   useEffect(() => {
     if (periods.length === 0 && gameFormatFormations.length > 0) {
@@ -762,7 +747,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                       : 'bg-muted'
                 }`}
               >
-                <span className="font-medium">{getPlayerDisplayName(player)}</span>
+                <span className="font-medium">{formatPlayerName(player.name, nameDisplayOption)}</span>
                 <span className="text-muted-foreground">{minutes}'</span>
               </div>
             ))}

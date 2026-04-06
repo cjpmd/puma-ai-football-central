@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, Star, UserMinus } from 'lucide-react';
 import { GameFormat } from '@/types';
+import { NameDisplayOption } from '@/types/team';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface Player {
   id: string;
@@ -29,6 +31,7 @@ interface EnhancedFormationViewProps {
   onPositionChange: (position: string, playerId: string | null) => void;
   onCaptainChange: (playerId: string) => void;
   onPlayerRemove: (playerId: string) => void;
+  nameDisplayOption?: NameDisplayOption;
 }
 
 export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
@@ -40,7 +43,8 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
   allPlayers,
   onPositionChange,
   onCaptainChange,
-  onPlayerRemove
+  onPlayerRemove,
+  nameDisplayOption = 'surname',
 }) => {
   const [formationPositions, setFormationPositions] = useState<FormationPosition[]>([]);
 
@@ -168,7 +172,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">#{player.squad_number}</Badge>
                     <div className="flex flex-col">
-                      <span className="font-medium">{player.name}</span>
+                      <span className="font-medium">{formatPlayerName(player.name, nameDisplayOption)}</span>
                       {getAvailabilityBadge(player.availabilityStatus)}
                     </div>
                     {captainId === player.id && (
@@ -218,7 +222,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">#{player.squad_number}</Badge>
                     <div className="flex flex-col">
-                      <span className="font-medium">{player.name}</span>
+                      <span className="font-medium">{formatPlayerName(player.name, nameDisplayOption)}</span>
                       <div className="flex items-center gap-1">
                         <Badge variant="secondary" className="text-xs">SUB</Badge>
                         {getAvailabilityBadge(player.availabilityStatus)}
@@ -259,7 +263,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">#{player.squad_number}</Badge>
                     <div className="flex flex-col">
-                      <span className="font-medium">{player.name}</span>
+                      <span className="font-medium">{formatPlayerName(player.name, nameDisplayOption)}</span>
                       {getAvailabilityBadge(player.availabilityStatus)}
                     </div>
                   </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { FPLPlayerToken } from './FPLPlayerToken';
 import { SquadPlayer } from '@/types/teamSelection';
-import { KitDesign } from '@/types/team';
+import { KitDesign, NameDisplayOption } from '@/types/team';
 
 interface SubstituteBenchProps {
   id: string;
@@ -25,9 +25,10 @@ const DraggableSubstitutePlayer: React.FC<{
   player: SquadPlayer;
   periodId: string;
   isCaptain: boolean;
+  nameDisplayOption?: NameDisplayOption;
   kitDesign?: KitDesign;
   goalkeeperKitDesign?: KitDesign;
-}> = ({ player, periodId, isCaptain, kitDesign, goalkeeperKitDesign }) => {
+}> = ({ player, periodId, isCaptain, nameDisplayOption = 'surname', kitDesign, goalkeeperKitDesign }) => {
   const dragId = `${periodId}|substitutes|${player.id}`;
   const positionGroup = getPositionGroupFromType(player.type);
   
@@ -52,6 +53,7 @@ const DraggableSubstitutePlayer: React.FC<{
         size="bench"
         kitDesign={kitDesign}
         goalkeeperKitDesign={goalkeeperKitDesign}
+        nameDisplayOption={nameDisplayOption}
       />
     </div>
   );
@@ -97,6 +99,7 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
             player={player}
             periodId={periodId}
             isCaptain={player.id === globalCaptainId}
+            nameDisplayOption={nameDisplayOption}
             kitDesign={kitDesign}
             goalkeeperKitDesign={goalkeeperKitDesign}
           />

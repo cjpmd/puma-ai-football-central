@@ -1,6 +1,7 @@
 import React from 'react';
 import { FPLShirtIcon } from '@/components/shared/FPLShirtIcon';
-import { KitDesign } from '@/types/team';
+import { KitDesign, NameDisplayOption } from '@/types/team';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 type PositionGroup = 'goalkeeper' | 'defender' | 'midfielder' | 'forward';
 type TokenSize = 'pitch' | 'bench';
@@ -14,6 +15,7 @@ interface FPLPlayerTokenProps {
   className?: string;
   kitDesign?: KitDesign;
   goalkeeperKitDesign?: KitDesign;
+  nameDisplayOption?: NameDisplayOption;
 }
 
 /**
@@ -34,13 +36,6 @@ const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
   }
 };
 
-/**
- * Extract surname from full name
- */
-const getSurname = (name: string): string => {
-  const parts = name.trim().split(' ');
-  return parts.length > 1 ? parts[parts.length - 1] : parts[0];
-};
 
 /**
  * FPL-style Player Token Component
@@ -80,6 +75,7 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   className = '',
   kitDesign,
   goalkeeperKitDesign,
+  nameDisplayOption = 'surname',
 }) => {
   const isPitch = size === 'pitch';
   const containerSize = isPitch ? 'w-14 h-14' : 'w-11 h-11';
@@ -115,9 +111,9 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
         />
       </div>
 
-      {/* Player Surname */}
+      {/* Player Name (formatted per team setting) */}
       <div className={`fpl-player-name ${nameSize}`}>
-        {getSurname(name)}
+        {formatPlayerName(name, nameDisplayOption)}
       </div>
     </div>
   );

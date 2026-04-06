@@ -31,6 +31,7 @@ export const DraggablePitchPlayer: React.FC<DraggablePitchPlayerProps> = ({
   isPositionsLocked,
   periodId,
   positionIndex,
+  nameDisplayOption = 'surname',
   kitDesign,
   goalkeeperKitDesign,
 }) => {
@@ -69,6 +70,7 @@ export const DraggablePitchPlayer: React.FC<DraggablePitchPlayerProps> = ({
         className={isDragging ? 'scale-105' : ''}
         kitDesign={kitDesign}
         goalkeeperKitDesign={goalkeeperKitDesign}
+        nameDisplayOption={nameDisplayOption}
       />
     </div>
   );
