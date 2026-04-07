@@ -25,6 +25,7 @@ import { UnifiedLinkedAccounts } from './UnifiedLinkedAccounts';
 import { RoleAwareCalendar } from './RoleAwareCalendar';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { StaffKitSection } from '@/components/staff/StaffKitSection';
+import { AdminAssociationManager } from './AdminAssociationManager';
 
 interface RoleContext {
   type: 'player' | 'parent' | 'staff' | 'admin';
@@ -266,16 +267,18 @@ export const UnifiedProfile: React.FC<UnifiedProfileProps> = ({
                 )}
               </div>
             </div>
-            {isOwnProfile && (
+            {(isOwnProfile || viewMode === 'admin') && (
               <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowLinkedAccounts(true)}
-                  className="flex items-center space-x-2"
-                >
-                  <Link2 className="h-4 w-4" />
-                  <span>Linked Accounts</span>
-                </Button>
+                {(isOwnProfile) && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowLinkedAccounts(true)}
+                    className="flex items-center space-x-2"
+                  >
+                    <Link2 className="h-4 w-4" />
+                    <span>Linked Accounts</span>
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   onClick={() => setShowEditModal(true)}
@@ -323,10 +326,11 @@ export const UnifiedProfile: React.FC<UnifiedProfileProps> = ({
 
       {/* Role-Specific Content */}
       <Tabs value="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${viewMode === 'admin' ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="stats">Statistics</TabsTrigger>
+          {viewMode === 'admin' && <TabsTrigger value="associations">Associations</TabsTrigger>}
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -423,6 +427,15 @@ export const UnifiedProfile: React.FC<UnifiedProfileProps> = ({
             </CardContent>
           </Card>
         </TabsContent>
+
+        {viewMode === 'admin' && effectiveUserId && (
+          <TabsContent value="associations">
+            <AdminAssociationManager 
+              userId={effectiveUserId}
+              onUpdate={loadProfileData}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="settings">
           <div className="space-y-6">
