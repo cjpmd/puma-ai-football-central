@@ -48,6 +48,7 @@ export const StaffManagementDashboard: React.FC = () => {
 
   const availableRoles = [
     { value: 'manager', label: 'Manager' },
+    { value: 'team_manager', label: 'Team Manager' },
     { value: 'team_assistant_manager', label: 'Assistant Manager' },
     { value: 'team_coach', label: 'Coach' },
     { value: 'team_helper', label: 'Helper' },
@@ -206,6 +207,7 @@ export const StaffManagementDashboard: React.FC = () => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'manager': return 'bg-blue-500 text-white';
+      case 'team_manager': return 'bg-blue-600 text-white';
       case 'team_assistant_manager': return 'bg-purple-500 text-white';
       case 'team_coach': return 'bg-green-500 text-white';
       case 'team_helper': return 'bg-orange-500 text-white';

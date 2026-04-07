@@ -187,28 +187,70 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
       logger.log('StaffManagementModal: Raw staff data:', data);
 
-      if (data) {
-        const staffMembers: TeamStaff[] = data.map(record => ({
-          id: record.id,
-          name: record.name || '',
-          email: record.email || '',
-          phone: record.phone || '',
-          role: record.role as TeamStaff['role'],
-          user_id: record.user_id || undefined,
-          pvgChecked: record.pvg_checked || false,
-          pvgCheckedBy: record.pvg_checked_by || undefined,
-          pvgCheckedAt: record.pvg_checked_at || undefined,
-          coachingBadges: [],
-          certificates: [],
-          createdAt: record.created_at,
-          updatedAt: record.updated_at
-        }));
-        
-        logger.log('StaffManagementModal: Processed staff:', staffMembers);
-        setStaff(staffMembers);
-      } else {
-        setStaff([]);
+      const staffMembers: TeamStaff[] = (data || []).map(record => ({
+        id: record.id,
+        name: record.name || '',
+        email: record.email || '',
+        phone: record.phone || '',
+        role: record.role as TeamStaff['role'],
+        user_id: record.user_id || undefined,
+        pvgChecked: record.pvg_checked || false,
+        pvgCheckedBy: record.pvg_checked_by || undefined,
+        pvgCheckedAt: record.pvg_checked_at || undefined,
+        coachingBadges: [],
+        certificates: [],
+        createdAt: record.created_at,
+        updatedAt: record.updated_at
+      }));
+
+      // Also fetch staff-role users from user_teams who might not be in team_staff
+      const staffRoles = ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper', 'manager'];
+      const { data: userTeamStaff } = await supabase
+        .from('user_teams')
+        .select('user_id, role, created_at')
+        .eq('team_id', team.id)
+        .in('role', staffRoles);
+
+      if (userTeamStaff && userTeamStaff.length > 0) {
+        const existingUserIds = new Set(staffMembers.filter(s => s.user_id).map(s => s.user_id));
+        const newUserIds = userTeamStaff
+          .filter(ut => !existingUserIds.has(ut.user_id))
+          .map(ut => ut.user_id);
+
+        if (newUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, name, email, phone')
+            .in('id', newUserIds);
+
+          const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+          userTeamStaff
+            .filter(ut => !existingUserIds.has(ut.user_id))
+            .forEach(ut => {
+              const profile = profileMap.get(ut.user_id);
+              if (profile) {
+                staffMembers.push({
+                  id: `ut_${ut.user_id}`,
+                  name: profile.name || profile.email || '',
+                  email: profile.email || '',
+                  phone: profile.phone || '',
+                  role: ut.role as TeamStaff['role'],
+                  user_id: ut.user_id,
+                  pvgChecked: false,
+                  coachingBadges: [],
+                  certificates: [],
+                  createdAt: ut.created_at,
+                  updatedAt: ut.created_at,
+                  _source: 'user_teams'
+                } as any);
+              }
+            });
+        }
       }
+
+      logger.log('StaffManagementModal: Processed staff:', staffMembers);
+      setStaff(staffMembers);
     } catch (error: any) {
       logger.error('StaffManagementModal: Error loading staff:', error);
       setStaff([]);
