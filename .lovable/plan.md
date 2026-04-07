@@ -1,79 +1,64 @@
 
 
-## Plan: Global Admin Visibility for All Teams and Staff
+## Plan: Staff Visibility Fix + Admin Edit Capabilities
 
-### Problem Summary
+### Problem 1: micky.mcpherson Not Showing in Staff Modal
 
-Two separate issues prevent a System Admin from seeing all teams and all staff:
+The per-team **StaffManagementModal** only queries the `team_staff` table. micky.mcpherson is in `user_teams` with role `team_manager`, but has no record in `team_staff`. The admin-level **StaffManagementDashboard** uses the `team_staff_roles` view (which we just fixed to include `team_manager`), so micky will appear there — but not in the per-team staff modal.
 
-1. **Staff Management**: The `team_staff_roles` database view excludes the `team_manager` role from its filter, so any user whose only role is `team_manager` (like micky.mcpherson with Dundee Academy) is invisible in the Staff Management dashboard.
+**Fix**: Update `StaffManagementModal.loadStaff()` to also fetch users from `user_teams` who have staff-level roles (`team_manager`, `team_assistant_manager`, `team_coach`, etc.) and merge them into the staff list. This ensures the team creator appears as staff.
 
-2. **Team Management**: The `loadAllTeams` function correctly queries all teams when `currentView === 'global_admin'`, and RLS allows all authenticated users to SELECT teams. This should work — but if the view hasn't resolved to `global_admin` yet when `loadData` fires (race condition with SmartViewContext initialization), the wrong loader runs. We should add a safeguard.
+Also add `team_manager` to the `availableRoles` array in `StaffManagementDashboard` so it displays correctly in filters and labels.
 
-### Root Cause Details
+### Problem 2: No In-App Admin Edit Functionality
 
-**Staff issue**: The `team_staff_roles` view definition:
-```sql
-WHERE ut.role = ANY (ARRAY['manager', 'team_assistant_manager', 'team_coach', 'team_helper', 'staff'])
-```
-Missing: `'team_manager'` — which is the role assigned to team creators (per the project's own convention).
+Currently the admin can click a user card to see `UnifiedProfile` with `viewMode='admin'`, but the Edit Profile and Linked Accounts buttons only show for `isOwnProfile`. The `UserEditModal` exists and works (edits name, email, phone, roles) but isn't accessible from the admin view.
 
-**Teams issue**: `loadTeamsForCurrentRole()` dispatches based on `currentView`. If `currentView` is still `'parent'` (the default) when the effect fires, it calls `loadUserTeams()` instead of `loadAllTeams()`. The `isAdminUser` flag is correct, but the view-based dispatch doesn't use it as a fallback.
+**Fix**: 
+- Show "Edit Profile" button in `UnifiedProfile` when `viewMode === 'admin'`
+- Add a new **"Team Associations"** section in the admin view showing all `user_teams` records with ability to:
+  - Change a user's role within a team
+  - Remove a user from a team
+  - Add a user to a team
+- Add a **"Player Links"** section showing `user_players` records with ability to remove incorrect parent-player links (the exact scenario that required manual SQL for Shona McDonald)
 
----
+### Implementation Details
 
-### Solution
+#### File 1: `src/components/teams/StaffManagementModal.tsx`
 
-#### Change 1: Database Migration — Fix `team_staff_roles` view
-
-Recreate the view to include `team_manager` in the role filter:
-
-```sql
-CREATE OR REPLACE VIEW public.team_staff_roles AS
-SELECT t.id AS team_id,
-    t.name AS team_name,
-    p.id AS user_id,
-    p.name AS staff_name,
-    p.email AS staff_email,
-    ut.role,
-    ut.created_at
-FROM user_teams ut
-JOIN profiles p ON p.id = ut.user_id
-JOIN teams t ON t.id = ut.team_id
-WHERE ut.role = ANY (ARRAY[
-  'manager', 'team_manager', 'team_assistant_manager',
-  'team_coach', 'team_helper', 'staff'
-])
-ORDER BY t.name, p.name;
-```
-
-#### Change 2: `src/pages/TeamManagement.tsx` — Use `isAdminUser` as primary dispatch
-
-Update `loadTeamsForCurrentRole` to check `isAdminUser` first, before falling back to view-based dispatch:
+Update `loadStaff()` to also query `user_teams` for staff-role users and merge:
 
 ```typescript
-const loadTeamsForCurrentRole = async () => {
-  // Global/club admins always see all teams regardless of current view
-  if (isGlobalAdmin) return loadAllTeams();
-  if (isClubAdmin()) return loadClubTeams();
-  
-  switch (currentView) {
-    case 'team_manager':
-    case 'coach':
-      return loadUserTeams();
-    case 'parent':
-      return loadParentTeams();
-    default:
-      return loadUserTeams();
-  }
-};
+// After loading from team_staff, also load from user_teams
+const { data: userTeamStaff } = await supabase
+  .from('user_teams')
+  .select('user_id, role, created_at, profiles:user_id(name, email, phone)')
+  .eq('team_id', team.id)
+  .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper', 'manager']);
+
+// Merge into staff list, avoiding duplicates (by user_id)
 ```
 
-Also update `loadAllTeams` to set `isReadOnly: false` for global admins (currently it checks `isUserTeamAdmin` which only matches teams the admin is directly a member of):
+#### File 2: `src/components/admin/StaffManagementDashboard.tsx`
 
+Add `team_manager` to `availableRoles`:
 ```typescript
-isReadOnly: isGlobalAdmin ? false : !isUserTeamAdmin(team.id)
+{ value: 'team_manager', label: 'Team Manager' },
 ```
+
+#### File 3: `src/components/users/UnifiedProfile.tsx`
+
+- Show edit buttons when `viewMode === 'admin'` (not just `isOwnProfile`)
+- Add "Team Associations" tab/section for admin view showing `user_teams` records with edit/delete
+- Add "Player Links" section showing `user_players` records with delete capability
+- Use `EditProfileModal` or create an admin-specific edit flow
+
+#### File 4: New component or inline in UnifiedProfile — Admin Association Manager
+
+A section that shows:
+- All `user_teams` records for this user (team name, role, joined date) with delete button and role change dropdown
+- All `user_players` records (player name, team, relationship) with delete button
+- Add to team form (select team + role)
 
 ---
 
@@ -81,12 +66,13 @@ isReadOnly: isGlobalAdmin ? false : !isUserTeamAdmin(team.id)
 
 | File | Change |
 |------|--------|
-| **Database migration** | Recreate `team_staff_roles` view to include `team_manager` role |
-| `src/pages/TeamManagement.tsx` | Use `isAdminUser`/`isGlobalAdmin` as primary check in `loadTeamsForCurrentRole`; make all teams editable for global admins |
+| `src/components/teams/StaffManagementModal.tsx` | Merge `user_teams` staff-role users into staff list |
+| `src/components/admin/StaffManagementDashboard.tsx` | Add `team_manager` to available roles |
+| `src/components/users/UnifiedProfile.tsx` | Show admin edit controls; add team/player association management |
 
 ### Expected Result
 
-- **Teams page**: Global admin sees all 6 teams including Dundee Academy, all editable
-- **Staff Management**: micky.mcpherson appears as team_manager for Dundee Academy
-- No impact on non-admin users — their view dispatch remains unchanged
+- micky.mcpherson appears as Team Manager in Dundee Academy's staff modal
+- System Admin can edit any user's profile, roles, team associations, and player links directly in the app
+- No more need for manual SQL to fix incorrect associations
 
