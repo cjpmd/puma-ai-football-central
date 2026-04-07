@@ -1,235 +1,92 @@
 
-## Plan: Fix Shona's Incorrect Links + Prevent Future Cross-Team Parent Linking Errors
 
-### Part 1: Immediate Fix - Delete Incorrect Associations
+## Plan: Global Admin Visibility for All Teams and Staff
 
-The following records need to be deleted to fix Shona McDonald's account:
+### Problem Summary
 
-| Table | Record ID | Description |
-|-------|-----------|-------------|
-| `user_players` | `14bcfda5-14bf-4bf1-9ac4-876108a0d6a9` | Incorrect link to Bruno Fernandes as parent |
-| `user_teams` | `c2c1d7a9-a095-413b-b2e6-35b4db99400b` | Incorrect team_parent role for Panthers |
+Two separate issues prevent a System Admin from seeing all teams and all staff:
 
-**SQL to run in Supabase SQL Editor:**
+1. **Staff Management**: The `team_staff_roles` database view excludes the `team_manager` role from its filter, so any user whose only role is `team_manager` (like micky.mcpherson with Dundee Academy) is invisible in the Staff Management dashboard.
+
+2. **Team Management**: The `loadAllTeams` function correctly queries all teams when `currentView === 'global_admin'`, and RLS allows all authenticated users to SELECT teams. This should work — but if the view hasn't resolved to `global_admin` yet when `loadData` fires (race condition with SmartViewContext initialization), the wrong loader runs. We should add a safeguard.
+
+### Root Cause Details
+
+**Staff issue**: The `team_staff_roles` view definition:
 ```sql
--- Delete incorrect parent-player link
-DELETE FROM user_players 
-WHERE id = '14bcfda5-14bf-4bf1-9ac4-876108a0d6a9';
-
--- Delete incorrect team membership
-DELETE FROM user_teams 
-WHERE id = 'c2c1d7a9-a095-413b-b2e6-35b4db99400b';
+WHERE ut.role = ANY (ARRAY['manager', 'team_assistant_manager', 'team_coach', 'team_helper', 'staff'])
 ```
+Missing: `'team_manager'` — which is the role assigned to team creators (per the project's own convention).
+
+**Teams issue**: `loadTeamsForCurrentRole()` dispatches based on `currentView`. If `currentView` is still `'parent'` (the default) when the effect fires, it calls `loadUserTeams()` instead of `loadAllTeams()`. The `isAdminUser` flag is correct, but the view-based dispatch doesn't use it as a fallback.
 
 ---
 
-### Part 2: Prevention - Add Validation for Parent Linking
+### Solution
 
-#### Root Cause Analysis
+#### Change 1: Database Migration — Fix `team_staff_roles` view
 
-The issue likely occurred because:
-1. When a parent enters a code or is linked by email, there's **no check** to verify they aren't already linked to a different team
-2. The PlayerParentLinkManager only checks if the user is already linked to **that specific player**, not if they're already in a different team as a parent
+Recreate the view to include `team_manager` in the role filter:
 
-#### Solution: Add Cross-Team Validation
-
-**Before creating a parent link, check:**
-1. Is this user already linked as a parent to players on OTHER teams?
-2. If yes, show a warning and require confirmation (or block entirely)
-
----
-
-### Implementation Details
-
-#### File 1: `src/services/playerCodeService.ts` - Add validation in `linkUserToPlayerAsParent`
-
-Add a check before inserting the user_players record:
-
-```typescript
-async linkUserToPlayerAsParent(parentCode: string): Promise<void> {
-  const player = await this.getPlayerByParentLinkingCode(parentCode);
-  if (!player) {
-    throw new Error('Invalid parent linking code');
-  }
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('User must be authenticated to link as parent');
-  }
-  
-  // NEW: Check if user is already linked to this player
-  const { data: existingLink } = await supabase
-    .from('user_players')
-    .select('id')
-    .eq('player_id', player.id)
-    .eq('user_id', user.id)
-    .eq('relationship', 'parent')
-    .maybeSingle();
-  
-  if (existingLink) {
-    throw new Error('You are already linked as a parent to this player');
-  }
-  
-  // NEW: Check for cross-team parent links
-  const { data: existingLinks } = await supabase
-    .from('user_players')
-    .select(`
-      id,
-      players!inner(team_id, name, teams(name))
-    `)
-    .eq('user_id', user.id)
-    .eq('relationship', 'parent');
-  
-  if (existingLinks && existingLinks.length > 0) {
-    // User is already a parent to other players
-    const otherTeamLinks = existingLinks.filter(
-      link => link.players.team_id !== player.team_id
-    );
-    
-    if (otherTeamLinks.length > 0) {
-      const teamNames = otherTeamLinks.map(l => l.players.teams?.name).join(', ');
-      throw new Error(
-        `You are already linked as a parent to players on other teams (${teamNames}). ` +
-        `Please contact the team manager if you need to link to players on multiple teams.`
-      );
-    }
-  }
-  
-  // Existing code continues...
-}
+```sql
+CREATE OR REPLACE VIEW public.team_staff_roles AS
+SELECT t.id AS team_id,
+    t.name AS team_name,
+    p.id AS user_id,
+    p.name AS staff_name,
+    p.email AS staff_email,
+    ut.role,
+    ut.created_at
+FROM user_teams ut
+JOIN profiles p ON p.id = ut.user_id
+JOIN teams t ON t.id = ut.team_id
+WHERE ut.role = ANY (ARRAY[
+  'manager', 'team_manager', 'team_assistant_manager',
+  'team_coach', 'team_helper', 'staff'
+])
+ORDER BY t.name, p.name;
 ```
 
-#### File 2: `src/components/players/PlayerParentLinkManager.tsx` - Add validation in `handleInviteParent`
+#### Change 2: `src/pages/TeamManagement.tsx` — Use `isAdminUser` as primary dispatch
 
-Add validation when linking an existing user by email:
+Update `loadTeamsForCurrentRole` to check `isAdminUser` first, before falling back to view-based dispatch:
 
 ```typescript
-const handleInviteParent = async () => {
-  // ... existing validation ...
+const loadTeamsForCurrentRole = async () => {
+  // Global/club admins always see all teams regardless of current view
+  if (isGlobalAdmin) return loadAllTeams();
+  if (isClubAdmin()) return loadClubTeams();
   
-  if (existingProfile) {
-    // NEW: Check if this user is already a parent on a DIFFERENT team
-    const { data: currentPlayer } = await supabase
-      .from('players')
-      .select('team_id')
-      .eq('id', playerId)
-      .single();
-    
-    if (currentPlayer) {
-      const { data: existingLinks } = await supabase
-        .from('user_players')
-        .select(`
-          id,
-          players!inner(team_id, name, teams(name))
-        `)
-        .eq('user_id', existingProfile.id)
-        .eq('relationship', 'parent');
-      
-      if (existingLinks && existingLinks.length > 0) {
-        const otherTeamLinks = existingLinks.filter(
-          link => link.players.team_id !== currentPlayer.team_id
-        );
-        
-        if (otherTeamLinks.length > 0) {
-          const linkedTeams = otherTeamLinks
-            .map(l => l.players.teams?.name)
-            .filter(Boolean)
-            .join(', ');
-          
-          toast({
-            title: 'Warning: Cross-Team Link',
-            description: `This user is already a parent on: ${linkedTeams}. Are you sure this is correct?`,
-            variant: 'destructive'
-          });
-          // Optionally: block the action or add a confirmation dialog
-          return;
-        }
-      }
-    }
-    
-    // Continue with existing link logic...
+  switch (currentView) {
+    case 'team_manager':
+    case 'coach':
+      return loadUserTeams();
+    case 'parent':
+      return loadParentTeams();
+    default:
+      return loadUserTeams();
   }
 };
 ```
 
-#### File 3: `src/components/auth/UnifiedSignupWizard.tsx` - Add validation during signup
-
-For parents signing up with a code, add validation before creating links:
+Also update `loadAllTeams` to set `isReadOnly: false` for global admins (currently it checks `isUserTeamAdmin` which only matches teams the admin is directly a member of):
 
 ```typescript
-} else if (selectedRole === "parent" && matchedPlayer) {
-  // NEW: This is a new account, so no need to check for existing cross-team links
-  // The matchedPlayer already contains the team_id from the code
-  // But we should validate the team_id matches the team they entered the code for
-  
-  if (matchedPlayer.team_id !== teamInfo?.id) {
-    console.warn("Player team doesn't match selected team - potential code mismatch");
-    // This could indicate a bug or incorrect code handling
-  }
-  
-  // Existing code to create parent link...
-}
+isReadOnly: isGlobalAdmin ? false : !isUserTeamAdmin(team.id)
 ```
 
 ---
 
-### Part 3: Add Audit Logging for Parent Links
-
-#### Database Migration: Add `created_by` column to `user_players`
-
-```sql
--- Add tracking columns to user_players
-ALTER TABLE user_players 
-ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users(id),
-ADD COLUMN IF NOT EXISTS creation_method text;
-
--- Add comment for documentation
-COMMENT ON COLUMN user_players.created_by IS 'User who created this link (manager, self-signup, etc.)';
-COMMENT ON COLUMN user_players.creation_method IS 'How link was created: signup_code, manager_invite, manager_direct, code_link';
-```
-
-#### Update Link Creation Code
-
-When creating user_players records, include the creation method:
-
-```typescript
-// In playerCodeService.linkUserToPlayerAsParent
-const { error: linkError } = await supabase
-  .from('user_players')
-  .insert({
-    player_id: player.id,
-    user_id: user.id,
-    relationship: 'parent',
-    created_by: user.id,
-    creation_method: 'code_link'  // or 'signup_code' for UnifiedSignupWizard
-  });
-```
-
----
-
-### Summary of Changes
+### Files to Modify
 
 | File | Change |
 |------|--------|
-| **SQL (Manual)** | Delete 2 incorrect records for Shona McDonald |
-| `src/services/playerCodeService.ts` | Add cross-team validation in `linkUserToPlayerAsParent()` |
-| `src/components/players/PlayerParentLinkManager.tsx` | Add cross-team validation in `handleInviteParent()` |
-| `src/components/auth/UnifiedSignupWizard.tsx` | Add team_id consistency check during signup |
-| **Database Migration** | Add `created_by` and `creation_method` columns to `user_players` |
+| **Database migration** | Recreate `team_staff_roles` view to include `team_manager` role |
+| `src/pages/TeamManagement.tsx` | Use `isAdminUser`/`isGlobalAdmin` as primary check in `loadTeamsForCurrentRole`; make all teams editable for global admins |
 
----
+### Expected Result
 
-### Expected Behavior After Implementation
+- **Teams page**: Global admin sees all 6 teams including Dundee Academy, all editable
+- **Staff Management**: micky.mcpherson appears as team_manager for Dundee Academy
+- No impact on non-admin users — their view dispatch remains unchanged
 
-1. **Shona McDonald's account** will only show Andrew McDonald (Pumas) - Bruno Fernandes link will be removed
-2. **Future parent signups/links** will check for existing cross-team associations and warn/block
-3. **Audit trail** will track who created each parent-player link and how
-
----
-
-### Verification Steps
-
-After implementation:
-1. Query Shona's links - should only see Andrew McDonald
-2. Try to link a user who is already a parent on Team A to a player on Team B - should show warning/error
-3. Verify new `user_players` records have `created_by` and `creation_method` populated
