@@ -1,78 +1,63 @@
 
 
-## Plan: Staff Visibility Fix + Admin Edit Capabilities
+## Plan: Rebrand from Puma-AI to Origin Sports
 
-### Problem 1: micky.mcpherson Not Showing in Staff Modal
+I'll do a global rename across all user-facing text, metadata, and configuration. The visual logo (paw print PNG and logo-spinner SVG) will remain unchanged — only the name changes. If you want the logo art swapped too, upload new logo files and I'll replace them.
 
-The per-team **StaffManagementModal** only queries the `team_staff` table. micky.mcpherson is in `user_teams` with role `team_manager`, but has no record in `team_staff`. The admin-level **StaffManagementDashboard** uses the `team_staff_roles` view (which we just fixed to include `team_manager`), so micky will appear there — but not in the per-team staff modal.
+### Scope of Changes
 
-**Fix**: Update `StaffManagementModal.loadStaff()` to also fetch users from `user_teams` who have staff-level roles (`team_manager`, `team_assistant_manager`, `team_coach`, etc.) and merge them into the staff list. This ensures the team creator appears as staff.
+**1. App metadata & PWA**
+- `index.html` — title, description, author, og tags, apple-mobile-web-app-title
+- `vite.config.ts` — PWA manifest `name`, `short_name`, `description`
+- `capacitor.config.ts` — appName (and verify appId comment)
+- `README.md` — project name references
 
-Also add `team_manager` to the `availableRoles` array in `StaffManagementDashboard` so it displays correctly in filters and labels.
+**2. UI components with hardcoded "Puma-AI" / "Puma AI" / "Team Manager" text**
+- `src/components/layout/Logo.tsx` — "Team Manager" → "Origin Sports"
+- `src/components/pwa/SplashScreen.tsx` — "puma ai" branding text → "origin sports"
+- `src/components/pwa/PWAInstallPrompt.tsx` — "Install Puma-AI" → "Install Origin Sports"
+- `src/components/ui/sidebar.tsx` — "Coach's Playbook" header → "Origin Sports"
+- `src/components/landing/Hero.tsx`, `Features.tsx`, `Pricing.tsx`, `Testimonials.tsx`, `Footer.tsx` — any brand mentions
+- Any other component with "Puma" / "Puma-AI" / "Puma AI" string
 
-### Problem 2: No In-App Admin Edit Functionality
+**3. Service worker & notifications**
+- `src/sw.ts` — default notification title "Puma-AI" → "Origin Sports"
+- `public/sw-push.js` — same
+- Notification service files (`enhancedNotificationService.ts`, `pushNotificationService.ts`, `webPushService.ts`, `unifiedNotificationService.ts`) — any "Puma-AI" sender/title strings
 
-Currently the admin can click a user card to see `UnifiedProfile` with `viewMode='admin'`, but the Edit Profile and Linked Accounts buttons only show for `isOwnProfile`. The `UserEditModal` exists and works (edits name, email, phone, roles) but isn't accessible from the admin view.
+**4. Edge functions (email & notifications)**
+- `supabase/functions/send-invitation-email/index.ts` — sender name, email subject, body branding
+- `supabase/functions/send-availability-notification/index.ts` — sender/subject branding
+- `supabase/functions/send-push-notification/index.ts` — default title
+- `supabase/functions/enhanced-notification-scheduler/index.ts` — any branded copy
+- `supabase/functions/notification-rsvp-handler/index.ts` — any branded copy
 
-**Fix**: 
-- Show "Edit Profile" button in `UnifiedProfile` when `viewMode === 'admin'`
-- Add a new **"Team Associations"** section in the admin view showing all `user_teams` records with ability to:
-  - Change a user's role within a team
-  - Remove a user from a team
-  - Add a user to a team
-- Add a **"Player Links"** section showing `user_players` records with ability to remove incorrect parent-player links (the exact scenario that required manual SQL for Shona McDonald)
+**5. Auth pages & modals**
+- `src/pages/Auth.tsx`, `AuthMobile.tsx`, `ResetPassword.tsx`, `ResetPasswordMobile.tsx` — page headings/copy
+- `src/components/auth/*` — any welcome/branding copy in signup/wizard modals
 
-### Implementation Details
+**6. Documentation**
+- `STAFF_MANAGEMENT_COMPLETE.md` and `.lovable/plan.md` — name references
 
-#### File 1: `src/components/teams/StaffManagementModal.tsx`
+### Discovery Method
 
-Update `loadStaff()` to also query `user_teams` for staff-role users and merge:
+I'll run a project-wide search for the patterns: `Puma-AI`, `Puma AI`, `puma-ai`, `puma_ai`, `puma ai`, `PumaAI`, and `Coach's Playbook` / `Team Manager` (where it refers to the app name, not a role). Every match in user-facing strings, metadata, and configuration will be updated to the appropriate casing of "Origin Sports".
 
-```typescript
-// After loading from team_staff, also load from user_teams
-const { data: userTeamStaff } = await supabase
-  .from('user_teams')
-  .select('user_id, role, created_at, profiles:user_id(name, email, phone)')
-  .eq('team_id', team.id)
-  .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper', 'manager']);
+### What Stays the Same
 
-// Merge into staff list, avoiding duplicates (by user_id)
-```
+- Logo image files (`/lovable-uploads/0b482bd3-...png`, `/pwa-icons/*`) — visual logo unchanged
+- The `LogoSpinner` SVG paths
+- Database table/column names, internal type names, file paths, function names
+- The "Team Manager" *role label* (it's a user role, not the app name) — only the brand-name use of "Team Manager" in `Logo.tsx` will change
+- URL slugs (lovable preview/published URLs are managed separately)
 
-#### File 2: `src/components/admin/StaffManagementDashboard.tsx`
+### Things to Confirm (before I start, if you want)
 
-Add `team_manager` to `availableRoles`:
-```typescript
-{ value: 'team_manager', label: 'Team Manager' },
-```
+- **Casing**: I'll use **"Origin Sports"** (title case) everywhere user-facing, and `origin-sports` for short-name/slugs in the PWA manifest. Confirm or tell me if you want different casing.
+- **Email sender name**: I'll set the from-name in transactional emails to "Origin Sports". The actual sending email address depends on your configured email domain — that won't change here.
+- **Logo art**: Stays as the current paw-print mark. Upload new logo files later if you want a visual rebrand too.
 
-#### File 3: `src/components/users/UnifiedProfile.tsx`
+### Files Touched (estimate)
 
-- Show edit buttons when `viewMode === 'admin'` (not just `isOwnProfile`)
-- Add "Team Associations" tab/section for admin view showing `user_teams` records with edit/delete
-- Add "Player Links" section showing `user_players` records with delete capability
-- Use `EditProfileModal` or create an admin-specific edit flow
-
-#### File 4: New component or inline in UnifiedProfile — Admin Association Manager
-
-A section that shows:
-- All `user_teams` records for this user (team name, role, joined date) with delete button and role change dropdown
-- All `user_players` records (player name, team, relationship) with delete button
-- Add to team form (select team + role)
-
----
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/components/teams/StaffManagementModal.tsx` | Merge `user_teams` staff-role users into staff list |
-| `src/components/admin/StaffManagementDashboard.tsx` | Add `team_manager` to available roles |
-| `src/components/users/UnifiedProfile.tsx` | Show admin edit controls; add team/player association management |
-
-### Expected Result
-
-- micky.mcpherson appears as Team Manager in Dundee Academy's staff modal
-- System Admin can edit any user's profile, roles, team associations, and player links directly in the app
-- No more need for manual SQL to fix incorrect associations
+~25–35 files: 1 config (vite), 1 capacitor config, 1 index.html, 1 README, ~10–15 components, ~5 edge functions, ~3 service workers/notification services, 2 markdown docs.
 
