@@ -612,34 +612,39 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           </div>
         </div>
 
-        {/* Period Tabs - Ultra Compact on Mobile */}
-        <div className={`shrink-0 border-t bg-muted/30 px-1.5 ${isMobile ? 'py-0.5' : 'py-1.5'}`}>
-          <div className="flex items-center gap-0.5">
+        {/* Period Tabs - Ultra Compact on Mobile (glass) */}
+        <div className={`shrink-0 border-t border-white/10 bg-white/[0.04] px-2 ${isMobile ? 'py-1' : 'py-1.5'}`}>
+          <div className="flex items-center gap-1">
             {/* Left Arrow */}
             <Button
               variant="ghost"
               size="sm"
-              className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
+              className={`${isMobile ? 'h-6 w-6' : 'h-7 w-7'} p-0 shrink-0 text-white/70 hover:text-white hover:bg-white/10`}
               onClick={() => setActivePeriodIndex(Math.max(0, activePeriodIndex - 1))}
               disabled={activePeriodIndex === 0}
             >
-              <ChevronLeft className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+              <ChevronLeft className={isMobile ? 'h-3 w-3' : 'h-3 w-3'} />
             </Button>
             
             {/* Period Buttons */}
-            <div className="flex-1 flex gap-0.5 overflow-x-auto scrollbar-hide">
-              {periods.map((period, index) => (
-                readOnly ? (
-                  // Read-only: Simple button without popover
+            <div className="flex-1 flex gap-1 overflow-x-auto scrollbar-hide">
+              {periods.map((period, index) => {
+                const baseClasses = `flex-1 min-w-[44px] rounded-md border px-2 transition-all ${
+                  isMobile ? 'text-[10px] py-1' : 'text-xs py-1.5'
+                } ${
+                  index === activePeriodIndex
+                    ? 'bg-primary/30 border-primary/40 text-white'
+                    : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                }`;
+                return readOnly ? (
                   <button
                     key={period.id}
-                    className={`period-time-button flex-1 min-w-[40px] ${isMobile ? 'text-[10px] py-0.5' : 'text-xs py-1'} ${index === activePeriodIndex ? 'active' : ''}`}
+                    className={baseClasses}
                     onClick={() => setActivePeriodIndex(index)}
                   >
                     {calculateTimeRange(index)}
                   </button>
                 ) : (
-                  // Editable: Popover with duration/delete controls
                   <Popover 
                     key={period.id} 
                     open={editingPeriodId === period.id}
@@ -647,7 +652,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                   >
                     <PopoverTrigger asChild>
                       <button
-                        className={`period-time-button flex-1 min-w-[40px] ${isMobile ? 'text-[10px] py-0.5' : 'text-xs py-1'} ${index === activePeriodIndex ? 'active' : ''}`}
+                        className={baseClasses}
                         onClick={() => setActivePeriodIndex(index)}
                       >
                         {calculateTimeRange(index)}
@@ -687,19 +692,19 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                       </div>
                     </PopoverContent>
                   </Popover>
-                )
-              ))}
+                );
+              })}
             </div>
 
             {/* Right Arrow */}
             <Button
               variant="ghost"
               size="sm"
-              className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
+              className={`${isMobile ? 'h-6 w-6' : 'h-7 w-7'} p-0 shrink-0 text-white/70 hover:text-white hover:bg-white/10`}
               onClick={() => setActivePeriodIndex(Math.min(periods.length - 1, activePeriodIndex + 1))}
               disabled={activePeriodIndex === periods.length - 1}
             >
-              <ChevronRight className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+              <ChevronRight className={isMobile ? 'h-3 w-3' : 'h-3 w-3'} />
             </Button>
 
             {/* Add Period Button - hidden for read-only */}
@@ -707,18 +712,23 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
               <Button
                 variant="outline"
                 size="sm"
-                className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
+                className={`${isMobile ? 'h-6 w-6' : 'h-7 w-7'} p-0 shrink-0 bg-white/5 border-white/15 text-white hover:bg-white/15`}
                 onClick={addPeriod}
               >
-                <Plus className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+                <Plus className={isMobile ? 'h-3 w-3' : 'h-3 w-3'} />
               </Button>
             )}
           </div>
         </div>
 
-        {/* Substitutes Bench - Ultra Compact on Mobile */}
-        <div className={`shrink-0 px-1.5 border-t ${isMobile ? 'py-0.5' : 'py-1'}`}>
-          <div className={`font-medium text-muted-foreground ${isMobile ? 'text-[9px] mb-0' : 'text-xs mb-1'}`}>Subs</div>
+        {/* Substitutes Bench - glass */}
+        <div className={`shrink-0 px-2 border-t border-white/10 bg-white/[0.03] ${isMobile ? 'py-1.5' : 'py-2'}`}>
+          <div className={`flex items-center justify-between mb-1 ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
+            <span className="font-semibold tracking-wider uppercase text-white/80">
+              Bench · {getSubstitutePlayers().length}
+            </span>
+            <span className="text-white/40">drag to swap</span>
+          </div>
           <SubstituteBench
             id={`substitutes-${currentPeriod.id}`}
             substitutes={getSubstitutePlayers()}
@@ -730,26 +740,28 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           />
         </div>
 
-        {/* Playing Time Summary - Ultra Compact on Mobile */}
-        <div className={`shrink-0 border-t bg-muted/20 px-1.5 ${isMobile ? 'py-1' : 'py-1.5'}`}>
-          <div className={`font-medium text-muted-foreground flex items-center gap-0.5 ${isMobile ? 'text-[10px] mb-0.5' : 'text-xs mb-1'}`}>
-            <Clock className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+        {/* Playing Time Summary - glass */}
+        <div className={`shrink-0 border-t border-white/10 bg-white/[0.03] px-2 ${isMobile ? 'py-1.5' : 'py-2'}`}>
+          <div className={`font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1 ${isMobile ? 'text-[10px] mb-1' : 'text-xs mb-1.5'}`}>
+            <Clock className={isMobile ? 'h-3 w-3' : 'h-3 w-3'} />
             Time ({totalGameMinutes}')
           </div>
-          <div className="flex gap-0.5 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             {playingTimeSummary.map(({ player, minutes }) => (
               <div 
                 key={player.id}
-                className={`flex items-center gap-0.5 rounded-full whitespace-nowrap ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} ${
+                className={`flex items-center gap-1 rounded-full whitespace-nowrap border ${
+                  isMobile ? 'px-2 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'
+                } ${
                   minutes === 0 
-                    ? 'bg-destructive/10 text-destructive' 
+                    ? 'bg-destructive/20 border-destructive/30 text-destructive-foreground' 
                     : minutes >= totalGameMinutes 
-                      ? 'bg-primary/10 text-primary' 
-                      : 'bg-muted'
+                      ? 'bg-primary/25 border-primary/40 text-white' 
+                      : 'bg-white/8 border-white/15 text-white/85'
                 }`}
               >
                 <span className="font-medium">{formatPlayerName(player.name, nameDisplayOption)}</span>
-                <span className="text-muted-foreground">{minutes}'</span>
+                <span className="text-white/55">{minutes}'</span>
               </div>
             ))}
           </div>
