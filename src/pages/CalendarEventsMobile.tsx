@@ -977,10 +977,10 @@ export default function CalendarEventsMobile() {
           };
           
           return (
-            <div className="bg-card rounded-lg border p-3">
+            <div className="ios-card p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-sm font-medium text-red-600">
+                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                <span className="text-sm font-medium text-rose-300">
                   {futurePendingAvailability.length} unanswered event{futurePendingAvailability.length > 1 ? 's' : ''}
                 </span>
               </div>
@@ -988,16 +988,16 @@ export default function CalendarEventsMobile() {
                 {futurePendingAvailability.slice(0, 2).map((availability) => (
                   <div 
                     key={availability.id} 
-                    className="flex items-center justify-between p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                    className="flex items-center justify-between p-2 rounded-md bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => handleAvailabilityClick(availability)}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm truncate">
+                      <div className="font-medium text-sm truncate text-white">
                         {availability.events.event_type === 'training' 
                           ? availability.events.title 
                           : `vs ${availability.events.opponent || 'TBD'}`}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-white/60">
                         {format(new Date(availability.events.date), 'EEE d MMM')}
                         {availability.events.start_time && ` at ${formatTime(availability.events.start_time)}`}
                       </div>
@@ -1005,7 +1005,7 @@ export default function CalendarEventsMobile() {
                   </div>
                 ))}
                 {futurePendingAvailability.length > 2 && (
-                  <p className="text-xs text-center text-muted-foreground pt-1">
+                  <p className="text-xs text-center text-white/60 pt-1">
                     +{futurePendingAvailability.length - 2} more
                   </p>
                 )}
