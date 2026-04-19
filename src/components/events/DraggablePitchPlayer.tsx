@@ -71,6 +71,7 @@ export const DraggablePitchPlayer: React.FC<DraggablePitchPlayerProps> = ({
         kitDesign={kitDesign}
         goalkeeperKitDesign={goalkeeperKitDesign}
         nameDisplayOption={nameDisplayOption}
+        positionAbbr={position.abbreviation}
       />
     </div>
   );
