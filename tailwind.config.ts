@@ -69,7 +69,7 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Puma-AI specific colors
+				// Brand-specific colors
 				"puma-blue": {
 					50: "#e6f0fa",
 					100: "#cce1f5",

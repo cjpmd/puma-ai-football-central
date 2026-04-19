@@ -18,7 +18,7 @@ self.addEventListener('push', (event) => {
   });
 
   let data = {
-    title: 'Puma-AI',
+    title: 'Origin Sports',
     body: 'You have a new notification',
     icon: '/pwa-icons/icon-192x192.png',
     badge: '/pwa-icons/badge-72x72.png',
@@ -53,7 +53,7 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: data.icon,
     badge: data.badge,
-    tag: 'puma-ai-notification-' + Date.now(),
+    tag: 'origin-sports-notification-' + Date.now(),
     data: { url: data.url, eventId: data.eventId },
   };
 

@@ -227,7 +227,7 @@ export const webPushService = {
       const { error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           title: 'Test Notification 🔔',
-          body: 'Web Push is working! Puma-AI notifications are enabled.',
+          body: 'Web Push is working! Origin Sports notifications are enabled.',
           userIds: [user.id]
         }
       });

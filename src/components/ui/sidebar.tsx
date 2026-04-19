@@ -22,7 +22,7 @@ export function Sidebar() {
     <div className="h-full flex flex-col border-r bg-background">
       <div className="p-6">
         <h2 className="text-lg font-semibold text-foreground">
-          Coach's Playbook
+          Origin Sports
         </h2>
       </div>
       <div className="flex-1 overflow-auto py-2">

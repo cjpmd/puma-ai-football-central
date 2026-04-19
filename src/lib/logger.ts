@@ -1,5 +1,5 @@
 /**
- * Structured logger for Puma-AI.
+ * Structured logger for Origin Sports.
  *
  * - In development (import.meta.env.DEV): all levels are printed.
  * - In production: only `warn` and `error` are printed so that
