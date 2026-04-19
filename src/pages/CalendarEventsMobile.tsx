@@ -91,23 +91,23 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
   const today = new Date();
 
   return (
-    <div className="rounded-xl border bg-card p-3">
+    <div className="ios-card p-3">
       <div className="flex items-center justify-between mb-2">
         <button
           aria-label="Previous month"
           onClick={() => onMonthChange(subMonths(month, 1))}
-          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-white/10 text-white"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">{format(month, 'MMMM yyyy')}</span>
+          <span className="text-sm font-semibold text-white">{format(month, 'MMMM yyyy')}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             aria-label="Next month"
             onClick={() => onMonthChange(addMonths(month, 1))}
-            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-white/10 text-white"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -115,7 +115,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
             <button
               aria-label="Create event"
               onClick={onCreate}
-              className="h-7 w-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+              className="h-7 w-7 flex items-center justify-center rounded-md bg-white text-primary hover:bg-white/90"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -126,7 +126,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
       {/* Weekday header */}
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-          <div key={i} className="text-[10px] text-muted-foreground text-center font-medium">
+          <div key={i} className="text-[10px] text-white/50 text-center font-medium">
             {d}
           </div>
         ))}
@@ -149,17 +149,17 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
               key={key}
               onClick={() => onSelectDate(isSelected ? null : day)}
               className={`h-8 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors
-                ${isSelected ? 'bg-primary text-primary-foreground font-semibold' : ''}
-                ${!isSelected && isCurrentDay ? 'ring-1 ring-primary text-foreground font-semibold' : ''}
-                ${!isSelected && !isCurrentDay && isPastDay ? 'text-muted-foreground/60' : ''}
-                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-foreground hover:bg-accent' : ''}
+                ${isSelected ? 'bg-white text-primary font-semibold' : ''}
+                ${!isSelected && isCurrentDay ? 'ring-1 ring-white/70 text-white font-semibold' : ''}
+                ${!isSelected && !isCurrentDay && isPastDay ? 'text-white/35' : ''}
+                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-white hover:bg-white/10' : ''}
               `}
             >
               <span className="leading-none">{format(day, 'd')}</span>
               {hasEvent && (
                 <span
                   className={`w-1 h-1 rounded-full mt-0.5 ${
-                    isSelected ? 'bg-primary-foreground' : 'bg-primary'
+                    isSelected ? 'bg-primary' : 'bg-white/80'
                   }`}
                 />
               )}
@@ -172,7 +172,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
         <div className="mt-2 flex justify-center">
           <button
             onClick={() => onSelectDate(null)}
-            className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-accent"
+            className="text-xs px-3 py-1 rounded-full bg-white/10 text-white/80 hover:bg-white/15"
           >
             Show all
           </button>
