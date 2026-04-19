@@ -11,11 +11,11 @@ export const Logo: React.FC<LogoProps> = ({ className = "h-8 w-8", showText = tr
     <div className="flex items-center gap-2">
       <img 
         src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
-        alt="Team Manager Logo" 
+        alt="Origin Sports Logo" 
         className={className}
       />
       {showText && (
-        <span className="font-bold text-lg">Team Manager</span>
+        <span className="font-bold text-lg">Origin Sports</span>
       )}
     </div>
   );

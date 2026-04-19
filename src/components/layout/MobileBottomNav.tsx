@@ -1,48 +1,68 @@
 
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  Users, 
-  Calendar, 
-  BarChart3,
-  Trophy,
-  Building2,
-  UserCog,
-  Menu,
-  Dumbbell,
-  Target
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const ACTIVE_COLOR = '#b89fff';
+const INACTIVE_COLOR = 'rgba(235,235,245,0.55)';
+
 const navItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Players', href: '/players', icon: Users },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Training', href: '/training', icon: Dumbbell },
-  { name: 'Individual', href: '/individual-training', icon: Target },
+  { name: 'Home',     href: '/dashboard' },
+  { name: 'Players',  href: '/players' },
+  { name: 'Calendar', href: '/calendar' },
+  { name: 'Training', href: '/training' },
+  { name: 'More',     href: '/individual-training' },
 ];
 
 export function MobileBottomNav() {
   const location = useLocation();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 pb-[calc(theme(spacing.safe-bottom)+0.75rem)]">
-      <div className="flex justify-around items-center h-16 px-2">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)', paddingLeft: 12, paddingRight: 12 }}
+    >
+      <div
+        className="flex items-center justify-around w-full max-w-sm"
+        style={{
+          height: 64,
+          borderRadius: 32,
+          backdropFilter: 'blur(28px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+          background: 'rgba(20, 10, 36, 0.72)',
+          border: '0.5px solid rgba(255,255,255,0.14)',
+          boxShadow:
+            'inset 1px 1px 0 rgba(255,255,255,0.12), inset -1px -1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(80,20,140,0.35)',
+          padding: '0 8px',
+        }}
+      >
         {navItems.map((item) => {
-          const isActive = location.pathname === item.href;
+          const isActive =
+            location.pathname === item.href ||
+            (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
           return (
             <Link
               key={item.name}
               to={item.href}
-              className={cn(
-                'flex flex-col items-center justify-center flex-1 h-full text-xs transition-colors',
-                isActive 
-                  ? 'text-primary' 
-                  : 'text-gray-500 hover:text-gray-700'
-              )}
+              className="flex flex-col items-center justify-center gap-[2px] flex-1"
+              style={{
+                padding: '6px 8px',
+                borderRadius: 18,
+                background: isActive ? 'rgba(255,255,255,0.11)' : 'transparent',
+                minWidth: 52,
+                textDecoration: 'none',
+                transition: 'background 0.15s ease',
+              }}
             >
-              <item.icon className={cn('h-6 w-6 mb-1', isActive && 'text-primary')} />
-              <span className={cn('font-medium', isActive && 'text-primary')}>
+              <span
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+                  fontSize: 11,
+                  fontWeight: isActive ? 600 : 500,
+                  letterSpacing: 0.07,
+                  color: isActive ? ACTIVE_COLOR : INACTIVE_COLOR,
+                  lineHeight: '13px',
+                }}
+              >
                 {item.name}
               </span>
             </Link>

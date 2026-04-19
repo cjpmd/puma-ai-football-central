@@ -48,7 +48,7 @@ registerRoute(
 self.addEventListener('push', (event) => {
   logger.log('[SW] Push event received');
   
-  let title = 'Puma-AI';
+  let title = 'Origin Sports';
   let body = 'You have a new notification';
   let notificationData = {};
   
@@ -71,7 +71,7 @@ self.addEventListener('push', (event) => {
   const options: NotificationOptions = {
     body: body,
     icon: '/pwa-icons/icon-192x192.png',
-    tag: 'puma-ai-notification',
+    tag: 'origin-sports-notification',
     data: notificationData
   };
   

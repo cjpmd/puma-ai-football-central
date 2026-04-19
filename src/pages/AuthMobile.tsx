@@ -121,11 +121,11 @@ export default function AuthMobile() {
           <div className="flex justify-center mb-3">
             <img 
               src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
-              alt="Puma AI" 
+              alt="Origin Sports" 
               className="w-20 h-20"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Puma AI</h1>
+          <h1 className="text-2xl font-bold text-foreground">Origin Sports</h1>
           <p className="text-muted-foreground">Team Management Made Simple</p>
         </div>
         
@@ -250,7 +250,7 @@ export default function AuthMobile() {
           <div className="flex justify-center">
             <img 
               src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
-              alt="Puma AI" 
+              alt="Origin Sports" 
               className="w-16 h-16"
             />
           </div>

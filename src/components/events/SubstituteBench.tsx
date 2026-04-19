@@ -82,14 +82,22 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
     <div
       ref={setNodeRef}
       className={`
-        flex flex-wrap gap-1 rounded-lg border-2 border-dashed
+        flex flex-wrap gap-1 rounded-xl border
         ${compact ? 'p-1 min-h-[50px]' : 'p-3 min-h-[100px]'}
-        ${isOver ? 'border-solid border-primary bg-primary/15 ring-4 ring-primary/30 shadow-lg animate-pulse' : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'}
+        ${isOver
+          ? 'border-purple-400 ring-2 ring-purple-400/30 animate-pulse'
+          : 'border-white/10 hover:border-white/20'}
         transition-all duration-300 ease-out
       `}
+      style={{
+        backdropFilter: 'blur(16px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(160%)',
+        background: isOver ? 'rgba(124,77,232,0.18)' : 'rgba(20,10,36,0.55)',
+        boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.08)',
+      }}
     >
       {substitutes.length === 0 ? (
-        <div className={`flex-1 flex items-center justify-center text-gray-500 ${compact ? 'text-[9px]' : 'text-sm'}`}>
+        <div className={`flex-1 flex items-center justify-center ${compact ? 'text-[9px]' : 'text-sm'}`} style={{ color: 'rgba(235,235,245,0.45)' }}>
           Drag players here
         </div>
       ) : (

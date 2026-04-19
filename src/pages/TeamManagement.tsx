@@ -71,6 +71,10 @@ const TeamManagement = () => {
   };
 
   const loadTeamsForCurrentRole = async () => {
+    // Global/club admins always see all teams regardless of current view state
+    if (isGlobalAdmin) return loadAllTeams();
+    if (isClubAdmin()) return loadClubTeams();
+
     switch (currentView) {
       case 'global_admin':
         return loadAllTeams();
@@ -216,7 +220,7 @@ const TeamManagement = () => {
         updatedAt: team.updated_at,
         clubName: team.clubs?.name || 'Independent',
         playerCount: team.players?.[0]?.count || 0,
-        isReadOnly: !isUserTeamAdmin(team.id)
+        isReadOnly: isGlobalAdmin ? false : !isUserTeamAdmin(team.id)
       }));
 
       setAllTeams(convertedTeams);

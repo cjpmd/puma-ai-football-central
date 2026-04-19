@@ -1,5 +1,5 @@
 /**
- * Offline query persistence for Puma-AI.
+ * Offline query persistence for Origin Sports.
  *
  * Uses TanStack Query's sync-storage persister to serialise the
  * query cache to localStorage.  When a coach opens the app with
@@ -37,7 +37,7 @@ export function attachQueryPersistence(queryClient: QueryClient) {
 
   const persister = createSyncStoragePersister({
     storage,
-    key: 'puma-ai-query-cache',
+    key: 'origin-sports-query-cache',
   });
 
   persistQueryClient({

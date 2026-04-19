@@ -16,13 +16,13 @@ import {
 
 export function Sidebar() {
   const { user, signOut } = useAuth();
-  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('global_admin');
+  const isAdmin = (user as any)?.role === 'admin' || (user as any)?.role === 'global_admin';
 
   return (
     <div className="h-full flex flex-col border-r bg-background">
       <div className="p-6">
         <h2 className="text-lg font-semibold text-foreground">
-          Coach's Playbook
+          Origin Sports
         </h2>
       </div>
       <div className="flex-1 overflow-auto py-2">

@@ -1,235 +1,71 @@
 
-## Plan: Fix Shona's Incorrect Links + Prevent Future Cross-Team Parent Linking Errors
 
-### Part 1: Immediate Fix - Delete Incorrect Associations
+## Plan: Calendar Mini-Grid + Training Page Redesign (Mobile)
 
-The following records need to be deleted to fix Shona McDonald's account:
+The reference screenshots (image-274) show two distinct designs:
+- **Calendar (Matches)**: a compact month grid at the top with selected/today/dotted-event days, then a "This Week" list of events below
+- **Training**: a hero "Weekly load" chart card, a "Today's Session" highlight card, and an "Upcoming" list
 
-| Table | Record ID | Description |
-|-------|-----------|-------------|
-| `user_players` | `14bcfda5-14bf-4bf1-9ac4-876108a0d6a9` | Incorrect link to Bruno Fernandes as parent |
-| `user_teams` | `c2c1d7a9-a095-413b-b2e6-35b4db99400b` | Incorrect team_parent role for Panthers |
+You've asked for the Calendar to use a **smaller** date grid so the events list gets more space.
 
-**SQL to run in Supabase SQL Editor:**
-```sql
--- Delete incorrect parent-player link
-DELETE FROM user_players 
-WHERE id = '14bcfda5-14bf-4bf1-9ac4-876108a0d6a9';
+### 1. Calendar page — `src/pages/CalendarEventsMobile.tsx`
 
--- Delete incorrect team membership
-DELETE FROM user_teams 
-WHERE id = 'c2c1d7a9-a095-413b-b2e6-35b4db99400b';
-```
+**Add a compact month grid at the top** (replacing nothing — sits above the existing pending-availability + grouped event list):
 
----
+- Header: month name (e.g. "April 2026") with a small `+` create button on the right (only when `canCreateEvents()`)
+- 7-column grid (M T W T F S S) with single-digit day cells, ~28px tall — much smaller than a standard `<Calendar />`
+- Each day cell:
+  - Today → outlined ring
+  - Selected day → filled primary background
+  - Days with events → small dot below the number
+  - Past days → muted
+- Tapping a day either:
+  - Filters the list below to that day, OR
+  - Scrolls to that day's section (TBD — I'll go with **filter** since it's cleaner)
+- A "Show all" pill clears the filter
 
-### Part 2: Prevention - Add Validation for Parent Linking
+**Existing event list stays** but gets the saved space:
+- Keep current grouped sections (This Week / Next Week / etc.)
+- Keep the date-column + colored-accent + title card design (already matches the screenshot's "This Week" look closely)
+- When a day is selected in the grid, hide the period headers and just show that day's events (or "No events on this day")
 
-#### Root Cause Analysis
+**Build it as a small inline component** inside `CalendarEventsMobile.tsx` (no new file needed) — uses `date-fns` (`startOfMonth`, `endOfMonth`, `eachDayOfInterval`, `getDay`, `isSameDay`, `isSameMonth`).
 
-The issue likely occurred because:
-1. When a parent enters a code or is linked by email, there's **no check** to verify they aren't already linked to a different team
-2. The PlayerParentLinkManager only checks if the user is already linked to **that specific player**, not if they're already in a different team as a parent
+**Month nav**: left/right chevrons either side of the month label to page months. Defaults to current month.
 
-#### Solution: Add Cross-Team Validation
+### 2. Training page — `src/pages/TrainingMobile.tsx`
 
-**Before creating a parent link, check:**
-1. Is this user already linked as a parent to players on OTHER teams?
-2. If yes, show a warning and require confirmation (or block entirely)
+Currently a 3-tab page (Library / Plans / Sessions). The reference shows a feed-style training home. Redesign the default landing into a **scrollable feed** with the existing tab functionality moved into a secondary access point:
 
----
+**New top section (above tabs)**:
+1. **Week summary card** — "Week N · X of Y sessions" header + "Weekly load: Optimal" + a 7-bar mini-chart (M–S), built from sessions on the team's calendar this week. Acute:Chronic ratio shown if computable, otherwise hidden.
+2. **Today's Session card** — picks the next training event today (or next future training if none today). Shows time · location · duration, title, description, and a `Start` action that navigates to that event's training plan view. Hidden if no upcoming training.
+3. **Upcoming list** (next 3 training events) — same compact horizontal card style as the Calendar list (date column + title + time/location), tap → navigate to event details.
 
-### Implementation Details
+**Tabs section stays below** for Library / Plans / Sessions so existing functionality isn't lost — collapsed by default into a "Manage drills & plans" disclosure or kept visible as the secondary tabs (I recommend keeping the tabs visible but below the new feed so power-users still have access).
 
-#### File 1: `src/services/playerCodeService.ts` - Add validation in `linkUserToPlayerAsParent`
+**Data sources**:
+- Pull training events via `supabase.from('events').select().eq('event_type','training').in('team_id', teamIds)` for the current week + next 7 days
+- Bar chart heights = duration of each day's training session(s); inactive days = empty bars
+- "Weekly load" label is a simple bucket: 0–1 sessions = Light, 2–3 = Optimal, 4+ = High
 
-Add a check before inserting the user_players record:
+### 3. Out of scope (call out for later if wanted)
 
-```typescript
-async linkUserToPlayerAsParent(parentCode: string): Promise<void> {
-  const player = await this.getPlayerByParentLinkingCode(parentCode);
-  if (!player) {
-    throw new Error('Invalid parent linking code');
-  }
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('User must be authenticated to link as parent');
-  }
-  
-  // NEW: Check if user is already linked to this player
-  const { data: existingLink } = await supabase
-    .from('user_players')
-    .select('id')
-    .eq('player_id', player.id)
-    .eq('user_id', user.id)
-    .eq('relationship', 'parent')
-    .maybeSingle();
-  
-  if (existingLink) {
-    throw new Error('You are already linked as a parent to this player');
-  }
-  
-  // NEW: Check for cross-team parent links
-  const { data: existingLinks } = await supabase
-    .from('user_players')
-    .select(`
-      id,
-      players!inner(team_id, name, teams(name))
-    `)
-    .eq('user_id', user.id)
-    .eq('relationship', 'parent');
-  
-  if (existingLinks && existingLinks.length > 0) {
-    // User is already a parent to other players
-    const otherTeamLinks = existingLinks.filter(
-      link => link.players.team_id !== player.team_id
-    );
-    
-    if (otherTeamLinks.length > 0) {
-      const teamNames = otherTeamLinks.map(l => l.players.teams?.name).join(', ');
-      throw new Error(
-        `You are already linked as a parent to players on other teams (${teamNames}). ` +
-        `Please contact the team manager if you need to link to players on multiple teams.`
-      );
-    }
-  }
-  
-  // Existing code continues...
-}
-```
+- Real acute:chronic workload ratio (needs a workload tracking table)
+- The redesigned bottom-nav style from the screenshot (Home / Squad / Matches / Training / Profile with the active pill background) — current nav already works but doesn't match exactly. Tell me if you want that polished too.
+- Replacing the Calendar/Training designs across **all** views — this plan only updates the mobile pages
 
-#### File 2: `src/components/players/PlayerParentLinkManager.tsx` - Add validation in `handleInviteParent`
-
-Add validation when linking an existing user by email:
-
-```typescript
-const handleInviteParent = async () => {
-  // ... existing validation ...
-  
-  if (existingProfile) {
-    // NEW: Check if this user is already a parent on a DIFFERENT team
-    const { data: currentPlayer } = await supabase
-      .from('players')
-      .select('team_id')
-      .eq('id', playerId)
-      .single();
-    
-    if (currentPlayer) {
-      const { data: existingLinks } = await supabase
-        .from('user_players')
-        .select(`
-          id,
-          players!inner(team_id, name, teams(name))
-        `)
-        .eq('user_id', existingProfile.id)
-        .eq('relationship', 'parent');
-      
-      if (existingLinks && existingLinks.length > 0) {
-        const otherTeamLinks = existingLinks.filter(
-          link => link.players.team_id !== currentPlayer.team_id
-        );
-        
-        if (otherTeamLinks.length > 0) {
-          const linkedTeams = otherTeamLinks
-            .map(l => l.players.teams?.name)
-            .filter(Boolean)
-            .join(', ');
-          
-          toast({
-            title: 'Warning: Cross-Team Link',
-            description: `This user is already a parent on: ${linkedTeams}. Are you sure this is correct?`,
-            variant: 'destructive'
-          });
-          // Optionally: block the action or add a confirmation dialog
-          return;
-        }
-      }
-    }
-    
-    // Continue with existing link logic...
-  }
-};
-```
-
-#### File 3: `src/components/auth/UnifiedSignupWizard.tsx` - Add validation during signup
-
-For parents signing up with a code, add validation before creating links:
-
-```typescript
-} else if (selectedRole === "parent" && matchedPlayer) {
-  // NEW: This is a new account, so no need to check for existing cross-team links
-  // The matchedPlayer already contains the team_id from the code
-  // But we should validate the team_id matches the team they entered the code for
-  
-  if (matchedPlayer.team_id !== teamInfo?.id) {
-    console.warn("Player team doesn't match selected team - potential code mismatch");
-    // This could indicate a bug or incorrect code handling
-  }
-  
-  // Existing code to create parent link...
-}
-```
-
----
-
-### Part 3: Add Audit Logging for Parent Links
-
-#### Database Migration: Add `created_by` column to `user_players`
-
-```sql
--- Add tracking columns to user_players
-ALTER TABLE user_players 
-ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users(id),
-ADD COLUMN IF NOT EXISTS creation_method text;
-
--- Add comment for documentation
-COMMENT ON COLUMN user_players.created_by IS 'User who created this link (manager, self-signup, etc.)';
-COMMENT ON COLUMN user_players.creation_method IS 'How link was created: signup_code, manager_invite, manager_direct, code_link';
-```
-
-#### Update Link Creation Code
-
-When creating user_players records, include the creation method:
-
-```typescript
-// In playerCodeService.linkUserToPlayerAsParent
-const { error: linkError } = await supabase
-  .from('user_players')
-  .insert({
-    player_id: player.id,
-    user_id: user.id,
-    relationship: 'parent',
-    created_by: user.id,
-    creation_method: 'code_link'  // or 'signup_code' for UnifiedSignupWizard
-  });
-```
-
----
-
-### Summary of Changes
+### Files to modify
 
 | File | Change |
 |------|--------|
-| **SQL (Manual)** | Delete 2 incorrect records for Shona McDonald |
-| `src/services/playerCodeService.ts` | Add cross-team validation in `linkUserToPlayerAsParent()` |
-| `src/components/players/PlayerParentLinkManager.tsx` | Add cross-team validation in `handleInviteParent()` |
-| `src/components/auth/UnifiedSignupWizard.tsx` | Add team_id consistency check during signup |
-| **Database Migration** | Add `created_by` and `creation_method` columns to `user_players` |
+| `src/pages/CalendarEventsMobile.tsx` | Add compact month-grid component above the event list; add selected-day filter |
+| `src/pages/TrainingMobile.tsx` | Add Weekly load card, Today's Session card, Upcoming list above the existing tabs |
 
----
+### What stays the same
 
-### Expected Behavior After Implementation
+- All event details modal, post-game editor, team selection flow on Calendar
+- Drill library, plans dashboard, drill creator on Training
+- Pending availability banner at the top of Calendar
+- Routing, auth, role permissions
 
-1. **Shona McDonald's account** will only show Andrew McDonald (Pumas) - Bruno Fernandes link will be removed
-2. **Future parent signups/links** will check for existing cross-team associations and warn/block
-3. **Audit trail** will track who created each parent-player link and how
-
----
-
-### Verification Steps
-
-After implementation:
-1. Query Shona's links - should only see Andrew McDonald
-2. Try to link a user who is already a parent on Team A to a player on Team B - should show warning/error
-3. Verify new `user_players` records have `created_by` and `creation_method` populated

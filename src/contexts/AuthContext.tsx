@@ -29,8 +29,8 @@ interface AuthContextType {
   loading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error: unknown }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ data: unknown; error: unknown }>;
+  signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ data: { session: Session | null } | null; error: { message: string } | null }>;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
 }

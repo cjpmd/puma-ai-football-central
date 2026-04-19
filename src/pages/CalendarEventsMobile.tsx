@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { format, isSameDay, isToday, isTomorrow, isPast, parseISO, startOfDay, endOfWeek, addWeeks } from 'date-fns';
+import { format, isSameDay, isToday, isTomorrow, isPast, parseISO, startOfDay, endOfWeek, addWeeks, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, addMonths, subMonths, isBefore } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { isEventPast, formatTime } from '@/utils/eventUtils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -62,6 +63,125 @@ const getEventTypeLabel = (eventType: string): { label: string; colorClass: stri
   }
 };
 
+// Compact mini month grid for the calendar header
+interface MiniMonthGridProps {
+  month: Date;
+  selectedDate: Date | null;
+  eventDates: Set<string>; // 'yyyy-MM-dd'
+  onSelectDate: (date: Date | null) => void;
+  onMonthChange: (date: Date) => void;
+  onCreate?: () => void;
+  showCreate?: boolean;
+}
+
+const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
+  month,
+  selectedDate,
+  eventDates,
+  onSelectDate,
+  onMonthChange,
+  onCreate,
+  showCreate,
+}) => {
+  const monthStart = startOfMonth(month);
+  const monthEnd = endOfMonth(month);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // Pad to start on Monday
+  const firstDayIdx = (getDay(monthStart) + 6) % 7; // 0=Mon
+  const today = new Date();
+
+  return (
+    <div className="rounded-xl border bg-card p-3">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          aria-label="Previous month"
+          onClick={() => onMonthChange(subMonths(month, 1))}
+          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{format(month, 'MMMM yyyy')}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            aria-label="Next month"
+            onClick={() => onMonthChange(addMonths(month, 1))}
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          {showCreate && onCreate && (
+            <button
+              aria-label="Create event"
+              onClick={onCreate}
+              className="h-7 w-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Weekday header */}
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+          <div key={i} className="text-[10px] text-muted-foreground text-center font-medium">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Day grid */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {Array.from({ length: firstDayIdx }).map((_, i) => (
+          <div key={`pad-${i}`} className="h-8" />
+        ))}
+        {days.map((day) => {
+          const key = format(day, 'yyyy-MM-dd');
+          const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === key;
+          const isCurrentDay = format(today, 'yyyy-MM-dd') === key;
+          const hasEvent = eventDates.has(key);
+          const isPastDay = isBefore(day, today) && !isCurrentDay;
+
+          return (
+            <button
+              key={key}
+              onClick={() => onSelectDate(isSelected ? null : day)}
+              className={`h-8 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors
+                ${isSelected ? 'bg-primary text-primary-foreground font-semibold' : ''}
+                ${!isSelected && isCurrentDay ? 'ring-1 ring-primary text-foreground font-semibold' : ''}
+                ${!isSelected && !isCurrentDay && isPastDay ? 'text-muted-foreground/60' : ''}
+                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-foreground hover:bg-accent' : ''}
+              `}
+            >
+              <span className="leading-none">{format(day, 'd')}</span>
+              {hasEvent && (
+                <span
+                  className={`w-1 h-1 rounded-full mt-0.5 ${
+                    isSelected ? 'bg-primary-foreground' : 'bg-primary'
+                  }`}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedDate && (
+        <div className="mt-2 flex justify-center">
+          <button
+            onClick={() => onSelectDate(null)}
+            className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-accent"
+          >
+            Show all
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function CalendarEventsMobile() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = React.useState(() => new URLSearchParams(window.location.search));
@@ -86,6 +206,8 @@ export default function CalendarEventsMobile() {
   const [selectedTeamIndex, setSelectedTeamIndex] = useState(0);
   const [teamRefreshTrigger, setTeamRefreshTrigger] = useState(0);
   const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const { toast } = useToast();
   const { user, profile, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
@@ -786,6 +908,24 @@ export default function CalendarEventsMobile() {
   
   const groupedEvents = groupEventsByPeriod(paginatedEvents);
 
+  // Build event date set for the mini grid (all events for current team scope)
+  const eventDateSet = React.useMemo(() => {
+    const set = new Set<string>();
+    filteredEvents.forEach(e => set.add(format(new Date(e.date), 'yyyy-MM-dd')));
+    return set;
+  }, [filteredEvents]);
+
+  // Apply selected-date filter to ordered events when active
+  const visibleEvents = selectedDate
+    ? orderedEvents.filter(e => format(new Date(e.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
+    : orderedEvents;
+
+  const paginatedVisibleEvents = selectedDate ? visibleEvents : paginatedEvents;
+  const hasMoreVisibleEvents = !selectedDate && hasMoreEvents;
+  const groupedVisibleEvents = selectedDate
+    ? { [format(selectedDate, 'EEE d MMM')]: visibleEvents }
+    : groupedEvents;
+
   if (showExpandedTeamSelection && selectedEvent) {
     // Get the event's actual team for proper context
     const eventTeam = (allTeams || authTeams || teams || []).find(t => t.id === selectedEvent.team_id);
@@ -874,17 +1014,36 @@ export default function CalendarEventsMobile() {
           );
         })()}
 
+        {/* Compact mini-month grid */}
+        <MiniMonthGrid
+          month={calendarMonth}
+          selectedDate={selectedDate}
+          eventDates={eventDateSet}
+          onSelectDate={(d) => {
+            setSelectedDate(d);
+            if (d) setCalendarMonth(d);
+          }}
+          onMonthChange={setCalendarMonth}
+          onCreate={() => {
+            setSelectedEvent(null);
+            setShowMobileEventForm(true);
+          }}
+          showCreate={canCreateEvents()}
+        />
+
         {loading ? (
           <div className="text-center py-8">
             <LoadingSpinner size="md" message="Loading events..." />
           </div>
-        ) : paginatedEvents.length === 0 ? (
+        ) : paginatedVisibleEvents.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">No events scheduled</p>
+            <p className="text-muted-foreground">
+              {selectedDate ? 'No events on this day' : 'No events scheduled'}
+            </p>
           </div>
         ) : (
           <>
-            {Object.entries(groupedEvents).map(([period, periodEvents]) => (
+            {Object.entries(groupedVisibleEvents).map(([period, periodEvents]) => (
               <div key={period} className="space-y-2">
                 <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
                   {period}
@@ -992,7 +1151,7 @@ export default function CalendarEventsMobile() {
             ))}
             
             {/* Show More Button */}
-            {hasMoreEvents && (
+            {hasMoreVisibleEvents && (
               <div className="flex justify-center pt-4">
                 <Button
                   variant="outline"

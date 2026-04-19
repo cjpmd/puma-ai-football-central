@@ -80,7 +80,7 @@ export function Features() {
             Everything you need to manage your football team
           </h2>
           <p className="max-w-[700px] text-gray-500 md:text-lg">
-            Puma-AI provides a comprehensive suite of tools designed specifically for football teams and clubs.
+            Origin Sports provides a comprehensive suite of tools designed specifically for football teams and clubs.
           </p>
         </div>
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mt-12">
