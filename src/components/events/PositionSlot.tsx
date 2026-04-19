@@ -27,23 +27,20 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     }
   });
 
-  // Helper function to get position group color
   const getPositionGroupColor = (position: string) => {
     const pos = position?.toLowerCase() || '';
-    
     if (pos.includes('gk') || pos.includes('goalkeeper')) {
-      return 'border-yellow-400 bg-yellow-50';
-    } else if (pos.includes('cb') || pos.includes('lb') || pos.includes('rb') || 
-               pos.includes('wb') || pos.includes('def') || pos.includes('dl') || 
+      return 'border-amber-400';
+    } else if (pos.includes('cb') || pos.includes('lb') || pos.includes('rb') ||
+               pos.includes('wb') || pos.includes('def') || pos.includes('dl') ||
                pos.includes('dr') || pos.includes('dc')) {
-      return 'border-blue-400 bg-blue-50';
-    } else if (pos.includes('cm') || pos.includes('dm') || pos.includes('am') || 
-               pos.includes('mid') || pos.includes('ml') || pos.includes('mr') || 
+      return 'border-purple-300';
+    } else if (pos.includes('cm') || pos.includes('dm') || pos.includes('am') ||
+               pos.includes('mid') || pos.includes('ml') || pos.includes('mr') ||
                pos.includes('mc') || pos.includes('cdm') || pos.includes('cam')) {
-      return 'border-green-400 bg-green-50';
+      return 'border-pink-400';
     } else {
-      // Forwards/Attackers
-      return 'border-red-400 bg-red-50';
+      return 'border-red-400';
     }
   };
 
@@ -56,8 +53,11 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
         absolute flex flex-col items-center justify-center
         ${isLarger ? 'w-20 h-20' : 'w-16 h-16'}
         rounded-full border-2 border-dashed
-        ${isOver ? 'border-solid border-primary bg-primary/15 ring-4 ring-primary/30 shadow-lg' : 
-          (player ? 'border-transparent bg-transparent' : 'border-white/60 bg-white/20 hover:border-white/80 hover:bg-white/30')}
+        ${isOver
+          ? 'border-solid border-purple-300 ring-4 ring-purple-400/30 shadow-lg'
+          : player
+          ? 'border-transparent bg-transparent'
+          : 'border-white/40 bg-white/10 hover:border-white/60 hover:bg-white/15'}
         transition-all duration-300 ease-out backdrop-blur-sm
       `}
       style={{

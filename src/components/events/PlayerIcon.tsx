@@ -54,18 +54,18 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
 
   const getAvailabilityStyle = () => {
     const baseStyle = isCircular ? 'rounded-full' : 'rounded-lg';
-    
+    // Dark glass background — availability indicated by border colour only
     switch (player.availabilityStatus) {
       case 'available':
-        return `border-green-500 bg-green-50 ${baseStyle}`;
+        return `border-puma-purple-400 ${baseStyle}`;
       case 'unavailable':
-        return `border-red-500 bg-red-50 opacity-60 ${baseStyle}`;
+        return `border-red-500 opacity-60 ${baseStyle}`;
       case 'maybe':
-        return `border-yellow-500 bg-yellow-50 ${baseStyle}`;
+        return `border-amber-400 ${baseStyle}`;
       case 'pending':
-        return `border-orange-500 bg-orange-50 ${baseStyle}`;
+        return `border-orange-400 ${baseStyle}`;
       default:
-        return `border-gray-300 bg-gray-50 ${baseStyle}`;
+        return `border-white/20 ${baseStyle}`;
     }
   };
 
@@ -82,13 +82,14 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         className={`
           relative flex flex-col items-center justify-center ${circularSize} border-2
           ${getAvailabilityStyle()}
-          ${actualIsDragging ? 'opacity-50' : 'shadow-sm'}
+          ${actualIsDragging ? 'opacity-50' : ''}
           ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : shouldEnableDrag ? 'cursor-grab print:cursor-default' : 'cursor-default'}
-          ${(player.availabilityStatus === 'available' || player.availabilityStatus === 'pending') && shouldEnableDrag ? 'hover:scale-105 hover:shadow-md active:scale-110' : ''}
+          ${(player.availabilityStatus === 'available' || player.availabilityStatus === 'pending') && shouldEnableDrag ? 'hover:scale-105 active:scale-110' : ''}
           transition-all duration-200 ease-in-out
           ${shouldEnableDrag ? 'touch-none select-none' : ''}
           print:scale-100 print:shadow-none
         `}
+      style={{ background: 'rgba(12,6,22,0.75)', backdropFilter: 'blur(6px)', boxShadow: '0 4px 14px rgba(0,0,0,0.45)' }}
       >
         {/* Captain indicator */}
         {(isCaptain || player.squadRole === 'captain') && (
@@ -108,19 +109,19 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         <div className="flex flex-col items-center justify-center text-center leading-none">
           {/* Position abbreviation above name if provided */}
           {showPositionLabel && positionAbbreviation && (
-            <div className={`${textSize} font-bold text-blue-600 mb-0.5`}>
+            <div className={`${textSize} font-bold mb-0.5`} style={{ color: 'rgba(184,159,255,0.9)' }}>
               {positionAbbreviation}
             </div>
           )}
-          
+
           {/* Player name */}
-          <div className={`${textSize} font-medium leading-tight`}>
+          <div className={`${textSize} font-medium leading-tight`} style={{ color: '#fff' }}>
             {getDisplayName()}
           </div>
-          
+
           {/* Squad number below */}
           {!compact && (
-            <div className={`${textSize} font-bold text-gray-600 mt-0.5`}>
+            <div className={`${textSize} font-bold mt-0.5`} style={{ color: 'rgba(235,235,245,0.55)' }}>
               #{player.squadNumber}
             </div>
           )}

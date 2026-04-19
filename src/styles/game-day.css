@@ -263,11 +263,14 @@
   height: 100%;
 }
 
-/* Name bar - THINNER */
+/* Name bar — dark glass pill */
 .player-name-bar {
   width: 100%;
-  background: hsl(0, 0%, 100%);
-  border-radius: 2px;
+  background: rgba(12, 6, 22, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 0.5px solid rgba(255, 255, 255, 0.10);
+  border-radius: 4px;
   padding: 2px 3px;
   margin-top: 2px;
   text-align: center;
@@ -276,7 +279,7 @@
 .player-name-bar span {
   font-size: 7px;
   font-weight: 700;
-  color: hsl(240, 26%, 14%);
+  color: rgba(255, 255, 255, 0.92);
   text-transform: uppercase;
   letter-spacing: 0.2px;
   line-height: 1;
@@ -296,17 +299,17 @@
   line-height: 1;
 }
 
-/* Position-based number bar colors */
+/* Position-based number bar colours — purple palette */
 .player-number-bar.goalkeeper {
-  background: linear-gradient(90deg, hsl(45, 93%, 47%), hsl(38, 92%, 50%));
+  background: linear-gradient(90deg, hsl(38, 92%, 50%), hsl(45, 93%, 47%));
 }
 
 .player-number-bar.defender {
-  background: linear-gradient(90deg, hsl(217, 91%, 60%), hsl(221, 83%, 53%));
+  background: linear-gradient(90deg, oklch(0.58 0.19 295), oklch(0.48 0.18 290));
 }
 
 .player-number-bar.midfielder {
-  background: linear-gradient(90deg, hsl(142, 71%, 45%), hsl(142, 76%, 36%));
+  background: linear-gradient(90deg, oklch(0.66 0.18 340), oklch(0.56 0.20 335));
 }
 
 .player-number-bar.forward {
@@ -347,11 +350,11 @@
 }
 
 .event-badge-mini.goal {
-  background: linear-gradient(135deg, hsl(142, 71%, 45%), hsl(142, 76%, 36%));
+  background: linear-gradient(135deg, oklch(0.58 0.19 295), oklch(0.46 0.17 290));
 }
 
 .event-badge-mini.assist {
-  background: linear-gradient(135deg, hsl(217, 91%, 60%), hsl(217, 91%, 50%));
+  background: linear-gradient(135deg, oklch(0.66 0.18 340), oklch(0.54 0.20 335));
 }
 
 .event-badge-mini.yellow-card {
