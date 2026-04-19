@@ -810,16 +810,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
   const getPositionGroupColor = (position: string) => {
     const pos = position?.toLowerCase() || '';
-    
+    // iOS purple-toned position colours — dark glass, coloured border only
     if (pos.includes('goalkeeper') || pos === 'gk') {
-      return 'border-yellow-400 bg-yellow-50';
+      return 'border-amber-400 bg-transparent';
     } else if (pos.includes('defender') || pos.startsWith('d')) {
-      return 'border-blue-400 bg-blue-50';
+      return 'border-puma-purple-300 bg-transparent';
     } else if (pos.includes('midfielder') || pos.startsWith('m') || pos.includes('mid')) {
-      return 'border-green-400 bg-green-50';
+      return 'border-pink-400 bg-transparent';
     } else {
-      // Forwards/Attackers/Strikers
-      return 'border-red-400 bg-red-50';
+      return 'border-red-400 bg-transparent';
     }
   };
 
@@ -828,12 +827,12 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const nudgedPositions = applyAntiOverlapNudge(period.positions);
     
     return (
-      <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
+      <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid overflow-hidden" style={{ background: 'linear-gradient(180deg, #150A1F 0%, #0A0511 100%)', border: '0.5px solid rgba(255,255,255,0.10)', color: '#fff' }}>
         <CardHeader className="pb-3">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-center flex-1">
-                <CardTitle className="text-lg mb-2">Period {period.periodNumber}</CardTitle>
+                <CardTitle className="text-lg mb-2" style={{ color: '#fff' }}>Period {period.periodNumber}</CardTitle>
                 <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
                   <span>{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
                   <div className="flex items-center gap-1">
@@ -888,14 +887,32 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-4">
-          <div className="relative bg-green-100 rounded-lg p-4 h-[400px] print:h-[300px]">
-            <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
-            
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
-            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-            <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-            <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
+        <CardContent className="space-y-4" style={{ background: 'transparent' }}>
+          <div className="relative rounded-xl p-4 h-[400px] print:h-[300px] overflow-hidden" style={{
+            background: 'repeating-linear-gradient(180deg, oklch(0.30 0.14 295) 0 28px, oklch(0.25 0.13 295) 28px 56px)',
+            boxShadow: 'inset 0 0 0 0.5px rgba(255,255,255,0.10), inset 0 0 60px rgba(0,0,0,0.3)',
+          }}>
+            {/* Radial glow at top */}
+            <div className="absolute inset-0 rounded-xl pointer-events-none" style={{ background: 'radial-gradient(ellipse 120% 60% at 50% 0%, oklch(0.55 0.20 295 / 0.45), transparent 65%)' }} />
+            {/* Pitch SVG lines */}
+            <svg viewBox="0 0 400 500" preserveAspectRatio="none" className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.18 }}>
+              <g fill="none" stroke="#fff" strokeWidth="1.2">
+                <rect x="4" y="4" width="392" height="492" rx="4"/>
+                <line x1="4" y1="250" x2="396" y2="250"/>
+                <circle cx="200" cy="250" r="44"/>
+                <circle cx="200" cy="250" r="2" fill="#fff"/>
+                <rect x="74" y="4" width="252" height="66"/>
+                <rect x="138" y="4" width="124" height="24"/>
+                <path d="M138 70 a64 64 0 0 0 124 0"/>
+                <rect x="74" y="430" width="252" height="66"/>
+                <rect x="138" y="472" width="124" height="24"/>
+                <path d="M138 430 a64 64 0 0 1 124 0"/>
+              </g>
+            </svg>
+
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-0" />
+            <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-0" />
+            <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-0" />
             
             <div className="relative h-full">
               {nudgedPositions.map((position, index) => {
@@ -926,7 +943,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                         zIndex: 20,
                       }}
                     >
-                       <div className={`rounded-full border-2 ${positionGroupColor} p-1 ${isPositionsLocked ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                       <div className={`rounded-full border-2 ${positionGroupColor} p-1 ${isPositionsLocked ? 'opacity-60 cursor-not-allowed' : ''}`} style={{ backdropFilter: 'blur(8px)', background: 'rgba(12,6,22,0.72)', boxShadow: '0 3px 12px rgba(0,0,0,0.5)' }}>
                          <PlayerIcon
                            player={player}
                            isCaptain={isCaptain}
