@@ -25,7 +25,7 @@ export function Footer() {
                 <path d="M8.5 7c-.99 0-1.898.38-2.575 1" />
                 <path d="M2 12c0-1.688 1.5-3 3-3" />
               </svg>
-              <h3 className="text-xl font-bold text-puma-blue-500">Puma-AI</h3>
+              <h3 className="text-xl font-bold text-puma-blue-500">Origin Sports</h3>
             </div>
             <p className="text-sm text-muted-foreground">
               The comprehensive platform for managing football teams and clubs.
@@ -82,7 +82,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Puma-AI. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Origin Sports. All rights reserved.</p>
         </div>
       </div>
     </footer>

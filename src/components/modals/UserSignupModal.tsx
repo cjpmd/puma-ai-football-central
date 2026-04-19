@@ -100,7 +100,7 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
           riskLevel: 'low'
         });
         
-        toast.success("Welcome to Puma-AI!", {
+        toast.success("Welcome to Origin Sports!", {
           description: "Your account has been created and you are now logged in."
         });
         onSignup();
@@ -151,7 +151,7 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
         <DialogHeader>
           <DialogTitle>Create an account</DialogTitle>
           <DialogDescription>
-            Sign up to start using Puma-AI.
+            Sign up to start using Origin Sports.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">

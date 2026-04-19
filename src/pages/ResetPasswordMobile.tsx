@@ -154,7 +154,7 @@ export default function ResetPasswordMobile() {
           <div className="flex justify-center mb-4">
             <img 
               src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
-              alt="Puma AI" 
+              alt="Origin Sports" 
               className="w-16 h-16"
             />
           </div>

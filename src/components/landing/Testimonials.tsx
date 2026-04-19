@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export function Testimonials() {
   const testimonials = [
     {
-      quote: "Puma-AI has transformed how we manage our youth teams. The player development tracking is invaluable!",
+      quote: "Origin Sports has transformed how we manage our youth teams. The player development tracking is invaluable!",
       name: "Sarah Johnson",
       title: "Club Director, United FC",
       avatar: "",
@@ -19,7 +19,7 @@ export function Testimonials() {
       initials: "MC",
     },
     {
-      quote: "Managing player subscriptions used to be a nightmare. With Puma-AI, it's seamless and our cash flow has improved.",
+      quote: "Managing player subscriptions used to be a nightmare. With Origin Sports, it's seamless and our cash flow has improved.",
       name: "David Thompson",
       title: "Club Treasurer, Riverside FC",
       avatar: "",
@@ -38,7 +38,7 @@ export function Testimonials() {
             Trusted by clubs and teams nationwide
           </h2>
           <p className="max-w-[700px] text-gray-500 md:text-lg">
-            Hear what our users have to say about Puma-AI
+            Hear what our users have to say about Origin Sports
           </p>
         </div>
         

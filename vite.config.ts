@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => ({
       srcDir: 'src',
       filename: 'sw.ts',
       manifest: {
-        name: 'Puma-AI Football Team Manager',
-        short_name: 'Puma-AI',
+        name: 'Origin Sports Football Team Manager',
+        short_name: 'Origin Sports',
         description: 'Comprehensive platform for managing football teams and clubs',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',

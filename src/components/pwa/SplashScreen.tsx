@@ -41,7 +41,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
       <div className="animate-splash-logo">
         <img 
           src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
-          alt="Puma AI Logo" 
+          alt="Origin Sports Logo" 
           className="h-32 w-32 object-contain"
         />
       </div>
@@ -68,7 +68,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         }`}
       >
         <span className="text-sm text-muted-foreground tracking-widest uppercase">
-          puma ai
+          origin sports
         </span>
       </div>
     </div>

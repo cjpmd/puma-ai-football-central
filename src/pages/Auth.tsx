@@ -138,11 +138,11 @@ const Auth = () => {
           <div className="flex justify-center mb-4">
             <img 
               src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
-              alt="Puma AI" 
+              alt="Origin Sports" 
               className="w-16 h-16"
             />
           </div>
-          <CardTitle className="text-2xl text-center">Welcome to Puma AI</CardTitle>
+          <CardTitle className="text-2xl text-center">Welcome to Origin Sports</CardTitle>
           <CardDescription className="text-center">
             Sign in to your account or join a team
           </CardDescription>
