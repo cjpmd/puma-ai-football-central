@@ -206,6 +206,8 @@ export default function CalendarEventsMobile() {
   const [selectedTeamIndex, setSelectedTeamIndex] = useState(0);
   const [teamRefreshTrigger, setTeamRefreshTrigger] = useState(0);
   const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const { toast } = useToast();
   const { user, profile, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
