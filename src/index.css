@@ -188,6 +188,33 @@
       inset -1px -1px 0 rgba(255, 255, 255, 0.06),
       0 8px 32px rgba(0, 0, 0, 0.3);
   }
+
+  /* Mobile glass card surfaces — translucent over the dark purple wallpaper */
+  .ios-card {
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+
+  .ios-card-strong {
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border: 0.5px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.14),
+      0 4px 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .ios-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 
 /* iOS mobile wallpaper backgrounds */
