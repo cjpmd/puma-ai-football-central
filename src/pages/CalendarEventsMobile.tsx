@@ -63,6 +63,125 @@ const getEventTypeLabel = (eventType: string): { label: string; colorClass: stri
   }
 };
 
+// Compact mini month grid for the calendar header
+interface MiniMonthGridProps {
+  month: Date;
+  selectedDate: Date | null;
+  eventDates: Set<string>; // 'yyyy-MM-dd'
+  onSelectDate: (date: Date | null) => void;
+  onMonthChange: (date: Date) => void;
+  onCreate?: () => void;
+  showCreate?: boolean;
+}
+
+const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
+  month,
+  selectedDate,
+  eventDates,
+  onSelectDate,
+  onMonthChange,
+  onCreate,
+  showCreate,
+}) => {
+  const monthStart = startOfMonth(month);
+  const monthEnd = endOfMonth(month);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // Pad to start on Monday
+  const firstDayIdx = (getDay(monthStart) + 6) % 7; // 0=Mon
+  const today = new Date();
+
+  return (
+    <div className="rounded-xl border bg-card p-3">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          aria-label="Previous month"
+          onClick={() => onMonthChange(subMonths(month, 1))}
+          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{format(month, 'MMMM yyyy')}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            aria-label="Next month"
+            onClick={() => onMonthChange(addMonths(month, 1))}
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          {showCreate && onCreate && (
+            <button
+              aria-label="Create event"
+              onClick={onCreate}
+              className="h-7 w-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Weekday header */}
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+          <div key={i} className="text-[10px] text-muted-foreground text-center font-medium">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Day grid */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {Array.from({ length: firstDayIdx }).map((_, i) => (
+          <div key={`pad-${i}`} className="h-8" />
+        ))}
+        {days.map((day) => {
+          const key = format(day, 'yyyy-MM-dd');
+          const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === key;
+          const isCurrentDay = format(today, 'yyyy-MM-dd') === key;
+          const hasEvent = eventDates.has(key);
+          const isPastDay = isBefore(day, today) && !isCurrentDay;
+
+          return (
+            <button
+              key={key}
+              onClick={() => onSelectDate(isSelected ? null : day)}
+              className={`h-8 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors
+                ${isSelected ? 'bg-primary text-primary-foreground font-semibold' : ''}
+                ${!isSelected && isCurrentDay ? 'ring-1 ring-primary text-foreground font-semibold' : ''}
+                ${!isSelected && !isCurrentDay && isPastDay ? 'text-muted-foreground/60' : ''}
+                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-foreground hover:bg-accent' : ''}
+              `}
+            >
+              <span className="leading-none">{format(day, 'd')}</span>
+              {hasEvent && (
+                <span
+                  className={`w-1 h-1 rounded-full mt-0.5 ${
+                    isSelected ? 'bg-primary-foreground' : 'bg-primary'
+                  }`}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedDate && (
+        <div className="mt-2 flex justify-center">
+          <button
+            onClick={() => onSelectDate(null)}
+            className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-accent"
+          >
+            Show all
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function CalendarEventsMobile() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = React.useState(() => new URLSearchParams(window.location.search));
