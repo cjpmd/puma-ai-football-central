@@ -16,6 +16,7 @@ interface MobileLayoutProps {
   onTabChange?: (tabId: string) => void;
   tabs?: Tab[];
   stickyTabs?: boolean;
+  hideHeader?: boolean;
 }
 
 export const MobileLayout: React.FC<MobileLayoutProps> = ({
@@ -25,7 +26,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
   activeTab,
   onTabChange,
   tabs = [],
-  stickyTabs = false
+  stickyTabs = false,
+  hideHeader = false,
 }) => {
   return (
     <div
