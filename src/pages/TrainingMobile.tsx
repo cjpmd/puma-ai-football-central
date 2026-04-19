@@ -1,24 +1,46 @@
 import { logger } from '@/lib/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { DrillLibraryManager } from '@/components/training/DrillLibraryManager';
 import { DrillCreator } from '@/components/training/DrillCreator';
 import { CoachTrainingDashboard } from '@/components/training/CoachTrainingDashboard';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTeamContext } from '@/contexts/TeamContext';
 import { playersService } from '@/services/playersService';
-import { Plus, BookOpen, Users, Calendar } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { format, startOfWeek, endOfWeek, addDays, isSameDay, isToday, isAfter, parseISO, getWeek, isBefore } from 'date-fns';
+import { formatTime } from '@/utils/eventUtils';
+import { Plus, BookOpen, Users, Calendar, Clock, MapPin, Play, Activity } from 'lucide-react';
+
+interface TrainingEvent {
+  id: string;
+  title: string;
+  date: string;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  description: string | null;
+  game_duration: number | null;
+  team_id: string;
+}
 
 export default function TrainingMobile() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('library');
   const [showCreateDrill, setShowCreateDrill] = useState(false);
-  const { user, connectedPlayers, teams } = useAuth();
-  
-  // Team players for coach/staff roles
-  const [coachPlayers, setCoachPlayers] = useState<Array<{ id: string; name: string; team_id: string }>>([]);
+  const { user, connectedPlayers, teams, allTeams } = useAuth();
+  const { currentTeam, viewMode } = useTeamContext();
 
+  const [coachPlayers, setCoachPlayers] = useState<Array<{ id: string; name: string; team_id: string }>>([]);
+  const [trainingEvents, setTrainingEvents] = useState<TrainingEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+
+  // Load team players for coach/staff roles
   useEffect(() => {
     const loadTeamPlayers = async () => {
       if (!teams || teams.length === 0) {
@@ -29,7 +51,6 @@ export default function TrainingMobile() {
         const teamIds = Array.from(new Set(teams.map(t => t.id)));
         const results = await Promise.all(teamIds.map(id => playersService.getActivePlayersByTeamId(id)));
         const flat = results.flat();
-        // Map to minimal shape and dedupe by id
         const mapped = flat.map(p => ({ id: (p as any).id, name: (p as any).name, team_id: (p as any).teamId || (p as any).team_id }));
         const map = new Map<string, { id: string; name: string; team_id: string }>();
         mapped.forEach(p => map.set(p.id, p));
@@ -42,6 +63,45 @@ export default function TrainingMobile() {
     loadTeamPlayers();
   }, [teams, user?.id]);
 
+  // Load training events for this team / current week + next 7 days
+  useEffect(() => {
+    const loadTrainingEvents = async () => {
+      try {
+        setLoadingEvents(true);
+        const teamsToQuery = viewMode === 'all'
+          ? (teams?.length ? teams : allTeams || [])
+          : (currentTeam ? [currentTeam] : []);
+
+        if (teamsToQuery.length === 0) {
+          setTrainingEvents([]);
+          return;
+        }
+
+        const teamIds = teamsToQuery.map(t => t.id);
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const rangeEnd = addDays(weekStart, 21); // 3 weeks
+
+        const { data, error } = await supabase
+          .from('events')
+          .select('id, title, date, start_time, end_time, location, description, game_duration, team_id')
+          .eq('event_type', 'training')
+          .in('team_id', teamIds)
+          .gte('date', format(weekStart, 'yyyy-MM-dd'))
+          .lte('date', format(rangeEnd, 'yyyy-MM-dd'))
+          .order('date', { ascending: true });
+
+        if (error) throw error;
+        setTrainingEvents((data || []) as TrainingEvent[]);
+      } catch (e) {
+        logger.error('Failed to load training events:', e);
+        setTrainingEvents([]);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    loadTrainingEvents();
+  }, [teams, allTeams, currentTeam, viewMode]);
+
   // Connected players (parent links)
   const parentLinkedPlayers = connectedPlayers?.map(cp => ({
     id: cp.id,
@@ -49,23 +109,69 @@ export default function TrainingMobile() {
     team_id: cp.team?.id || ''
   })) || [];
 
-  // Combine coach team players and parent-linked players
   const combinedPlayers = (() => {
     const map = new Map<string, { id: string; name: string; team_id: string }>();
     [...coachPlayers, ...parentLinkedPlayers].forEach(p => map.set(p.id, p));
     return Array.from(map.values());
   })();
 
+  // ===== Derived training data =====
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekDays = useMemo(() => Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i)), [weekStart]);
+
+  const thisWeekEvents = trainingEvents.filter(e => {
+    const d = parseISO(e.date);
+    return !isBefore(d, weekStart) && !isAfter(d, endOfWeek(now, { weekStartsOn: 1 }));
+  });
+
+  // Compute duration per day (for bars)
+  const dayDurations = weekDays.map(day => {
+    const total = thisWeekEvents
+      .filter(e => isSameDay(parseISO(e.date), day))
+      .reduce((sum, e) => sum + (e.game_duration || 60), 0);
+    return total;
+  });
+  const maxDuration = Math.max(...dayDurations, 1);
+
+  // Weekly load label
+  const sessionsThisWeek = thisWeekEvents.length;
+  const loadLabel = sessionsThisWeek <= 1 ? 'Light' : sessionsThisWeek <= 3 ? 'Optimal' : 'High';
+  const loadColor =
+    loadLabel === 'Optimal' ? 'text-green-600 bg-green-500/10' :
+    loadLabel === 'Light' ? 'text-amber-600 bg-amber-500/10' :
+    'text-red-600 bg-red-500/10';
+
+  // Today's session: first training today, else next future training
+  const todaysSession =
+    trainingEvents.find(e => isSameDay(parseISO(e.date), now)) ||
+    trainingEvents.find(e => isAfter(parseISO(e.date), now));
+
+  // Upcoming: next 3 future trainings excluding "today's session" duplicate
+  const upcomingSessions = trainingEvents
+    .filter(e => {
+      const d = parseISO(e.date);
+      return (isAfter(d, now) || isSameDay(d, now)) && (!todaysSession || e.id !== todaysSession.id);
+    })
+    .slice(0, 3);
+
+  const weekNumber = getWeek(now, { weekStartsOn: 1 });
+
+  const handleEventClick = (eventId: string) => {
+    navigate(`/calendar?eventId=${eventId}`);
+  };
+
   return (
-    <MobileLayout 
-      headerTitle="Training Management"
+    <MobileLayout
+      headerTitle="Training"
       showTabs={false}
     >
       <div className="p-4 space-y-4">
+        {/* Header row with Create Drill */}
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm text-muted-foreground">
-              Manage drills and individual training plans
+              Sessions, drills & individual plans
             </p>
           </div>
           <Button size="sm" onClick={() => setShowCreateDrill(true)}>
@@ -74,7 +180,163 @@ export default function TrainingMobile() {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* Weekly Load Card */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                  Week {weekNumber}
+                </p>
+                <p className="text-sm font-semibold text-foreground mt-0.5">
+                  {sessionsThisWeek} session{sessionsThisWeek !== 1 ? 's' : ''} planned
+                </p>
+              </div>
+              <Badge className={`${loadColor} border-0 font-medium`}>
+                <Activity className="w-3 h-3 mr-1" />
+                {loadLabel}
+              </Badge>
+            </div>
+
+            {/* 7-day mini bar chart */}
+            <div className="flex items-end justify-between gap-1.5 h-16 pt-2">
+              {weekDays.map((day, i) => {
+                const duration = dayDurations[i];
+                const heightPct = duration > 0 ? Math.max(15, (duration / maxDuration) * 100) : 6;
+                const isCurrentDay = isToday(day);
+                const hasSession = duration > 0;
+                return (
+                  <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                    <div className="flex-1 w-full flex items-end">
+                      <div
+                        className={`w-full rounded-t-sm transition-all ${
+                          hasSession
+                            ? isCurrentDay
+                              ? 'bg-primary'
+                              : 'bg-primary/60'
+                            : 'bg-muted'
+                        }`}
+                        style={{ height: `${heightPct}%` }}
+                      />
+                    </div>
+                    <span className={`text-[10px] ${isCurrentDay ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                      {format(day, 'EEEEE')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Today's / Next Session highlight */}
+        {todaysSession && (
+          <Card
+            className="cursor-pointer hover:bg-accent/50 transition-colors border-primary/30 bg-primary/5"
+            onClick={() => handleEventClick(todaysSession.id)}
+          >
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-primary text-primary-foreground border-0">
+                  {isSameDay(parseISO(todaysSession.date), now) ? 'Today' : format(parseISO(todaysSession.date), 'EEE d MMM')}
+                </Badge>
+                <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); handleEventClick(todaysSession.id); }}>
+                  <Play className="w-3 h-3 mr-1" />
+                  Open
+                </Button>
+              </div>
+              <h3 className="font-semibold text-base text-foreground">{todaysSession.title}</h3>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                {todaysSession.start_time && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatTime(todaysSession.start_time)}
+                  </span>
+                )}
+                {todaysSession.game_duration && (
+                  <span>{todaysSession.game_duration} min</span>
+                )}
+                {todaysSession.location && (
+                  <span className="flex items-center gap-1 truncate">
+                    <MapPin className="w-3 h-3" />
+                    <span className="truncate">{todaysSession.location}</span>
+                  </span>
+                )}
+              </div>
+              {todaysSession.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2">{todaysSession.description}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Upcoming list */}
+        {upcomingSessions.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+              Upcoming
+            </h2>
+            <div className="space-y-2">
+              {upcomingSessions.map(event => {
+                const eventDate = parseISO(event.date);
+                return (
+                  <Card
+                    key={event.id}
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => handleEventClick(event.id)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex gap-3">
+                        <div className="flex flex-col items-center justify-center min-w-[40px]">
+                          <span className="text-[10px] uppercase font-medium text-muted-foreground">
+                            {format(eventDate, 'MMM')}
+                          </span>
+                          <span className="text-xl font-bold text-foreground leading-tight">
+                            {format(eventDate, 'd')}
+                          </span>
+                        </div>
+                        <div className="w-1 self-stretch rounded-full bg-purple-500" />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm text-foreground truncate">{event.title}</h3>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            {event.start_time && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatTime(event.start_time)}
+                              </span>
+                            )}
+                            {event.location && (
+                              <span className="flex items-center gap-1 truncate">
+                                <MapPin className="w-3 h-3" />
+                                <span className="truncate">{event.location}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state when no sessions at all */}
+        {!loadingEvents && !todaysSession && upcomingSessions.length === 0 && (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Calendar className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">No upcoming training sessions.</p>
+              <Button variant="outline" size="sm" className="mt-3" asChild>
+                <a href="/calendar">Schedule on Calendar</a>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Existing tabs - kept for power users */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-2">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="library" className="text-xs">
               <BookOpen className="w-4 h-4 mr-1" />
@@ -105,8 +367,8 @@ export default function TrainingMobile() {
           </TabsContent>
 
           <TabsContent value="plans" className="space-y-4">
-            <CoachTrainingDashboard 
-              userId={user?.id || ''} 
+            <CoachTrainingDashboard
+              userId={user?.id || ''}
               userPlayers={combinedPlayers}
             />
           </TabsContent>
@@ -136,8 +398,8 @@ export default function TrainingMobile() {
         </Tabs>
 
         {showCreateDrill && (
-          <DrillCreator 
-            open={showCreateDrill} 
+          <DrillCreator
+            open={showCreateDrill}
             onOpenChange={setShowCreateDrill}
           />
         )}
