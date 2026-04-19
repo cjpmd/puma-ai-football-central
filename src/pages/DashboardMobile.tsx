@@ -3,7 +3,8 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp, Settings, Building2 } from 'lucide-react';
+import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, ChevronDown, TrendingUp, Settings, Building2 } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
@@ -58,6 +59,7 @@ export default function DashboardMobile() {
   const [selectedPlayerData, setSelectedPlayerData] = useState<any>(null);
   const [showPlayerCard, setShowPlayerCard] = useState(false);
   const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
   
   // Player action modal states for Dashboard FIFA card
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -669,122 +671,166 @@ export default function DashboardMobile() {
   }
 
   return (
-    <MobileLayout>
-      <div className="min-h-screen bg-gray-50 -mx-4 -mt-4 px-4 pt-4">
+    <MobileLayout hideHeader>
+      <div
+        className="-mx-4 -mt-4 px-4"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
+      >
         <div className="space-y-4 pb-safe-bottom">
-          
-          {/* Profile Header */}
-          <div className="flex flex-col items-center pt-2 pb-3">
-            <Avatar className="w-16 h-16 rounded-2xl mb-2 shadow-sm">
-              {(profile as any)?.avatar_url ? (
-                <AvatarImage src={(profile as any).avatar_url} alt="Profile" className="rounded-2xl" />
-              ) : null}
-              <AvatarFallback className="rounded-2xl bg-gray-200 text-xl font-semibold text-gray-600">
-                {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
-              </AvatarFallback>
-            </Avatar>
-            <h1 className="text-lg font-semibold text-gray-900">
-              {getPersonalizedGreeting(profile, user?.email)}
-            </h1>
+
+          {/* Condensed Header — date + greeting + avatar */}
+          <div className="flex items-end justify-between pt-1 pb-1">
+            <div className="min-w-0">
+              <p className="text-xs text-white/60 font-medium">
+                {format(new Date(), 'EEEE, d MMMM')}
+              </p>
+              <h1 className="text-3xl font-bold text-white leading-tight truncate">
+                {getPersonalizedGreeting(profile, user?.email)}
+              </h1>
+            </div>
+            <button
+              onClick={() => setShowEditProfile(true)}
+              className="flex-shrink-0 ml-3"
+              aria-label="Edit profile"
+            >
+              <Avatar className="w-11 h-11 rounded-full ring-1 ring-white/20">
+                {(profile as any)?.avatar_url ? (
+                  <AvatarImage src={(profile as any).avatar_url} alt="Profile" className="rounded-full" />
+                ) : null}
+                <AvatarFallback className="rounded-full bg-white/15 text-base font-semibold text-white">
+                  {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
+                </AvatarFallback>
+              </Avatar>
+            </button>
           </div>
 
           {/* Availability Status Banner - hide for club-only users */}
           {!isClubOnlyUser() && stats.pendingAvailability.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="ios-card overflow-hidden">
               <Link to="/calendar" className="flex items-center justify-between px-4 py-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
-                    <AlertCircle className="w-4 h-4 text-orange-600" />
+                  <div className="w-8 h-8 rounded-full bg-orange-400/20 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-orange-300" />
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-900">Availability Requests</span>
-                    <p className="text-xs text-gray-500">{stats.pendingAvailability.length} pending response{stats.pendingAvailability.length > 1 ? 's' : ''}</p>
+                    <span className="text-sm font-medium text-white">Availability Requests</span>
+                    <p className="text-xs text-white/60">{stats.pendingAvailability.length} pending response{stats.pendingAvailability.length > 1 ? 's' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-xs">{stats.pendingAvailability.length}</Badge>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <Badge className="bg-orange-400/20 text-orange-200 hover:bg-orange-400/20 text-xs border-0">{stats.pendingAvailability.length}</Badge>
+                  <ChevronRight className="w-4 h-4 text-white/50" />
                 </div>
               </Link>
             </div>
           )}
           {!isClubOnlyUser() && stats.pendingAvailability.length === 0 && (
-            <div className="bg-white rounded-2xl shadow-sm px-4 py-2.5">
+            <div className="ios-card px-4 py-2.5">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-green-600" />
+                <div className="w-8 h-8 rounded-full bg-emerald-400/20 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-emerald-300" />
                 </div>
-                <span className="text-sm text-gray-900">All caught up!</span>
+                <span className="text-sm text-white">All caught up!</span>
               </div>
             </div>
           )}
 
-          {/* Your Teams */}
-          {(allTeams?.length || teams?.length) ? (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2 border-b border-gray-100">
-                <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your Teams</h2>
-              </div>
-              
-              {/* All Teams option */}
-              <button
-                onClick={() => setViewMode('all')}
-                className="w-full flex items-center justify-between px-4 py-2.5"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                    <Users className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-gray-900">All Teams</span>
-                </div>
-                {viewMode === 'all' ? (
-                  <Check className="w-4 h-4 text-blue-600" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-              
-              {/* Individual teams */}
-              {(allTeams?.length ? allTeams : teams)?.map((team, index) => {
-                const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
-                return (
-                  <div key={team.id}>
-                    <div className="h-px bg-gray-100 mx-4" />
-                    <button
-                      onClick={() => setCurrentTeam(team)}
-                      className="w-full flex items-center justify-between px-4 py-2.5"
-                    >
-                      <div className="flex items-center gap-3">
-                        {team.logoUrl ? (
-                          <img 
-                            src={team.logoUrl} 
-                            alt={team.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-semibold text-blue-600">
-                            {getInitials(team.name)}
-                          </div>
-                        )}
-                        <span className="text-sm text-gray-900 text-left">{team.name}</span>
-                      </div>
-                      {isSelected ? (
-                        <Check className="w-4 h-4 text-blue-600" />
+          {/* Your Teams - compact selector */}
+          {(allTeams?.length || teams?.length) ? (() => {
+            const teamsList = (allTeams?.length ? allTeams : teams) || [];
+            const selectedTeamObj = viewMode === 'single' ? currentTeam : null;
+            return (
+              <>
+                <button
+                  onClick={() => setShowTeamPicker(true)}
+                  className="w-full ios-card px-4 py-3 flex items-center justify-between active:bg-white/15 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {selectedTeamObj ? (
+                      selectedTeamObj.logoUrl ? (
+                        <img
+                          src={selectedTeamObj.logoUrl}
+                          alt={selectedTeamObj.name}
+                          className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                        />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                      )}
-                    </button>
+                        <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
+                          {getInitials(selectedTeamObj.name)}
+                        </div>
+                      )
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <div className="min-w-0 text-left">
+                      <p className="text-[10px] font-medium text-white/50 uppercase tracking-wide">Active Team</p>
+                      <p className="text-sm font-semibold text-white truncate">
+                        {selectedTeamObj ? selectedTeamObj.name : 'All Teams'}
+                      </p>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : null}
+                  <ChevronDown className="w-5 h-5 text-white/50 flex-shrink-0" />
+                </button>
+
+                <Sheet open={showTeamPicker} onOpenChange={setShowTeamPicker}>
+                  <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl overflow-y-auto pb-safe">
+                    <SheetHeader className="pb-3">
+                      <SheetTitle className="text-lg">Select Team</SheetTitle>
+                    </SheetHeader>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => { setViewMode('all'); setShowTeamPicker(false); }}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                          viewMode === 'all' ? 'bg-primary/10 border-2 border-primary' : 'bg-muted border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-semibold text-foreground">All Teams</p>
+                          <p className="text-xs text-muted-foreground">Integrated view across teams</p>
+                        </div>
+                        {viewMode === 'all' && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
+                      </button>
+                      {teamsList.map((team) => {
+                        const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
+                        return (
+                          <button
+                            key={team.id}
+                            onClick={() => { setCurrentTeam(team); setShowTeamPicker(false); }}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                              isSelected ? 'bg-primary/10 border-2 border-primary' : 'bg-muted border-2 border-transparent'
+                            }`}
+                          >
+                            {team.logoUrl ? (
+                              <img src={team.logoUrl} alt={team.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-sm font-semibold text-primary flex-shrink-0">
+                                {getInitials(team.name)}
+                              </div>
+                            )}
+                            <div className="flex-1 text-left min-w-0">
+                              <p className="text-sm font-semibold text-foreground truncate">{team.name}</p>
+                              {team.ageGroup && <p className="text-xs text-muted-foreground truncate">{team.ageGroup}</p>}
+                            </div>
+                            {isSelected && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            );
+          })() : null}
 
           {/* Connected Players */}
           {connectedPlayers?.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2 border-b border-gray-100">
-                <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your Players</h2>
+            <div className="ios-card overflow-hidden">
+              <div className="px-4 py-2 border-b border-white/10">
+                <h2 className="text-xs font-medium text-white/50 uppercase tracking-wide">Your Players</h2>
               </div>
               <div className="px-4 py-2.5">
                 <div className="flex flex-wrap gap-1.5">
@@ -792,7 +838,7 @@ export default function DashboardMobile() {
                     <button
                       key={player.id}
                       onClick={() => handlePlayerClick(player)}
-                      className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                      className="flex items-center gap-1.5 bg-white/10 rounded-full px-2.5 py-1 hover:bg-white/15 active:bg-white/20 transition-colors"
                     >
                       {player.photoUrl ? (
                         <img 
@@ -801,11 +847,11 @@ export default function DashboardMobile() {
                           className="w-5 h-5 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-semibold text-blue-600">
+                        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-semibold text-white">
                           {getInitials(player.name)}
                         </div>
                       )}
-                      <span className="text-xs font-medium text-gray-700">{player.name}</span>
+                      <span className="text-xs font-medium text-white">{player.name}</span>
                     </button>
                   ))}
                 </div>
@@ -814,9 +860,9 @@ export default function DashboardMobile() {
           )}
 
           {/* Quick Actions */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-4 py-2 border-b border-gray-100">
-              <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quick Actions</h2>
+          <div className="ios-card overflow-hidden">
+            <div className="px-4 py-2 border-b border-white/10">
+              <h2 className="text-xs font-medium text-white/50 uppercase tracking-wide">Quick Actions</h2>
             </div>
             
             {canManageTeam() && (
@@ -827,42 +873,42 @@ export default function DashboardMobile() {
                   className={`w-full flex items-center justify-between px-4 py-2.5 ${!currentTeam ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentTeam ? 'bg-green-50' : 'bg-gray-100'}`}>
-                      <Plus className={`w-4 h-4 ${currentTeam ? 'text-green-600' : 'text-gray-400'}`} />
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentTeam ? 'bg-emerald-400/20' : 'bg-white/10'}`}>
+                      <Plus className={`w-4 h-4 ${currentTeam ? 'text-emerald-300' : 'text-white/40'}`} />
                     </div>
                     <div className="flex flex-col items-start">
-                      <span className={`text-sm ${currentTeam ? 'text-gray-900' : 'text-gray-400'}`}>Create Event</span>
-                      {!currentTeam && <span className="text-xs text-gray-400">Select a team first</span>}
+                      <span className={`text-sm ${currentTeam ? 'text-white' : 'text-white/40'}`}>Create Event</span>
+                      {!currentTeam && <span className="text-xs text-white/40">Select a team first</span>}
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-white/40" />
                 </button>
-                <div className="h-px bg-gray-100 mx-4" />
+                <div className="h-px bg-white/10 mx-4" />
               </>
             )}
             <Link to="/players" className="w-full flex items-center justify-between px-4 py-2.5">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-blue-600" />
+                <div className="w-8 h-8 rounded-full bg-sky-400/20 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-sky-300" />
                 </div>
-                <span className="text-sm text-gray-900">View Team</span>
+                <span className="text-sm text-white">View Team</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <ChevronRight className="w-4 h-4 text-white/40" />
             </Link>
-            <div className="h-px bg-gray-100 mx-4" />
+            <div className="h-px bg-white/10 mx-4" />
             
             {canAccessTeamSettings() && currentTeam && (
               <>
                 <Link to={`/team-settings/${currentTeam.id}`} className="w-full flex items-center justify-between px-4 py-2.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Settings className="w-4 h-4 text-gray-600" />
+                    <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">
+                      <Settings className="w-4 h-4 text-white" />
                     </div>
-                    <span className="text-sm text-gray-900">Team Settings</span>
+                    <span className="text-sm text-white">Team Settings</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-white/40" />
                 </Link>
-                <div className="h-px bg-gray-100 mx-4" />
+                <div className="h-px bg-white/10 mx-4" />
               </>
             )}
 
@@ -871,14 +917,14 @@ export default function DashboardMobile() {
               <>
                 <Link to="/clubs" className="w-full flex items-center justify-between px-4 py-2.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
-                      <Building2 className="w-4 h-4 text-indigo-600" />
+                    <div className="w-8 h-8 rounded-full bg-indigo-400/20 flex items-center justify-center">
+                      <Building2 className="w-4 h-4 text-indigo-300" />
                     </div>
-                    <span className="text-sm text-gray-900">Club Management</span>
+                    <span className="text-sm text-white">Club Management</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-white/40" />
                 </Link>
-                <div className="h-px bg-gray-100 mx-4" />
+                <div className="h-px bg-white/10 mx-4" />
               </>
             )}
             
@@ -887,49 +933,49 @@ export default function DashboardMobile() {
               className="w-full flex items-center justify-between px-4 py-2.5"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center">
-                  <User className="w-4 h-4 text-purple-600" />
+                <div className="w-8 h-8 rounded-full bg-purple-400/20 flex items-center justify-center">
+                  <User className="w-4 h-4 text-purple-200" />
                 </div>
-                <span className="text-sm text-gray-900">Edit Profile</span>
+                <span className="text-sm text-white">Edit Profile</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <ChevronRight className="w-4 h-4 text-white/40" />
             </button>
-            <div className="h-px bg-gray-100 mx-4" />
+            <div className="h-px bg-white/10 mx-4" />
             <button
               onClick={() => setShowManageConnections(true)}
               className="w-full flex items-center justify-between px-4 py-2.5"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
-                  <Link2 className="w-4 h-4 text-orange-600" />
+                <div className="w-8 h-8 rounded-full bg-orange-400/20 flex items-center justify-center">
+                  <Link2 className="w-4 h-4 text-orange-300" />
                 </div>
-                <span className="text-sm text-gray-900">Manage Connections</span>
+                <span className="text-sm text-white">Manage Connections</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <ChevronRight className="w-4 h-4 text-white/40" />
             </button>
           </div>
 
           {/* Upcoming Events */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-4 py-2 border-b border-gray-100">
-              <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Upcoming Events</h2>
+          <div className="ios-card overflow-hidden">
+            <div className="px-4 py-2 border-b border-white/10">
+              <h2 className="text-xs font-medium text-white/50 uppercase tracking-wide">Upcoming Events</h2>
             </div>
             
             {stats.upcomingEvents.length > 0 ? (
               <>
                 {stats.upcomingEvents.map((event, index) => (
                   <div key={event.id}>
-                    {index > 0 && <div className="h-px bg-gray-100 mx-4" />}
+                    {index > 0 && <div className="h-px bg-white/10 mx-4" />}
                     <div 
-                      className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors"
                       onClick={() => navigate(`/calendar?eventId=${event.id}`)}
                     >
                       {/* Date column */}
                       <div className="flex flex-col items-center justify-center min-w-[40px]">
-                        <span className="text-[10px] text-gray-500 uppercase font-medium">
+                        <span className="text-[10px] text-white/50 uppercase font-medium">
                           {format(new Date(event.date), 'MMM')}
                         </span>
-                        <span className="text-xl font-bold text-gray-900">
+                        <span className="text-xl font-bold text-white">
                           {format(new Date(event.date), 'd')}
                         </span>
                       </div>
@@ -937,25 +983,25 @@ export default function DashboardMobile() {
                       {/* Colored accent - based on availability status */}
                       <div className={`w-1 self-stretch rounded-full ${
                         event.user_availability === 'available'
-                          ? 'bg-green-400'
+                          ? 'bg-emerald-400'
                           : event.user_availability === 'unavailable'
                             ? 'bg-red-400'
                             : event.user_availability === 'pending'
                               ? 'bg-amber-400'
                               : event.event_type === 'training'
                                 ? 'bg-purple-400'
-                                : 'bg-gray-300'
+                                : 'bg-white/30'
                       }`} />
                       
                       {/* Event details */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 truncate">
+                        <p className="font-semibold text-white truncate">
                           {event.event_type === 'training' ? event.title : `vs ${event.opponent || 'TBD'}`}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-white/70">
                           {getConversationalTime(event)}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-white/50">
                           {event.team_context?.name}
                         </p>
                         
@@ -972,22 +1018,22 @@ export default function DashboardMobile() {
                     </div>
                   </div>
                 ))}
-                <div className="h-px bg-gray-100" />
-                <Link to="/calendar" className="flex items-center justify-center px-4 py-3 text-blue-600 font-medium">
+                <div className="h-px bg-white/10" />
+                <Link to="/calendar" className="flex items-center justify-center px-4 py-3 text-primary-foreground font-medium" style={{ color: '#b89fff' }}>
                   View All Events
                 </Link>
               </>
             ) : (
-              <div className="px-4 py-6 text-center text-gray-500">
+              <div className="px-4 py-6 text-center text-white/60">
                 No upcoming events
               </div>
             )}
           </div>
 
           {/* Recent Results */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-4 py-2 border-b border-gray-100">
-              <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Results</h2>
+          <div className="ios-card overflow-hidden">
+            <div className="px-4 py-2 border-b border-white/10">
+              <h2 className="text-xs font-medium text-white/50 uppercase tracking-wide">Recent Results</h2>
             </div>
             
             {stats.recentResults.length > 0 ? (
@@ -997,53 +1043,53 @@ export default function DashboardMobile() {
                   const result = showScores ? getResultFromScores(event.our_score, event.opponent_score) : null;
                   return (
                     <div key={event.id}>
-                      {index > 0 && <div className="h-px bg-gray-100 mx-4" />}
+                      {index > 0 && <div className="h-px bg-white/10 mx-4" />}
                       <div className="flex gap-3 px-4 py-3">
                         {/* Date column */}
                         <div className="flex flex-col items-center justify-center min-w-[40px]">
-                          <span className="text-[10px] text-gray-500 uppercase font-medium">
+                          <span className="text-[10px] text-white/50 uppercase font-medium">
                             {format(new Date(event.date), 'MMM')}
                           </span>
-                          <span className="text-xl font-bold text-gray-900">
+                          <span className="text-xl font-bold text-white">
                             {format(new Date(event.date), 'd')}
                           </span>
                         </div>
                         
                         {/* Colored accent based on result - gray if scores hidden */}
                         <div className={`w-1 self-stretch rounded-full ${
-                          !showScores ? 'bg-gray-300' :
-                          result?.result === 'W' ? 'bg-green-400' : 
-                          result?.result === 'L' ? 'bg-red-400' : 'bg-gray-400'
+                          !showScores ? 'bg-white/30' :
+                          result?.result === 'W' ? 'bg-emerald-400' : 
+                          result?.result === 'L' ? 'bg-red-400' : 'bg-white/40'
                         }`} />
                         
                         {/* Result details */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="font-semibold text-gray-900 truncate">
+                            <p className="font-semibold text-white truncate">
                               vs {event.opponent}
                             </p>
                             {showScores ? (
                               <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-lg font-bold text-gray-900">
+                                <span className="text-lg font-bold text-white">
                                   {event.our_score}-{event.opponent_score}
                                 </span>
                                 {result && (
-                                  <Badge className={`${result.color} text-white text-xs px-1.5`}>
+                                  <Badge className={`${result.color} text-white text-xs px-1.5 border-0`}>
                                     {result.result}
                                   </Badge>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-sm text-muted-foreground italic">
+                              <span className="text-sm text-white/50 italic">
                                 Score hidden
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-white/50">
                             {event.team_context?.name}
                           </p>
                           {event.category_name && (
-                            <Badge variant="outline" className="text-xs mt-1">
+                            <Badge variant="outline" className="text-xs mt-1 border-white/20 text-white/80 bg-white/5">
                               {event.category_name}
                             </Badge>
                           )}
@@ -1054,7 +1100,7 @@ export default function DashboardMobile() {
                 })}
               </>
             ) : (
-              <div className="px-4 py-6 text-center text-gray-500">
+              <div className="px-4 py-6 text-center text-white/60">
                 No recent results
               </div>
             )}
