@@ -1,71 +1,80 @@
 
 
-## Plan: Calendar Mini-Grid + Training Page Redesign (Mobile)
+## Plan: Unified Glass Design System Across Mobile Pages
 
-The reference screenshots (image-274) show two distinct designs:
-- **Calendar (Matches)**: a compact month grid at the top with selected/today/dotted-event days, then a "This Week" list of events below
-- **Training**: a hero "Weekly load" chart card, a "Today's Session" highlight card, and an "Upcoming" list
+The reference screenshots use a **dark purple gradient background** with **translucent glass cards** (blurred, semi-transparent surfaces) — not solid white cards. Currently many mobile pages render Tailwind defaults (`bg-card` = white) which clashes with the dark wallpaper.
 
-You've asked for the Calendar to use a **smaller** date grid so the events list gets more space.
+This plan unifies the visual system across all mobile pages and adds proper safe-area handling for the iOS notch/Dynamic Island.
 
-### 1. Calendar page — `src/pages/CalendarEventsMobile.tsx`
+### 1. Safe-area handling (iOS notch / Dynamic Island)
 
-**Add a compact month grid at the top** (replacing nothing — sits above the existing pending-availability + grouped event list):
+`MobileHeader` currently uses `pt-[calc(theme(spacing.safe-top)+0.75rem)]`. Verify `tailwind.config.ts` defines `spacing.safe-top` as `env(safe-area-inset-top)` — if missing, add it. Also ensure:
+- `index.html` has `<meta name="viewport" content="..., viewport-fit=cover">`
+- Bottom nav respects `env(safe-area-inset-bottom)` (already partially handled via `safe-bottom`)
+- Header reserves enough top space (~44–50px) for status bar — increase to `pt-[calc(env(safe-area-inset-top)+1rem)]` minimum on devices with notches
 
-- Header: month name (e.g. "April 2026") with a small `+` create button on the right (only when `canCreateEvents()`)
-- 7-column grid (M T W T F S S) with single-digit day cells, ~28px tall — much smaller than a standard `<Calendar />`
-- Each day cell:
-  - Today → outlined ring
-  - Selected day → filled primary background
-  - Days with events → small dot below the number
-  - Past days → muted
-- Tapping a day either:
-  - Filters the list below to that day, OR
-  - Scrolls to that day's section (TBD — I'll go with **filter** since it's cleaner)
-- A "Show all" pill clears the filter
+### 2. Glass card utility — apply across mobile pages
 
-**Existing event list stays** but gets the saved space:
-- Keep current grouped sections (This Week / Next Week / etc.)
-- Keep the date-column + colored-accent + title card design (already matches the screenshot's "This Week" look closely)
-- When a day is selected in the grid, hide the period headers and just show that day's events (or "No events on this day")
+The `.ios-glass` utility in `index.css` already exists but isn't used in the new redesigned sections. Replace solid white surfaces with glass surfaces on these mobile pages:
 
-**Build it as a small inline component** inside `CalendarEventsMobile.tsx` (no new file needed) — uses `date-fns` (`startOfMonth`, `endOfMonth`, `eachDayOfInterval`, `getDay`, `isSameDay`, `isSameMonth`).
+**Matches (`CalendarEventsMobile.tsx`)**
+- Mini month grid container → glass surface (purple-tinted, translucent), white text
+- Event row cards → glass purple gradient cards (matching screenshot 275/278): keep date column, accent bar, but switch backgrounds to `bg-white/8 backdrop-blur` with subtle border
+- Section labels ("This Week", "Past Events") → uppercase, muted white
 
-**Month nav**: left/right chevrons either side of the month label to page months. Defaults to current month.
+**Squad (`PlayerManagementMobile.tsx`) — list view**
+- List rows currently use `from-primary/90 to-primary` solid purple. Match screenshot 276 exactly: lighter purple translucent rows (`bg-white/8` with purple tint), white player name, muted subtitle, colored avatar circle, availability dot, chevron
+- Cards/List toggle pill → glass background, active segment white pill with purple text
+- Top action buttons (Add Player / Codes / Staff / Medical) → glass surface with white icons
 
-### 2. Training page — `src/pages/TrainingMobile.tsx`
+**Home (`DashboardMobile.tsx`)**
+- "All caught up!" banner, "Active Team" selector, "Your Players" chip row, "Quick Actions" rows → all glass surfaces (translucent over purple wallpaper) instead of solid white
+- Action row icons keep their colored circular badges (those look correct)
+- Greeting "Home" / date in white at top with avatar pill on the right
 
-Currently a 3-tab page (Library / Plans / Sessions). The reference shows a feed-style training home. Redesign the default landing into a **scrollable feed** with the existing tab functionality moved into a secondary access point:
+**Training (`TrainingMobile.tsx`)**
+- Weekly Load card, Today's Session card, Upcoming list rows → glass surfaces matching screenshot 278
 
-**New top section (above tabs)**:
-1. **Week summary card** — "Week N · X of Y sessions" header + "Weekly load: Optimal" + a 7-bar mini-chart (M–S), built from sessions on the team's calendar this week. Acute:Chronic ratio shown if computable, otherwise hidden.
-2. **Today's Session card** — picks the next training event today (or next future training if none today). Shows time · location · duration, title, description, and a `Start` action that navigates to that event's training plan view. Hidden if no upcoming training.
-3. **Upcoming list** (next 3 training events) — same compact horizontal card style as the Calendar list (date column + title + time/location), tap → navigate to event details.
+### 3. Reusable approach
 
-**Tabs section stays below** for Library / Plans / Sessions so existing functionality isn't lost — collapsed by default into a "Manage drills & plans" disclosure or kept visible as the secondary tabs (I recommend keeping the tabs visible but below the new feed so power-users still have access).
+Add (or use existing) two utility classes consistently:
+- `.ios-card` — `rounded-2xl bg-white/8 backdrop-blur-xl border border-white/10 text-white` (for general cards)
+- `.ios-card-strong` — same but `bg-white/12` for hero/highlight cards
 
-**Data sources**:
-- Pull training events via `supabase.from('events').select().eq('event_type','training').in('team_id', teamIds)` for the current week + next 7 days
-- Bar chart heights = duration of each day's training session(s); inactive days = empty bars
-- "Weekly load" label is a simple bucket: 0–1 sessions = Light, 2–3 = Optimal, 4+ = High
+Replace `<Card>` shadcn usages on these mobile pages with simple `<div className="ios-card">` so they don't pick up the white `bg-card` token. Keep shadcn Card for desktop/non-mobile pages.
 
-### 3. Out of scope (call out for later if wanted)
+### 4. Text color discipline
 
-- Real acute:chronic workload ratio (needs a workload tracking table)
-- The redesigned bottom-nav style from the screenshot (Home / Squad / Matches / Training / Profile with the active pill background) — current nav already works but doesn't match exactly. Tell me if you want that polished too.
-- Replacing the Calendar/Training designs across **all** views — this plan only updates the mobile pages
+Inside dark glass cards, all text must default to white/light:
+- Primary: `text-white`
+- Secondary: `text-white/70`
+- Muted/labels: `text-white/50` uppercase tracking
+Audit each modified mobile page for `text-foreground` / `text-muted-foreground` / `text-gray-*` and swap appropriately.
 
-### Files to modify
+### 5. Files to modify
 
 | File | Change |
 |------|--------|
-| `src/pages/CalendarEventsMobile.tsx` | Add compact month-grid component above the event list; add selected-day filter |
-| `src/pages/TrainingMobile.tsx` | Add Weekly load card, Today's Session card, Upcoming list above the existing tabs |
+| `tailwind.config.ts` | Confirm/add `spacing.safe-top` & `safe-bottom` using `env()` insets |
+| `index.html` | Ensure `viewport-fit=cover` |
+| `src/index.css` | Add `.ios-card` and `.ios-card-strong` helper classes |
+| `src/components/layout/MobileHeader.tsx` | Increase top padding for notch/Dynamic Island clearance |
+| `src/pages/DashboardMobile.tsx` | Convert white cards → glass cards; restyle Active Team, Players chips, Quick Actions |
+| `src/pages/PlayerManagementMobile.tsx` | Restyle list-view rows to match screenshot 276; glass top action buttons; glass toggle pill |
+| `src/pages/CalendarEventsMobile.tsx` | Glass mini month grid; glass event row cards |
+| `src/pages/TrainingMobile.tsx` | Apply glass surfaces to Weekly Load, Today's Session, Upcoming cards |
 
-### What stays the same
+### 6. Out of scope
 
-- All event details modal, post-game editor, team selection flow on Calendar
-- Drill library, plans dashboard, drill creator on Training
-- Pending availability banner at the top of Calendar
-- Routing, auth, role permissions
+- Bottom-nav redesign (separate request — current nav stays as-is)
+- Real progress rings on Home "Today" card and Team Form sparkline (requires data plumbing — placeholder UI only if needed; this PR focuses on backgrounds/glass styling)
+- Desktop pages — only mobile (`*Mobile.tsx`) views are touched
+
+### 7. Visual reference summary
+
+- **Background**: dark purple gradient (already on `MobileLayout`)
+- **Cards**: translucent white-on-purple (`bg-white/8` + `backdrop-blur-xl` + thin white border)
+- **Text on cards**: white primary, white/70 secondary, white/50 labels
+- **Active accent**: `oklch(0.58 0.19 295)` purple already in the palette
+- **Status bar safe-area**: respected via `env(safe-area-inset-top)`
 
