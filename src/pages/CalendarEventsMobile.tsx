@@ -1151,7 +1151,7 @@ export default function CalendarEventsMobile() {
             ))}
             
             {/* Show More Button */}
-            {hasMoreEvents && (
+            {hasMoreVisibleEvents && (
               <div className="flex justify-center pt-4">
                 <Button
                   variant="outline"
