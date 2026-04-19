@@ -493,13 +493,16 @@
   gap: 8px;
   padding: 10px;
   flex-shrink: 0;
-  background: hsla(240, 20%, 15%, 0.9);
-  border: 2px dashed hsla(240, 20%, 40%, 0.6);
-  border-radius: 10px;
+  background: rgba(20, 10, 36, 0.72);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 0.5px solid rgba(184, 159, 255, 0.20);
+  border-radius: 14px;
   margin: 8px;
   min-height: 60px;
   justify-content: center;
   align-items: center;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.08);
 }
 
 /* Bench player names need white text on dark background */

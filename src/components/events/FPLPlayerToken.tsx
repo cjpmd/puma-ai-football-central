@@ -24,15 +24,15 @@ interface FPLPlayerTokenProps {
 const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
   switch (positionGroup) {
     case 'goalkeeper':
-      return '#facc15'; // yellow-400
+      return '#facc15'; // amber — universal GK
     case 'defender':
-      return '#2563eb'; // blue-600
+      return '#7c4de8'; // purple-500
     case 'midfielder':
-      return '#16a34a'; // green-600
+      return '#d946ef'; // fuchsia-500 / magenta
     case 'forward':
       return '#dc2626'; // red-600
     default:
-      return '#16a34a';
+      return '#7c4de8';
   }
 };
 
@@ -54,15 +54,15 @@ const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
 const getCircleBackground = (positionGroup: PositionGroup): string => {
   switch (positionGroup) {
     case 'goalkeeper':
-      return 'bg-yellow-400/50 border-2 border-yellow-300/60';
+      return 'bg-amber-400/50 border-2 border-amber-300/60';
     case 'defender':
-      return 'bg-blue-400/50 border-2 border-blue-300/60';
+      return 'bg-purple-500/50 border-2 border-purple-300/60';
     case 'midfielder':
-      return 'bg-green-400/50 border-2 border-green-300/60';
+      return 'bg-fuchsia-500/50 border-2 border-fuchsia-300/60';
     case 'forward':
       return 'bg-red-400/50 border-2 border-red-300/60';
     default:
-      return 'bg-green-400/50 border-2 border-green-300/60';
+      return 'bg-purple-500/50 border-2 border-purple-300/60';
   }
 };
 

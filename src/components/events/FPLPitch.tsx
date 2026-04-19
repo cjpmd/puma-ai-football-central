@@ -97,28 +97,28 @@ const FPLPitch: React.FC<FPLPitchProps> = ({ className = '' }) => {
         className="fpl-pitch-svg"
       >
         <defs>
-          {/* Main pitch gradient - lighter at bottom (near), darker at top (far/distance) */}
+          {/* Purple-toned pitch gradient — brighter (near) to darker (far) */}
           <linearGradient id="pitchGradient" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#4CAF50" /> {/* Bright green at bottom */}
-            <stop offset="40%" stopColor="#43A047" />
-            <stop offset="70%" stopColor="#388E3C" />
-            <stop offset="100%" stopColor="#2E7D32" /> {/* Darker at top (distance) */}
+            <stop offset="0%"   stopColor="oklch(0.32 0.15 295)" />
+            <stop offset="40%"  stopColor="oklch(0.28 0.14 295)" />
+            <stop offset="70%"  stopColor="oklch(0.24 0.13 292)" />
+            <stop offset="100%" stopColor="oklch(0.20 0.12 290)" />
           </linearGradient>
-          
-          {/* Distance haze overlay - creates depth at the top */}
+
+          {/* Distance haze — dark purple at top */}
           <linearGradient id="distanceHaze" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(0,30,0,0.25)" /> {/* Dark haze at very top */}
-            <stop offset="15%" stopColor="rgba(0,20,0,0.12)" />
-            <stop offset="35%" stopColor="rgba(0,0,0,0)" /> {/* Fade to transparent */}
+            <stop offset="0%"   stopColor="rgba(10,2,20,0.35)" />
+            <stop offset="15%"  stopColor="rgba(8,2,16,0.15)" />
+            <stop offset="35%"  stopColor="rgba(0,0,0,0)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0)" />
           </linearGradient>
-          
-          {/* Vertical mowing stripes pattern */}
+
+          {/* Alternating stripe pattern */}
           <pattern id="mowingStripes" patternUnits="userSpaceOnUse" width="8" height="140">
-            <rect x="0" y="0" width="4" height="140" fill="rgba(255,255,255,0.03)" />
-            <rect x="4" y="0" width="4" height="140" fill="rgba(0,0,0,0.02)" />
+            <rect x="0" y="0" width="4" height="140" fill="rgba(255,255,255,0.025)" />
+            <rect x="4" y="0" width="4" height="140" fill="rgba(0,0,0,0.025)" />
           </pattern>
-          
+
           {/* Clip path for the trapezoid pitch shape */}
           <clipPath id="pitchClip">
             <path d={pitchShape} />
