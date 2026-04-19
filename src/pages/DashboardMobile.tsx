@@ -672,20 +672,20 @@ export default function DashboardMobile() {
 
   return (
     <MobileLayout>
-      <div className="min-h-screen bg-gray-50 -mx-4 -mt-4 px-4 pt-4">
+      <div className="-mx-4 -mt-4 px-4 pt-4">
         <div className="space-y-4 pb-safe-bottom">
           
           {/* Profile Header */}
           <div className="flex flex-col items-center pt-2 pb-3">
-            <Avatar className="w-16 h-16 rounded-2xl mb-2 shadow-sm">
+            <Avatar className="w-16 h-16 rounded-2xl mb-2 shadow-sm ring-1 ring-white/15">
               {(profile as any)?.avatar_url ? (
                 <AvatarImage src={(profile as any).avatar_url} alt="Profile" className="rounded-2xl" />
               ) : null}
-              <AvatarFallback className="rounded-2xl bg-gray-200 text-xl font-semibold text-gray-600">
+              <AvatarFallback className="rounded-2xl bg-white/15 text-xl font-semibold text-white">
                 {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
               </AvatarFallback>
             </Avatar>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-white">
               {getPersonalizedGreeting(profile, user?.email)}
             </h1>
           </div>
