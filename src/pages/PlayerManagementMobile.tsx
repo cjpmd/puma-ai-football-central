@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Search, Plus, Key, UserPlus, Heart } from 'lucide-react';
+import { Search, Plus, Key, UserPlus, Heart, LayoutGrid, List, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -67,6 +67,15 @@ export default function PlayerManagementMobile() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [viewModeSquad, setViewModeSquad] = useState<'cards' | 'list'>(() => {
+    if (typeof window === 'undefined') return 'cards';
+    return (localStorage.getItem('squad-view-mode') as 'cards' | 'list') || 'cards';
+  });
+
+  const handleSetViewModeSquad = (mode: 'cards' | 'list') => {
+    setViewModeSquad(mode);
+    try { localStorage.setItem('squad-view-mode', mode); } catch {}
+  };
   const { toast } = useToast();
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode } = useTeamContext();
@@ -568,7 +577,7 @@ export default function PlayerManagementMobile() {
             <Button 
               variant="outline" 
               onClick={() => setShowCodeManagement(true)}
-              className="flex-shrink-0 px-3"
+              className="flex-shrink-0 px-3 text-foreground"
               size="sm"
               title="Codes"
             >
@@ -579,7 +588,7 @@ export default function PlayerManagementMobile() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowStaffManagement(true)}
-                className="flex-shrink-0 px-3"
+                className="flex-shrink-0 px-3 text-foreground"
                 size="sm"
                 title="Staff"
               >
@@ -590,7 +599,7 @@ export default function PlayerManagementMobile() {
             <Button 
               variant="outline" 
               onClick={() => setShowMedicalSummary(true)}
-              className="flex-shrink-0 px-3"
+              className="flex-shrink-0 px-3 text-foreground"
               size="sm"
               title="Medical"
             >
@@ -600,11 +609,39 @@ export default function PlayerManagementMobile() {
           </div>
         )}
 
-        {/* Player Count Badge */}
-        <div className="flex justify-center">
+        {/* View toggle + Player Count */}
+        <div className="flex items-center justify-between">
           <Badge variant="secondary" className="text-sm">
             {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
           </Badge>
+          <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+            <button
+              type="button"
+              onClick={() => handleSetViewModeSquad('cards')}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                viewModeSquad === 'cards'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label="Card view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Cards
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetViewModeSquad('list')}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                viewModeSquad === 'list'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label="List view"
+            >
+              <List className="h-3.5 w-3.5" />
+              List
+            </button>
+          </div>
         </div>
 
         {/* Player Cards Grid - Single Column with Max Width */}
@@ -617,7 +654,7 @@ export default function PlayerManagementMobile() {
             <div className="text-center py-8">
               <p className="text-muted-foreground">No players found</p>
             </div>
-          ) : (
+          ) : viewModeSquad === 'cards' ? (
             <div className="grid grid-cols-1 gap-4">
               {filteredPlayers.map((player) => (
                   <div key={player.id} className="flex justify-center">
@@ -644,6 +681,47 @@ export default function PlayerManagementMobile() {
                     </div>
                   </div>
               ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredPlayers.map((player) => {
+                const availabilityColor =
+                  player.availability === 'green' ? 'bg-emerald-400' :
+                  player.availability === 'amber' ? 'bg-amber-400' :
+                  player.availability === 'red' ? 'bg-rose-400' : 'bg-muted-foreground';
+                const isGK = player.type === 'goalkeeper';
+                return (
+                  <button
+                    key={player.id}
+                    onClick={() => handlePlayerCardClick(player)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-primary-foreground shadow-sm active:scale-[0.99] transition-transform"
+                  >
+                    {player.photoUrl ? (
+                      <img
+                        src={player.photoUrl}
+                        alt={player.name}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-primary-foreground/30 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 ring-2 ring-primary-foreground/30 ${
+                        isGK ? 'bg-yellow-400 text-yellow-950' : 'bg-primary-foreground/20 text-primary-foreground'
+                      }`}>
+                        {player.squadNumber ?? '?'}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="font-semibold truncate">{player.name}</div>
+                      <div className="text-xs text-primary-foreground/80 truncate">
+                        #{player.squadNumber ?? '—'} · {isGK ? 'Goalkeeper' : 'Outfield'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`w-2.5 h-2.5 rounded-full ${availabilityColor}`} aria-hidden />
+                      <ChevronRight className="h-5 w-5 text-primary-foreground/70" />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
