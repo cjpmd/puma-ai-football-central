@@ -1014,13 +1014,32 @@ export default function CalendarEventsMobile() {
           );
         })()}
 
+        {/* Compact mini-month grid */}
+        <MiniMonthGrid
+          month={calendarMonth}
+          selectedDate={selectedDate}
+          eventDates={eventDateSet}
+          onSelectDate={(d) => {
+            setSelectedDate(d);
+            if (d) setCalendarMonth(d);
+          }}
+          onMonthChange={setCalendarMonth}
+          onCreate={() => {
+            setSelectedEvent(null);
+            setShowMobileEventForm(true);
+          }}
+          showCreate={canCreateEvents()}
+        />
+
         {loading ? (
           <div className="text-center py-8">
             <LoadingSpinner size="md" message="Loading events..." />
           </div>
-        ) : paginatedEvents.length === 0 ? (
+        ) : paginatedVisibleEvents.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">No events scheduled</p>
+            <p className="text-muted-foreground">
+              {selectedDate ? 'No events on this day' : 'No events scheduled'}
+            </p>
           </div>
         ) : (
           <>
