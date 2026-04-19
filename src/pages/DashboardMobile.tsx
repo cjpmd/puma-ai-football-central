@@ -59,6 +59,7 @@ export default function DashboardMobile() {
   const [selectedPlayerData, setSelectedPlayerData] = useState<any>(null);
   const [showPlayerCard, setShowPlayerCard] = useState(false);
   const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
   
   // Player action modal states for Dashboard FIFA card
   const [editModalOpen, setEditModalOpen] = useState(false);
