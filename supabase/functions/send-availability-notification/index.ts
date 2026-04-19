@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "Team Manager <noreply@puma-ai.com>",
+      from: "Origin Sports <noreply@puma-ai.com>",
       to: [user_email],
       subject: `Availability Required: ${event_title}`,
       html: emailHtml,
