@@ -40,7 +40,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         color: '#FFFFFF',
       }}
     >
-      <MobileHeader title={headerTitle} />
+      {!hideHeader && <MobileHeader title={headerTitle} />}
 
       {showTabs && tabs.length > 0 && (
         <div
