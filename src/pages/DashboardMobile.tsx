@@ -721,66 +721,96 @@ export default function DashboardMobile() {
             </div>
           )}
 
-          {/* Your Teams */}
-          {(allTeams?.length || teams?.length) ? (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2 border-b border-gray-100">
-                <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your Teams</h2>
-              </div>
-              
-              {/* All Teams option */}
-              <button
-                onClick={() => setViewMode('all')}
-                className="w-full flex items-center justify-between px-4 py-2.5"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                    <Users className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-gray-900">All Teams</span>
-                </div>
-                {viewMode === 'all' ? (
-                  <Check className="w-4 h-4 text-blue-600" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-              
-              {/* Individual teams */}
-              {(allTeams?.length ? allTeams : teams)?.map((team, index) => {
-                const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
-                return (
-                  <div key={team.id}>
-                    <div className="h-px bg-gray-100 mx-4" />
-                    <button
-                      onClick={() => setCurrentTeam(team)}
-                      className="w-full flex items-center justify-between px-4 py-2.5"
-                    >
-                      <div className="flex items-center gap-3">
-                        {team.logoUrl ? (
-                          <img 
-                            src={team.logoUrl} 
-                            alt={team.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-semibold text-blue-600">
-                            {getInitials(team.name)}
-                          </div>
-                        )}
-                        <span className="text-sm text-gray-900 text-left">{team.name}</span>
-                      </div>
-                      {isSelected ? (
-                        <Check className="w-4 h-4 text-blue-600" />
+          {/* Your Teams - compact selector */}
+          {(allTeams?.length || teams?.length) ? (() => {
+            const teamsList = (allTeams?.length ? allTeams : teams) || [];
+            const selectedTeamObj = viewMode === 'single' ? currentTeam : null;
+            return (
+              <>
+                <button
+                  onClick={() => setShowTeamPicker(true)}
+                  className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between active:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {selectedTeamObj ? (
+                      selectedTeamObj.logoUrl ? (
+                        <img
+                          src={selectedTeamObj.logoUrl}
+                          alt={selectedTeamObj.name}
+                          className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                        />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                      )}
-                    </button>
+                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-xs font-semibold text-blue-600 flex-shrink-0">
+                          {getInitials(selectedTeamObj.name)}
+                        </div>
+                      )
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-4 h-4 text-blue-600" />
+                      </div>
+                    )}
+                    <div className="min-w-0 text-left">
+                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Active Team</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {selectedTeamObj ? selectedTeamObj.name : 'All Teams'}
+                      </p>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : null}
+                  <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                </button>
+
+                <Sheet open={showTeamPicker} onOpenChange={setShowTeamPicker}>
+                  <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl overflow-y-auto pb-safe">
+                    <SheetHeader className="pb-3">
+                      <SheetTitle className="text-lg">Select Team</SheetTitle>
+                    </SheetHeader>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => { setViewMode('all'); setShowTeamPicker(false); }}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                          viewMode === 'all' ? 'bg-blue-50 border-2 border-blue-500' : 'bg-gray-50 border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Users className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-semibold text-gray-900">All Teams</p>
+                          <p className="text-xs text-gray-500">Integrated view across teams</p>
+                        </div>
+                        {viewMode === 'all' && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
+                      </button>
+                      {teamsList.map((team) => {
+                        const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
+                        return (
+                          <button
+                            key={team.id}
+                            onClick={() => { setCurrentTeam(team); setShowTeamPicker(false); }}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                              isSelected ? 'bg-blue-50 border-2 border-blue-500' : 'bg-gray-50 border-2 border-transparent'
+                            }`}
+                          >
+                            {team.logoUrl ? (
+                              <img src={team.logoUrl} alt={team.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-600 flex-shrink-0">
+                                {getInitials(team.name)}
+                              </div>
+                            )}
+                            <div className="flex-1 text-left min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{team.name}</p>
+                              {team.ageGroup && <p className="text-xs text-gray-500 truncate">{team.ageGroup}</p>}
+                            </div>
+                            {isSelected && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            );
+          })() : null}
 
           {/* Connected Players */}
           {connectedPlayers?.length > 0 && (
