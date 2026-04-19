@@ -67,6 +67,15 @@ export default function PlayerManagementMobile() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [viewModeSquad, setViewModeSquad] = useState<'cards' | 'list'>(() => {
+    if (typeof window === 'undefined') return 'cards';
+    return (localStorage.getItem('squad-view-mode') as 'cards' | 'list') || 'cards';
+  });
+
+  const handleSetViewModeSquad = (mode: 'cards' | 'list') => {
+    setViewModeSquad(mode);
+    try { localStorage.setItem('squad-view-mode', mode); } catch {}
+  };
   const { toast } = useToast();
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode } = useTeamContext();
