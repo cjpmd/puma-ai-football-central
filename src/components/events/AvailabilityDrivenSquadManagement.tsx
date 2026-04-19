@@ -159,33 +159,22 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   const getAvailabilityIcon = (status: string) => {
     switch (status) {
       case 'available':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-400" />;
       case 'unavailable':
-        return <X className="h-4 w-4 text-red-600" />;
+        return <X className="h-4 w-4 text-red-400" />;
       default:
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-amber-400" />;
     }
   };
 
-  const getAvailabilityColor = (status: string) => {
+  const getAvailabilityRowClass = (status: string) => {
     switch (status) {
       case 'available':
-        return 'bg-green-50 border-green-200';
+        return 'bg-white/5 border-white/10';
       case 'unavailable':
-        return 'bg-red-50 border-red-200 opacity-60';
+        return 'bg-white/[0.03] border-white/10 opacity-60';
       default:
-        return 'bg-yellow-50 border-yellow-200';
-    }
-  };
-
-  const getAvailabilityBadgeColor = (status: string) => {
-    switch (status) {
-      case 'available':
-        return 'bg-green-100 text-green-800';
-      case 'unavailable':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-500/[0.08] border-amber-300/20';
     }
   };
 
@@ -197,12 +186,10 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p>Loading squad data...</p>
-        </CardContent>
-      </Card>
+      <div className="ios-card text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+        <p className="text-white/80">Loading squad data...</p>
+      </div>
     );
   }
 
@@ -210,36 +197,34 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   const pendingCount = availablePlayers.filter(p => p.availabilityStatus === 'pending').length;
 
   return (
-    <div className="space-y-6 overflow-x-hidden">
+    <div className="space-y-4 overflow-x-hidden text-white">
       {/* Summary Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 ios-card">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-          <Badge variant="secondary" className="text-sm sm:text-base px-2 sm:px-3 py-1">
+          <Badge className="text-sm px-2 py-0.5 bg-primary/30 border-primary/40 text-white hover:bg-primary/30">
             {squadPlayers.length}/{availablePlayers.length + squadPlayers.length} selected
           </Badge>
-          <span className="text-xs sm:text-sm text-muted-foreground">
+          <span className="text-xs sm:text-sm text-white/70">
             {availableCount} available • {pendingCount} pending
           </span>
         </div>
       </div>
 
       {/* Selected Squad - Show First */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Selected Squad ({squadPlayers.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="ios-card p-3 sm:p-4">
+        <div className="flex items-center gap-2 mb-3 text-white">
+          <Users className="h-4 w-4" />
+          <h3 className="text-sm font-semibold uppercase tracking-wider">Selected Squad ({squadPlayers.length})</h3>
+        </div>
+        <div>
           {squadPlayers.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Captain Selection - Hidden for training events */}
               {!isTrainingEvent && (
-                <div className="pb-4 border-b">
-                  <label className="text-sm font-medium mb-2 block">Select Captain:</label>
+                <div className="pb-3 border-b border-white/10">
+                  <label className="text-xs font-medium mb-2 block text-white/70 uppercase tracking-wider">Captain</label>
                   <Select value={localCaptainId || 'no-captain'} onValueChange={handleCaptainChange}>
-                    <SelectTrigger className="w-full max-w-xs">
+                    <SelectTrigger className="w-full max-w-xs bg-white/10 border-white/15 text-white">
                       <SelectValue placeholder="Choose captain..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -255,7 +240,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               )}
 
               {/* Squad Players List */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {squadPlayers
                   .sort((a, b) => {
                     const availabilityOrder = { available: 1, pending: 2, unavailable: 3 };
@@ -265,39 +250,39 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                     return a.squadNumber - b.squadNumber;
                   })
                   .map((player) => (
-                  <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border gap-2 ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}>
+                  <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-xl border gap-2 ${getAvailabilityRowClass(player.availabilityStatus)}`}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Avatar className="h-7 w-7 sm:h-9 sm:w-9 shrink-0">
+                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 bg-white/10 border border-white/15">
                         <AvatarImage src={`/api/placeholder/40/40`} />
-                        <AvatarFallback className="text-[10px] sm:text-xs">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
+                        <AvatarFallback className="text-[10px] sm:text-xs bg-transparent text-white">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className="font-medium text-xs sm:text-sm truncate">{formatPlayerName(player.name, nameDisplayOption)}</span>
-                          <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
+                          <span className="font-medium text-xs sm:text-sm truncate text-white">{formatPlayerName(player.name, nameDisplayOption)}</span>
+                          <Badge className="text-[10px] px-1 h-4 bg-white/10 border-white/15 text-white/85 hover:bg-white/10">#{player.squadNumber}</Badge>
                           {!isTrainingEvent && player.id === localCaptainId && (
-                            <Badge className="bg-yellow-500 text-white text-[10px] px-1 h-4">
+                            <Badge className="bg-amber-500 text-white text-[10px] px-1 h-4 hover:bg-amber-500">
                               <span className="font-bold">C</span>
                             </Badge>
                           )}
                           {isPlayerInOtherTeams(player.id) && (
-                            <Badge variant="outline" className="text-blue-600 border-blue-600 text-[10px] px-1 h-4">
+                            <Badge variant="outline" className="text-blue-300 border-blue-300/40 text-[10px] px-1 h-4">
                               <Users className="h-2.5 w-2.5 sm:mr-0.5" />
                               <span className="hidden sm:inline">Multi</span>
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-white/60 mt-0.5">
                           {getAvailabilityIcon(player.availabilityStatus)}
                           <span className="capitalize">{player.availabilityStatus}</span>
                         </div>
                       </div>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveFromSquad(player.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0 h-7 w-7 sm:h-8 sm:w-auto sm:px-3 p-0"
+                      className="text-red-300 hover:text-red-200 hover:bg-red-500/15 shrink-0 h-8 w-8 sm:h-8 sm:w-auto sm:px-3 p-0"
                     >
                       <X className="h-3.5 w-3.5 sm:mr-1" />
                       <span className="hidden sm:inline text-xs">Remove</span>
@@ -307,34 +292,32 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               </div>
             </div>
           ) : (
-            <div className="text-center py-4 text-muted-foreground">
+            <div className="text-center py-4 text-white/60">
               <p className="text-sm">No players selected yet. Add players from the list below.</p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Available Players - Show Second */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Available Players ({availablePlayers.length})
-            {availablePlayers.length === 0 && !loading && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={reload}
-                className="ml-auto"
-              >
-                Reload Players
-              </Button>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="ios-card p-3 sm:p-4">
+        <div className="flex items-center gap-2 mb-3 text-white">
+          <UserPlus className="h-4 w-4" />
+          <h3 className="text-sm font-semibold uppercase tracking-wider flex-1">Available Players ({availablePlayers.length})</h3>
+          {availablePlayers.length === 0 && !loading && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={reload}
+              className="bg-white/5 border-white/15 text-white hover:bg-white/10"
+            >
+              Reload
+            </Button>
+          )}
+        </div>
+        <div>
           {availablePlayers.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {availablePlayers
                 .sort((a, b) => {
                   const availabilityOrder = { available: 1, pending: 2, unavailable: 3 };
@@ -344,24 +327,24 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                   return a.squadNumber - b.squadNumber;
                 })
                 .map((player) => (
-                <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-opacity gap-2 ${getAvailabilityColor(player.availabilityStatus)}`}>
+                <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-xl border transition-opacity gap-2 ${getAvailabilityRowClass(player.availabilityStatus)}`}>
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Avatar className="h-7 w-7 sm:h-9 sm:w-9 shrink-0">
+                    <Avatar className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 bg-white/10 border border-white/15">
                       <AvatarImage src={`/api/placeholder/40/40`} />
-                      <AvatarFallback className="text-[10px] sm:text-xs">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
+                      <AvatarFallback className="text-[10px] sm:text-xs bg-transparent text-white">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1 flex-wrap">
-                        <span className="font-medium text-xs sm:text-sm truncate">{formatPlayerName(player.name, nameDisplayOption)}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
+                        <span className="font-medium text-xs sm:text-sm truncate text-white">{formatPlayerName(player.name, nameDisplayOption)}</span>
+                        <Badge className="text-[10px] px-1 h-4 bg-white/10 border-white/15 text-white/85 hover:bg-white/10">#{player.squadNumber}</Badge>
                         {isPlayerInOtherTeams(player.id) && (
-                          <Badge variant="outline" className="text-blue-600 border-blue-600 text-[10px] px-1 h-4">
+                          <Badge variant="outline" className="text-blue-300 border-blue-300/40 text-[10px] px-1 h-4">
                             <Users className="h-2.5 w-2.5 sm:mr-0.5" />
                             <span className="hidden sm:inline">Multi</span>
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 text-[10px] sm:text-xs text-white/60 mt-0.5">
                         {getAvailabilityIcon(player.availabilityStatus)}
                         <span className="capitalize">{player.availabilityStatus}</span>
                       </div>
@@ -370,19 +353,18 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                   
                   {canAddToSquad(player.availabilityStatus) ? (
                     <Button
-                      variant="default"
                       size="sm"
                       onClick={() => handleAddToSquad(player)}
-                      className={`shrink-0 h-7 w-7 sm:h-8 sm:w-auto sm:px-3 p-0 ${player.availabilityStatus === 'available' 
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                      className={`shrink-0 h-8 w-8 sm:h-8 sm:w-auto sm:px-3 p-0 ${player.availabilityStatus === 'available' 
+                        ? "bg-emerald-500/85 hover:bg-emerald-500 text-white"
+                        : "bg-amber-500/85 hover:bg-amber-500 text-white"
                       }`}
                     >
                       <UserPlus className="h-3.5 w-3.5 sm:mr-1" />
                       <span className="hidden sm:inline text-xs">Add</span>
                     </Button>
                   ) : (
-                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0">
+                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-white/55 shrink-0">
                       <AlertTriangle className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline capitalize">{player.availabilityStatus}</span>
                     </div>
@@ -391,7 +373,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-white/60">
               <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium mb-2">No players found</p>
               <p className="text-sm">
@@ -402,15 +384,15 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                   variant="outline"
                   size="sm"
                   onClick={reload}
-                  className="mt-4"
+                  className="mt-4 bg-white/5 border-white/15 text-white hover:bg-white/10"
                 >
                   Reload Players
                 </Button>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
     </div>
   );
