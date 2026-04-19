@@ -1059,6 +1059,50 @@ return (
             </div>
           </div>
 
+        {/* Opponent line + Hero row (mobile only, formation tab) */}
+        {isMobile && !isTrainingEvent && (event.opponent || activeTab === 'formation') && (
+          <div className="px-3 pt-2 pb-1 space-y-2 flex-shrink-0">
+            {event.opponent && (
+              <div className="text-center text-xs text-white/70">
+                vs <span className="text-white font-medium">{event.opponent}</span>
+                {event.is_home !== undefined && (
+                  <span className="ml-1 text-white/50">· {event.is_home ? 'H' : 'A'}</span>
+                )}
+              </div>
+            )}
+            {activeTab === 'formation' && currentTeam && (
+              <div className="grid grid-cols-3 gap-2 items-stretch">
+                {/* Left: Avg last 5 + Performance Category chip */}
+                <div className="ios-card p-2 flex flex-col items-center justify-center text-center">
+                  {(() => {
+                    const cat = performanceCategories.find(c => c.id === currentTeam.performanceCategory);
+                    return cat ? (
+                      <Badge className="mb-1 bg-primary/30 border-primary/40 text-white text-[10px] px-1.5 py-0 hover:bg-primary/30">
+                        {cat.name}
+                      </Badge>
+                    ) : null;
+                  })()}
+                  <div className="text-lg font-bold text-white leading-tight">—</div>
+                  <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight">Avg last 5</div>
+                </div>
+                {/* Centre: Projected pts */}
+                <div className="rounded-2xl bg-primary/25 border border-primary/40 p-2 flex flex-col items-center justify-center text-center backdrop-blur-xl">
+                  <div className="text-2xl font-bold text-white leading-tight">—</div>
+                  <div className="text-[9px] uppercase tracking-wider text-white/70 leading-tight">Projected pts</div>
+                  <Badge className="mt-1 bg-white/15 border-white/20 text-white text-[9px] px-1.5 py-0 hover:bg-white/15">
+                    {currentTeam.periods[0]?.formation || '—'}
+                  </Badge>
+                </div>
+                {/* Right: Season best */}
+                <div className="ios-card p-2 flex flex-col items-center justify-center text-center">
+                  <div className="text-lg font-bold text-white leading-tight">—</div>
+                  <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight">Season best</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 min-h-0 overflow-hidden w-full max-w-full">
           {/* Determine if Formation tab should be shown based on privacy settings */}
           {(() => {
@@ -1070,18 +1114,18 @@ return (
             
             return (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col w-full max-w-full">
-                <div className={`${isMobile ? 'px-2 pb-2 pt-0' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
-                  <TabsList className={`grid w-full grid-cols-${tabCount}`}>
-                    <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                <div className={`${isMobile ? 'px-2 pb-2 pt-2' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
+                  <TabsList className={`grid w-full grid-cols-${tabCount} ${isMobile ? 'bg-white/[0.06] border border-white/10 backdrop-blur-xl' : ''}`}>
+                    <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs text-white/70 data-[state=active]:bg-white/15 data-[state=active]:text-white' : ''}`}>
                       <Users className="h-3 w-3" />
                       Squad
                     </TabsTrigger>
-                    <TabsTrigger value="staff" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                    <TabsTrigger value="staff" className={`flex items-center gap-1 ${isMobile ? 'text-xs text-white/70 data-[state=active]:bg-white/15 data-[state=active]:text-white' : ''}`}>
                       <UserPlus className="h-3 w-3" />
                       Staff
                     </TabsTrigger>
                     {showFormationTab && (
-                      <TabsTrigger value={isTrainingEvent ? "training-plan" : "formation"} className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                      <TabsTrigger value={isTrainingEvent ? "training-plan" : "formation"} className={`flex items-center gap-1 ${isMobile ? 'text-xs text-white/70 data-[state=active]:bg-white/15 data-[state=active]:text-white' : ''}`}>
                         <Gamepad2 className="h-3 w-3" />
                         {isTrainingEvent ? "Training Plan" : "Formation"}
                       </TabsTrigger>
