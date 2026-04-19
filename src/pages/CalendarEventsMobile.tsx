@@ -1043,7 +1043,7 @@ export default function CalendarEventsMobile() {
           </div>
         ) : (
           <>
-            {Object.entries(groupedEvents).map(([period, periodEvents]) => (
+            {Object.entries(groupedVisibleEvents).map(([period, periodEvents]) => (
               <div key={period} className="space-y-2">
                 <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
                   {period}
