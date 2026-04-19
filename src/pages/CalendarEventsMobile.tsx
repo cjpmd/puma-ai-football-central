@@ -91,23 +91,23 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
   const today = new Date();
 
   return (
-    <div className="rounded-xl border bg-card p-3">
+    <div className="ios-card p-3">
       <div className="flex items-center justify-between mb-2">
         <button
           aria-label="Previous month"
           onClick={() => onMonthChange(subMonths(month, 1))}
-          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-white/10 text-white"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">{format(month, 'MMMM yyyy')}</span>
+          <span className="text-sm font-semibold text-white">{format(month, 'MMMM yyyy')}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             aria-label="Next month"
             onClick={() => onMonthChange(addMonths(month, 1))}
-            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent text-foreground"
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-white/10 text-white"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -115,7 +115,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
             <button
               aria-label="Create event"
               onClick={onCreate}
-              className="h-7 w-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+              className="h-7 w-7 flex items-center justify-center rounded-md bg-white text-primary hover:bg-white/90"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -126,7 +126,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
       {/* Weekday header */}
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-          <div key={i} className="text-[10px] text-muted-foreground text-center font-medium">
+          <div key={i} className="text-[10px] text-white/50 text-center font-medium">
             {d}
           </div>
         ))}
@@ -149,17 +149,17 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
               key={key}
               onClick={() => onSelectDate(isSelected ? null : day)}
               className={`h-8 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors
-                ${isSelected ? 'bg-primary text-primary-foreground font-semibold' : ''}
-                ${!isSelected && isCurrentDay ? 'ring-1 ring-primary text-foreground font-semibold' : ''}
-                ${!isSelected && !isCurrentDay && isPastDay ? 'text-muted-foreground/60' : ''}
-                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-foreground hover:bg-accent' : ''}
+                ${isSelected ? 'bg-white text-primary font-semibold' : ''}
+                ${!isSelected && isCurrentDay ? 'ring-1 ring-white/70 text-white font-semibold' : ''}
+                ${!isSelected && !isCurrentDay && isPastDay ? 'text-white/35' : ''}
+                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-white hover:bg-white/10' : ''}
               `}
             >
               <span className="leading-none">{format(day, 'd')}</span>
               {hasEvent && (
                 <span
                   className={`w-1 h-1 rounded-full mt-0.5 ${
-                    isSelected ? 'bg-primary-foreground' : 'bg-primary'
+                    isSelected ? 'bg-primary' : 'bg-white/80'
                   }`}
                 />
               )}
@@ -172,7 +172,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
         <div className="mt-2 flex justify-center">
           <button
             onClick={() => onSelectDate(null)}
-            className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-accent"
+            className="text-xs px-3 py-1 rounded-full bg-white/10 text-white/80 hover:bg-white/15"
           >
             Show all
           </button>
@@ -977,10 +977,10 @@ export default function CalendarEventsMobile() {
           };
           
           return (
-            <div className="bg-card rounded-lg border p-3">
+            <div className="ios-card p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-sm font-medium text-red-600">
+                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                <span className="text-sm font-medium text-rose-300">
                   {futurePendingAvailability.length} unanswered event{futurePendingAvailability.length > 1 ? 's' : ''}
                 </span>
               </div>
@@ -988,16 +988,16 @@ export default function CalendarEventsMobile() {
                 {futurePendingAvailability.slice(0, 2).map((availability) => (
                   <div 
                     key={availability.id} 
-                    className="flex items-center justify-between p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                    className="flex items-center justify-between p-2 rounded-md bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => handleAvailabilityClick(availability)}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm truncate">
+                      <div className="font-medium text-sm truncate text-white">
                         {availability.events.event_type === 'training' 
                           ? availability.events.title 
                           : `vs ${availability.events.opponent || 'TBD'}`}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-white/60">
                         {format(new Date(availability.events.date), 'EEE d MMM')}
                         {availability.events.start_time && ` at ${formatTime(availability.events.start_time)}`}
                       </div>
@@ -1005,7 +1005,7 @@ export default function CalendarEventsMobile() {
                   </div>
                 ))}
                 {futurePendingAvailability.length > 2 && (
-                  <p className="text-xs text-center text-muted-foreground pt-1">
+                  <p className="text-xs text-center text-white/60 pt-1">
                     +{futurePendingAvailability.length - 2} more
                   </p>
                 )}
@@ -1045,7 +1045,7 @@ export default function CalendarEventsMobile() {
           <>
             {Object.entries(groupedVisibleEvents).map(([period, periodEvents]) => (
               <div key={period} className="space-y-2">
-                <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+                <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider px-1">
                   {period}
                 </h2>
                 
@@ -1061,89 +1061,87 @@ export default function CalendarEventsMobile() {
                     const accentColor = getAccentColor(event);
                     
                     return (
-                    <Card 
-                      key={event.id} 
-                      className={`bg-card shadow-none border cursor-pointer hover:bg-accent/50 transition-colors relative ${
-                        isNextEvent ? 'ring-2 ring-primary shadow-sm' : ''
+                    <div
+                      key={event.id}
+                      className={`ios-card cursor-pointer hover:bg-white/10 transition-colors relative ${
+                        isNextEvent ? 'ring-2 ring-white/40' : ''
                       }`}
-                        onClick={(e) => handleEventClick(event, e)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex gap-3">
-                            {/* Left: Date Column */}
-                            <div className="flex flex-col items-center justify-center min-w-[40px]">
-                              <span className="text-[10px] uppercase font-medium text-muted-foreground">
-                                {format(eventDate, 'MMM')}
+                      onClick={(e) => handleEventClick(event, e)}
+                    >
+                      <div className="p-3">
+                        <div className="flex gap-3">
+                          {/* Left: Date Column */}
+                          <div className="flex flex-col items-center justify-center min-w-[40px]">
+                            <span className="text-[10px] uppercase font-medium text-white/55">
+                              {format(eventDate, 'MMM')}
+                            </span>
+                            <span className="text-xl font-bold text-white leading-tight">
+                              {format(eventDate, 'd')}
+                            </span>
+                          </div>
+                          
+                          {/* Colored accent bar */}
+                          <div className={`w-1 self-stretch rounded-full ${accentColor}`} />
+                          
+                          {/* Right: Event Details */}
+                          <div className="flex-1 min-w-0 space-y-0.5">
+                            {/* Event Title with Color-Coded Type */}
+                            <h3 className="font-semibold truncate text-sm">
+                              <span className="text-white/70 mr-1">
+                                {getEventTypeLabel(event.event_type).label}
                               </span>
-                              <span className="text-xl font-bold text-foreground leading-tight">
-                                {format(eventDate, 'd')}
+                              <span className="text-white">
+                                {isMatchType(event.event_type) && event.opponent 
+                                  ? `vs ${event.opponent}`
+                                  : event.event_type !== 'training' ? event.title : ''
+                                }
                               </span>
-                            </div>
+                            </h3>
                             
-                            {/* Colored accent bar */}
-                            <div className={`w-1 self-stretch rounded-full ${accentColor}`} />
+                            {/* Conversational Time */}
+                            <p className="text-xs text-white/60">
+                              {getConversationalTime(event)}
+                            </p>
                             
-                            {/* Right: Event Details */}
-                            <div className="flex-1 min-w-0 space-y-0.5">
-                              {/* Event Title with Color-Coded Type */}
-                              <h3 className="font-semibold truncate text-sm">
-                                <span className={`${getEventTypeLabel(event.event_type).colorClass} mr-1`}>
-                                  {getEventTypeLabel(event.event_type).label}
-                                </span>
-                                <span className="text-foreground">
-                                  {isMatchType(event.event_type) && event.opponent 
-                                    ? `vs ${event.opponent}`
-                                    : event.event_type !== 'training' ? event.title : ''
-                                  }
-                                </span>
-                              </h3>
-                              
-                              {/* Conversational Time */}
-                              <p className="text-xs text-muted-foreground">
-                                {getConversationalTime(event)}
-                              </p>
-                              
-                              {/* Team Name */}
-                              <p className="text-xs text-muted-foreground truncate">
-                                {team?.name}
-                              </p>
-                              
-                              {/* Scores for completed matches - respect privacy settings */}
-                              {completed && teamScores.length > 0 && shouldShowScoresForEvent(event) && (
-                                <div className="flex items-center gap-2 pt-1">
-                                  {teamScores.map((score, index) => (
-                                    <div key={index} className="flex items-center gap-1">
-                                      <span className="text-xs font-medium">
-                                        {score.ourScore} - {score.opponentScore}
-                                      </span>
-                                      <span className="text-sm">{score.outcomeIcon}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* Availability status indicator removed - now in Event Details */}
-                            </div>
+                            {/* Team Name */}
+                            <p className="text-xs text-white/55 truncate">
+                              {team?.name}
+                            </p>
                             
-                            {/* NEXT badge - absolute top right */}
-                            {isNextEvent && (
-                              <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2">
-                                NEXT
-                              </Badge>
-                            )}
-                            
-                            {/* Team badge - absolute bottom right when viewing all teams */}
-                            {viewMode === 'all' && team && (
-                              <Avatar className="h-6 w-6 absolute bottom-2 right-2">
-                                <AvatarImage src={team.logoUrl} alt={team.name} />
-                                <AvatarFallback className="text-[8px] bg-muted">
-                                  {team.name?.substring(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
+                            {/* Scores for completed matches - respect privacy settings */}
+                            {completed && teamScores.length > 0 && shouldShowScoresForEvent(event) && (
+                              <div className="flex items-center gap-2 pt-1">
+                                {teamScores.map((score, index) => (
+                                  <div key={index} className="flex items-center gap-1">
+                                    <span className="text-xs font-medium text-white">
+                                      {score.ourScore} - {score.opponentScore}
+                                    </span>
+                                    <span className="text-sm">{score.outcomeIcon}</span>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </div>
-                        </CardContent>
-                      </Card>
+                          
+                          {/* NEXT badge - absolute top right */}
+                          {isNextEvent && (
+                            <Badge className="bg-white text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white">
+                              NEXT
+                            </Badge>
+                          )}
+                          
+                          {/* Team badge - absolute bottom right when viewing all teams */}
+                          {viewMode === 'all' && team && (
+                            <Avatar className="h-6 w-6 absolute bottom-2 right-2">
+                              <AvatarImage src={team.logoUrl} alt={team.name} />
+                              <AvatarFallback className="text-[8px] bg-white/15 text-white">
+                                {team.name?.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     );
                   })}
                 </div>

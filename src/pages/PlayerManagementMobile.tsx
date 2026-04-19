@@ -552,76 +552,66 @@ export default function PlayerManagementMobile() {
   return (
     <MobileLayout>
       <div className="space-y-4">
-        {/* Header Actions */}
+        {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
           <Input
             placeholder="Search by name or squad number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-12"
+            className="pl-10 h-12 ios-card border-white/10 text-white placeholder:text-white/50 focus-visible:ring-white/30"
           />
         </div>
 
         {/* Management Buttons - Role-based visibility */}
         {canManageTeam() && (
           <div className="flex gap-2 w-full">
-            <Button 
-              onClick={() => setShowAddPlayer(true)} 
-              className="flex-1 min-w-0"
-              size="sm"
+            <button
+              onClick={() => setShowAddPlayer(true)}
+              className="flex-1 min-w-0 flex items-center justify-center gap-1 ios-card-strong h-10 px-3 text-sm font-medium text-white active:scale-[0.98] transition-transform"
             >
-              <Plus className="h-4 w-4 mr-1 flex-shrink-0" />
+              <Plus className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">Add Player</span>
-            </Button>
-            <Button 
-              variant="outline" 
+            </button>
+            <button
               onClick={() => setShowCodeManagement(true)}
-              className="flex-shrink-0 px-3 text-foreground"
-              size="sm"
+              className="flex-shrink-0 flex items-center justify-center ios-card h-10 px-3 text-white active:scale-[0.98] transition-transform"
               title="Codes"
             >
               <Key className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">Codes</span>
-            </Button>
+            </button>
             {canManageStaff() && (
-              <Button 
-                variant="outline" 
+              <button
                 onClick={() => setShowStaffManagement(true)}
-                className="flex-shrink-0 px-3 text-foreground"
-                size="sm"
+                className="flex-shrink-0 flex items-center justify-center ios-card h-10 px-3 text-white active:scale-[0.98] transition-transform"
                 title="Staff"
               >
                 <UserPlus className="h-4 w-4" />
-                <span className="hidden sm:inline ml-1">Staff</span>
-              </Button>
+              </button>
             )}
-            <Button 
-              variant="outline" 
+            <button
               onClick={() => setShowMedicalSummary(true)}
-              className="flex-shrink-0 px-3 text-foreground"
-              size="sm"
+              className="flex-shrink-0 flex items-center justify-center ios-card h-10 px-3 text-white active:scale-[0.98] transition-transform"
               title="Medical"
             >
               <Heart className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">Medical</span>
-            </Button>
+            </button>
           </div>
         )}
 
         {/* View toggle + Player Count */}
         <div className="flex items-center justify-between">
-          <Badge variant="secondary" className="text-sm">
+          <Badge className="text-xs bg-white/10 text-white border-white/15 hover:bg-white/10">
             {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
           </Badge>
-          <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+          <div className="inline-flex rounded-full ios-card p-0.5">
             <button
               type="button"
               onClick={() => handleSetViewModeSquad('cards')}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'cards'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-white/70 hover:text-white'
               }`}
               aria-label="Card view"
             >
@@ -631,10 +621,10 @@ export default function PlayerManagementMobile() {
             <button
               type="button"
               onClick={() => handleSetViewModeSquad('list')}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'list'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-white/70 hover:text-white'
               }`}
               aria-label="List view"
             >
@@ -688,36 +678,36 @@ export default function PlayerManagementMobile() {
                 const availabilityColor =
                   player.availability === 'green' ? 'bg-emerald-400' :
                   player.availability === 'amber' ? 'bg-amber-400' :
-                  player.availability === 'red' ? 'bg-rose-400' : 'bg-muted-foreground';
+                  player.availability === 'red' ? 'bg-rose-400' : 'bg-white/40';
                 const isGK = player.type === 'goalkeeper';
                 return (
                   <button
                     key={player.id}
                     onClick={() => handlePlayerCardClick(player)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-primary-foreground shadow-sm active:scale-[0.99] transition-transform"
+                    className="w-full flex items-center gap-3 p-3 ios-card text-white active:scale-[0.99] transition-transform"
                   >
                     {player.photoUrl ? (
                       <img
                         src={player.photoUrl}
                         alt={player.name}
-                        className="w-12 h-12 rounded-full object-cover ring-2 ring-primary-foreground/30 flex-shrink-0"
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-white/20 flex-shrink-0"
                       />
                     ) : (
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 ring-2 ring-primary-foreground/30 ${
-                        isGK ? 'bg-yellow-400 text-yellow-950' : 'bg-primary-foreground/20 text-primary-foreground'
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 ring-2 ring-white/20 ${
+                        isGK ? 'bg-yellow-400 text-yellow-950' : 'bg-white/15 text-white'
                       }`}>
                         {player.squadNumber ?? '?'}
                       </div>
                     )}
                     <div className="flex-1 min-w-0 text-left">
-                      <div className="font-semibold truncate">{player.name}</div>
-                      <div className="text-xs text-primary-foreground/80 truncate">
+                      <div className="font-semibold truncate text-white">{player.name}</div>
+                      <div className="text-xs text-white/60 truncate">
                         #{player.squadNumber ?? '—'} · {isGK ? 'Goalkeeper' : 'Outfield'}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`w-2.5 h-2.5 rounded-full ${availabilityColor}`} aria-hidden />
-                      <ChevronRight className="h-5 w-5 text-primary-foreground/70" />
+                      <ChevronRight className="h-5 w-5 text-white/50" />
                     </div>
                   </button>
                 );

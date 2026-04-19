@@ -42,8 +42,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
 
       {showTabs && tabs.length > 0 && (
         <div
-          className={stickyTabs ? 'sticky top-[calc(3.5rem+theme(spacing.safe-top)+0.75rem)] z-20' : ''}
+          className={stickyTabs ? 'sticky z-20' : ''}
           style={{
+            top: stickyTabs ? 'calc(3.5rem + max(env(safe-area-inset-top), 1rem))' : undefined,
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             background: 'rgba(20,10,36,0.65)',

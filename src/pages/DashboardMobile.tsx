@@ -672,51 +672,51 @@ export default function DashboardMobile() {
 
   return (
     <MobileLayout>
-      <div className="min-h-screen bg-gray-50 -mx-4 -mt-4 px-4 pt-4">
+      <div className="-mx-4 -mt-4 px-4 pt-4">
         <div className="space-y-4 pb-safe-bottom">
           
           {/* Profile Header */}
           <div className="flex flex-col items-center pt-2 pb-3">
-            <Avatar className="w-16 h-16 rounded-2xl mb-2 shadow-sm">
+            <Avatar className="w-16 h-16 rounded-2xl mb-2 shadow-sm ring-1 ring-white/15">
               {(profile as any)?.avatar_url ? (
                 <AvatarImage src={(profile as any).avatar_url} alt="Profile" className="rounded-2xl" />
               ) : null}
-              <AvatarFallback className="rounded-2xl bg-gray-200 text-xl font-semibold text-gray-600">
+              <AvatarFallback className="rounded-2xl bg-white/15 text-xl font-semibold text-white">
                 {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
               </AvatarFallback>
             </Avatar>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-white">
               {getPersonalizedGreeting(profile, user?.email)}
             </h1>
           </div>
 
           {/* Availability Status Banner - hide for club-only users */}
           {!isClubOnlyUser() && stats.pendingAvailability.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="ios-card overflow-hidden">
               <Link to="/calendar" className="flex items-center justify-between px-4 py-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
-                    <AlertCircle className="w-4 h-4 text-orange-600" />
+                  <div className="w-8 h-8 rounded-full bg-orange-400/20 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-orange-300" />
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-900">Availability Requests</span>
-                    <p className="text-xs text-gray-500">{stats.pendingAvailability.length} pending response{stats.pendingAvailability.length > 1 ? 's' : ''}</p>
+                    <span className="text-sm font-medium text-white">Availability Requests</span>
+                    <p className="text-xs text-white/60">{stats.pendingAvailability.length} pending response{stats.pendingAvailability.length > 1 ? 's' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-xs">{stats.pendingAvailability.length}</Badge>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <Badge className="bg-orange-400/20 text-orange-200 hover:bg-orange-400/20 text-xs border-0">{stats.pendingAvailability.length}</Badge>
+                  <ChevronRight className="w-4 h-4 text-white/50" />
                 </div>
               </Link>
             </div>
           )}
           {!isClubOnlyUser() && stats.pendingAvailability.length === 0 && (
-            <div className="bg-white rounded-2xl shadow-sm px-4 py-2.5">
+            <div className="ios-card px-4 py-2.5">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-green-600" />
+                <div className="w-8 h-8 rounded-full bg-emerald-400/20 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-emerald-300" />
                 </div>
-                <span className="text-sm text-gray-900">All caught up!</span>
+                <span className="text-sm text-white">All caught up!</span>
               </div>
             </div>
           )}
