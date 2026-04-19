@@ -16,6 +16,8 @@ interface FPLPlayerTokenProps {
   kitDesign?: KitDesign;
   goalkeeperKitDesign?: KitDesign;
   nameDisplayOption?: NameDisplayOption;
+  /** Position abbreviation rendered as a muted secondary line under the name (e.g. "DC · 4") */
+  positionAbbr?: string;
 }
 
 const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
@@ -47,6 +49,7 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   kitDesign,
   goalkeeperKitDesign,
   nameDisplayOption = 'surname',
+  positionAbbr,
 }) => {
   const isPitch = size === 'pitch';
   const shirtSize = isPitch ? 'w-11 h-11' : 'w-9 h-9';
@@ -74,9 +77,15 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
         hasStripes={hasStripes}
       />
 
-      {/* Player name — dark glass pill */}
+      {/* Player name — dark glass pill (with optional position·# meta line) */}
       <div className="fpl-player-name-glass">
-        {formatPlayerName(name, nameDisplayOption)}
+        <div>{formatPlayerName(name, nameDisplayOption)}</div>
+        {positionAbbr && (
+          <div className="fpl-player-meta-line">
+            {positionAbbr}
+            {squadNumber !== undefined && squadNumber !== '' && ` · ${squadNumber}`}
+          </div>
+        )}
       </div>
     </div>
   );
