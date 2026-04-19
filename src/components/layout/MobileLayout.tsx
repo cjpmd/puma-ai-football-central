@@ -28,37 +28,54 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
   stickyTabs = false
 }) => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background:
+          'radial-gradient(ellipse 1100px 900px at 80% -10%, oklch(0.50 0.20 275 / 0.85), transparent 55%),' +
+          'radial-gradient(ellipse 800px 700px at 0% 60%, oklch(0.55 0.22 340 / 0.45), transparent 60%),' +
+          'linear-gradient(180deg, #120823 0%, #070311 100%)',
+        color: '#FFFFFF',
+      }}
+    >
       <MobileHeader title={headerTitle} />
-      
+
       {showTabs && tabs.length > 0 && (
-        <div className={`bg-white border-b ${stickyTabs ? 'sticky top-[calc(3.5rem+theme(spacing.safe-top)+0.75rem)] z-20' : ''}`}>
+        <div
+          className={stickyTabs ? 'sticky top-[calc(3.5rem+theme(spacing.safe-top)+0.75rem)] z-20' : ''}
+          style={{
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            background: 'rgba(20,10,36,0.65)',
+            borderBottom: '0.5px solid rgba(255,255,255,0.10)',
+          }}
+        >
           <div className="flex w-full overflow-hidden">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => onTabChange?.(tab.id)}
-                className={`flex-1 py-3 px-1 text-xs font-medium transition-colors text-center min-w-0 ${
-                  activeTab === tab.id
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className="flex-1 py-3 px-1 text-xs font-medium transition-colors text-center min-w-0"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+                  color: activeTab === tab.id ? '#b89fff' : 'rgba(235,235,245,0.55)',
+                  borderBottom: activeTab === tab.id ? '2px solid #b89fff' : '2px solid transparent',
+                  background: 'transparent',
+                }}
               >
-                <span className="block truncate">
-                  {tab.label}
-                </span>
+                <span className="block truncate">{tab.label}</span>
               </button>
             ))}
           </div>
         </div>
       )}
-      
+
       <div className={`flex-1 overflow-y-auto pb-[calc(5rem+theme(spacing.safe-bottom))] ${stickyTabs && showTabs ? 'pt-0' : ''}`}>
         <div className="p-4">
           {children}
         </div>
       </div>
-      
+
       <RoleAwareBottomNav />
     </div>
   );
