@@ -908,6 +908,24 @@ export default function CalendarEventsMobile() {
   
   const groupedEvents = groupEventsByPeriod(paginatedEvents);
 
+  // Build event date set for the mini grid (all events for current team scope)
+  const eventDateSet = React.useMemo(() => {
+    const set = new Set<string>();
+    filteredEvents.forEach(e => set.add(format(new Date(e.date), 'yyyy-MM-dd')));
+    return set;
+  }, [filteredEvents]);
+
+  // Apply selected-date filter to ordered events when active
+  const visibleEvents = selectedDate
+    ? orderedEvents.filter(e => format(new Date(e.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
+    : orderedEvents;
+
+  const paginatedVisibleEvents = selectedDate ? visibleEvents : paginatedEvents;
+  const hasMoreVisibleEvents = !selectedDate && hasMoreEvents;
+  const groupedVisibleEvents = selectedDate
+    ? { [format(selectedDate, 'EEE d MMM')]: visibleEvents }
+    : groupedEvents;
+
   if (showExpandedTeamSelection && selectedEvent) {
     // Get the event's actual team for proper context
     const eventTeam = (allTeams || authTeams || teams || []).find(t => t.id === selectedEvent.team_id);
