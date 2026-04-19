@@ -25,14 +25,13 @@ export const GameDayView: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
 
-  // Subscribe to live updates — invalidates query cache on any change
-  // so all connected devices (coaches + parents) see goals/subs in real time.
   useGameDayRealtime(eventId);
 
   const [selectedTeamNumber, setSelectedTeamNumber] = useState<number>(1);
   const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
   const [liveSubstitutions, setLiveSubstitutions] = useState<LiveSubstitution[]>([]);
+  const [viewMode, setViewMode] = useState<'pitch' | 'list'>('pitch');
   
   const { 
     data: event, 
@@ -517,107 +516,149 @@ export const GameDayView: React.FC = () => {
   const selectedTeamInfo = teamsInfo.find(t => t.teamNumber === selectedTeamNumber);
   const teamDisplayName = selectedTeamInfo?.categoryName || `Team ${selectedTeamNumber}`;
 
+  const scoreHome = (event.scores as any)?.home ?? (event.scores as any)?.team_1 ?? 0;
+  const scoreAway = (event.scores as any)?.away ?? (event.scores as any)?.team_2 ?? 0;
+
+  const getEventBadgesForPlayer = (playerId: string) => {
+    const playerEvents = filteredMatchEvents.filter(e => e.player_id === playerId);
+    if (playerEvents.length === 0) return null;
+    const goals = playerEvents.filter(e => e.event_type === 'goal').length;
+    const assists = playerEvents.filter(e => e.event_type === 'assist').length;
+    const yellows = playerEvents.filter(e => e.event_type === 'yellow_card').length;
+    const reds = playerEvents.filter(e => e.event_type === 'red_card').length;
+    return { goals, assists, yellows, reds };
+  };
+
   return (
     <div className="game-day-container">
-      {/* Compact Header */}
-      <div className="game-day-header-compact">
-        {/* Row 1: back + team badge + title/opponent + team switcher + controls */}
-        <div className="flex items-center justify-between px-2 py-1 gap-2">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate('/calendar')}>
+      {/* iOS glass header */}
+      <div className="game-day-header-glass">
+        <div className="flex items-center justify-between px-3 py-2 gap-2">
+          {/* Back */}
+          <button className="glass-icon-btn" onClick={() => navigate('/calendar')}>
             <ArrowLeft className="h-4 w-4" />
-          </Button>
+          </button>
 
-          <div className="flex-1 flex items-center justify-center gap-2">
-            {team?.logo_url && (
-              <img 
-                src={team.logo_url} 
-                alt={team.name}
-                className="h-8 w-8 object-contain rounded"
-              />
-            )}
-            <div className="text-center">
-              <h1 className="text-sm font-bold leading-tight truncate">
-                {event.title}
-              </h1>
-              {event.opponent && (
-                <p className="text-xs font-semibold text-foreground truncate">
-                  vs {event.opponent}
-                </p>
-              )}
+          {/* Centre: title */}
+          <div className="flex-1 text-center min-w-0 px-2">
+            <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.55)', letterSpacing: '0.5px', fontWeight: 500, textTransform: 'uppercase' }}>
+              GAME DAY
             </div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: '#fff', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {event.title}
+            </div>
+            {event.opponent && (
+              <div style={{ fontSize: 12, color: 'rgba(235,235,245,0.55)' }}>vs {event.opponent}</div>
+            )}
           </div>
 
-          <div className="flex items-center gap-1">
-            <Button
-              size="icon"
-              variant={isRunning ? "ghost" : "default"}
-              className="h-10 w-10"
-              onClick={isRunning ? pause : start}
+          {/* Play / Pause */}
+          <button className="glass-icon-btn" onClick={isRunning ? pause : start}>
+            {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Sub-header: period chip + KPI row + toggle */}
+      <div className="flex-shrink-0">
+        {/* Period navigation chip */}
+        <div className="flex justify-center px-4 pt-2 pb-1">
+          <div className="glass-chip">
+            <button
+              className="glass-chip-btn"
+              onClick={handlePreviousPeriod}
+              disabled={currentPeriodIndex === 0}
             >
-              {isRunning ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              onClick={reset}
+              <ChevronLeft className="h-3 w-3" />
+            </button>
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', padding: '0 8px', whiteSpace: 'nowrap' }}>
+              {totalPeriods > 1
+                ? `Period ${currentSelection.period_number}${currentSelection.formation ? ` · ${currentSelection.formation}` : ''}`
+                : currentSelection.formation || 'Formation'}
+            </span>
+            <button
+              className="glass-chip-btn"
+              onClick={handleNextPeriod}
+              disabled={currentPeriodIndex === totalPeriods - 1}
             >
-              <RotateCcw className="h-3 w-3" />
-            </Button>
+              <ChevronRight className="h-3 w-3" />
+            </button>
           </div>
         </div>
 
-        {/* Row 2: Team switcher + timer/score */}
-        <div className="flex items-center justify-between px-2 pb-1">
-          {/* Team Switcher (when multiple teams) */}
+        {/* KPI row */}
+        <div className="flex justify-around items-end px-4 py-1">
+          {/* Timer */}
+          <div className="text-center">
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{displayTime}</div>
+            <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.60)', marginTop: 3 }}>Match time</div>
+          </div>
+
+          {/* Score hero */}
+          <div className="text-center">
+            <div className="glass-kpi-card">
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', lineHeight: 1 }}>
+                {scoreHome} – {scoreAway}
+              </div>
+              <div style={{ fontSize: 11, color: 'oklch(0.85 0.10 295)', marginTop: 3 }}>Score</div>
+            </div>
+          </div>
+
+          {/* Team switcher or reset */}
           {teamsInfo.length > 1 ? (
-            <div className="flex items-center gap-1">
-              {teamsInfo.map(teamInfo => (
-                <Button
-                  key={teamInfo.teamNumber}
-                  variant={teamInfo.teamNumber === selectedTeamNumber ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedTeamNumber(teamInfo.teamNumber)}
-                  className="h-6 text-[10px] px-2"
+            <div className="flex flex-col gap-1 items-center">
+              {teamsInfo.map(ti => (
+                <button
+                  key={ti.teamNumber}
+                  onClick={() => setSelectedTeamNumber(ti.teamNumber)}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: ti.teamNumber === selectedTeamNumber ? '#fff' : 'rgba(235,235,245,0.55)',
+                    background: ti.teamNumber === selectedTeamNumber ? 'rgba(255,255,255,0.14)' : 'transparent',
+                    border: '0.5px solid rgba(255,255,255,0.18)',
+                    borderRadius: 8,
+                    padding: '3px 10px',
+                    cursor: 'pointer',
+                  }}
                 >
-                  {teamInfo.categoryName || `T${teamInfo.teamNumber}`}
-                </Button>
+                  {ti.categoryName || `T${ti.teamNumber}`}
+                </button>
               ))}
             </div>
           ) : (
-            <div className="text-[10px] text-muted-foreground">
-              Period {currentSelection.period_number}
-              {currentSelection.formation && ` • ${currentSelection.formation}`}
+            <div className="text-center">
+              <button className="glass-icon-btn" onClick={reset} style={{ width: 32, height: 32 }}>
+                <RotateCcw className="h-3 w-3" />
+              </button>
+              <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.60)', marginTop: 3 }}>Reset</div>
             </div>
           )}
-
-          <div className="flex items-center gap-2">
-            <div className="match-timer-compact text-xl leading-none">
-              {displayTime}
-            </div>
-            {event.scores && (
-              <div className="match-score-compact text-sm leading-none">
-                {(event.scores as any)?.home || (event.scores as any)?.team_1 || 0} - {(event.scores as any)?.away || (event.scores as any)?.team_2 || 0}
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Row 3: Period info (when multiple teams) */}
-        {teamsInfo.length > 1 && (
-          <div className="px-2 pb-1">
-            <div className="text-[10px] text-muted-foreground">
-              Period {currentSelection.period_number}
-              {currentSelection.formation && ` • ${currentSelection.formation}`}
-            </div>
+        {/* Pitch / List segmented control */}
+        <div className="px-16 pb-2 pt-1">
+          <div className="glass-segmented">
+            <button
+              className={`glass-segment-btn ${viewMode === 'pitch' ? 'active' : ''}`}
+              onClick={() => setViewMode('pitch')}
+            >
+              Pitch
+            </button>
+            <button
+              className={`glass-segment-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Content */}
       <div className="game-day-content">
         {/* Compact Timeline */}
-        <div className="px-2 py-1 shrink-0">
+        <div className="px-3 pb-1 shrink-0">
           <GameDayTimeline
             matchEvents={filteredMatchEvents}
             periodDuration={periodDuration}
@@ -627,73 +668,115 @@ export const GameDayView: React.FC = () => {
           />
         </div>
 
-        {/* Formation Display - fills available space */}
-        <div className="formation-wrapper">
-          <GameDayFormationCard
-            eventId={eventId!}
-            teamId={event.team_id}
-            periodNumber={currentSelection.period_number}
-            formation={currentSelection.formation}
-            positions={positions}
-            periodDuration={periodDuration}
-            substitutes={substitutes}
-            matchEvents={filteredMatchEvents}
-            onEventCreated={handleEventCreated}
-            onSubstitution={handleSubstitution}
-            currentMinute={currentMinute}
-          />
-        </div>
+        {viewMode === 'list' ? (
+          /* ——— LIST VIEW ——— */
+          <div className="flex-1 overflow-auto px-4 pb-6">
+            {[
+              { key: 'goalkeeper', label: 'Goalkeepers' },
+              { key: 'defender',   label: 'Defenders' },
+              { key: 'midfielder', label: 'Midfielders' },
+              { key: 'forward',    label: 'Forwards' },
+            ].map(group => {
+              const groupPositions = positions.filter(p => p.positionGroup === group.key);
+              if (groupPositions.length === 0) return null;
+              return (
+                <div key={group.key} className="mb-4">
+                  <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.6px', color: 'rgba(235,235,245,0.55)', padding: '6px 4px', textTransform: 'uppercase' }}>
+                    {group.label} · {groupPositions.length}
+                  </div>
+                  <div className="glass-list-card">
+                    {groupPositions.map((pos, i) => {
+                      const badges = getEventBadgesForPlayer(pos.playerId);
+                      return (
+                        <div
+                          key={pos.playerId}
+                          className="flex items-center px-3 py-3 gap-3"
+                          style={{ borderBottom: i < groupPositions.length - 1 ? '0.5px solid rgba(255,255,255,0.08)' : 'none' }}
+                        >
+                          <div style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.65)' }}>
+                            {pos.squadNumber}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {pos.playerName}
+                              {pos.isCaptain && (
+                                <span style={{ width: 16, height: 16, borderRadius: 8, background: 'oklch(0.58 0.19 295)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0 }}>C</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 13, color: 'rgba(235,235,245,0.55)' }}>{pos.position}</div>
+                          </div>
+                          {badges && (
+                            <div className="flex gap-1">
+                              {badges.goals > 0 && <span className="event-badge-mini goal">{badges.goals > 1 ? badges.goals : '⚽'}</span>}
+                              {badges.assists > 0 && <span className="event-badge-mini assist">A</span>}
+                              {badges.yellows > 0 && <span className="event-badge-mini yellow-card" />}
+                              {badges.reds > 0 && <span className="event-badge-mini red-card" />}
+                            </div>
+                          )}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.35, flexShrink: 0 }}>
+                            <circle cx="9"  cy="6"  r="1.5" fill="#fff"/><circle cx="15" cy="6"  r="1.5" fill="#fff"/>
+                            <circle cx="9"  cy="12" r="1.5" fill="#fff"/><circle cx="15" cy="12" r="1.5" fill="#fff"/>
+                            <circle cx="9"  cy="18" r="1.5" fill="#fff"/><circle cx="15" cy="18" r="1.5" fill="#fff"/>
+                          </svg>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
 
-        {/* Period Navigation with Time Ranges */}
-        {totalPeriods > 1 && (
-          <div className="flex items-center justify-center gap-2 py-2 px-2 shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handlePreviousPeriod}
-              disabled={currentPeriodIndex === 0}
-            >
-              <ChevronLeft className="h-3 w-3" />
-            </Button>
-            
-            <div className="flex gap-1 flex-1 justify-center overflow-x-auto">
-              {eventSelections.map((sel, i) => {
-                const startMin = eventSelections
-                  .slice(0, i)
-                  .reduce((sum, s) => sum + (s.duration_minutes || 25), 0);
-                const endMin = startMin + (sel.duration_minutes || 25);
-                
-                return (
-                  <button
-                    key={i}
-                    className={`period-time-button ${i === currentPeriodIndex ? 'active' : ''}`}
-                    onClick={() => setCurrentPeriodIndex(i)}
-                  >
-                    <div className="text-sm font-semibold">{startMin}-{endMin}'</div>
-                  </button>
-                );
-              })}
-            </div>
-            
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handleNextPeriod}
-              disabled={currentPeriodIndex === totalPeriods - 1}
-            >
-              <ChevronRight className="h-3 w-3" />
-            </Button>
+            {substitutes.length > 0 && (
+              <div className="mb-4">
+                <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.6px', color: 'rgba(235,235,245,0.55)', padding: '6px 4px', textTransform: 'uppercase' }}>
+                  Bench · {substitutes.length}
+                </div>
+                <div className="glass-list-card">
+                  {substitutes.map((sub, i) => (
+                    <div
+                      key={sub.id}
+                      className="flex items-center px-3 py-3 gap-3"
+                      style={{ borderBottom: i < substitutes.length - 1 ? '0.5px solid rgba(255,255,255,0.08)' : 'none', opacity: 0.60 }}
+                    >
+                      <div style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.65)' }}>
+                        {sub.squad_number}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{sub.name}</div>
+                        <div style={{ fontSize: 13, color: 'rgba(235,235,245,0.55)' }}>Substitute</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        ) : (
+          /* ——— PITCH VIEW ——— */
+          <>
+            <div className="formation-wrapper">
+              <GameDayFormationCard
+                eventId={eventId!}
+                teamId={event.team_id}
+                periodNumber={currentSelection.period_number}
+                formation={currentSelection.formation}
+                positions={positions}
+                periodDuration={periodDuration}
+                substitutes={substitutes}
+                matchEvents={filteredMatchEvents}
+                onEventCreated={handleEventCreated}
+                onSubstitution={handleSubstitution}
+                currentMinute={currentMinute}
+              />
+            </div>
 
-        {/* Substitutes - no extra wrapper, just the bench */}
-        {substitutes.length > 0 && (
-          <GameDaySubstituteBench
-            substitutes={substitutes}
-            onPlayerLongPress={handlePlayerLongPress}
-          />
+            {substitutes.length > 0 && (
+              <GameDaySubstituteBench
+                substitutes={substitutes}
+                onPlayerLongPress={handlePlayerLongPress}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

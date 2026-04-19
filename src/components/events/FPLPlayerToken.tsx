@@ -18,54 +18,25 @@ interface FPLPlayerTokenProps {
   nameDisplayOption?: NameDisplayOption;
 }
 
-/**
- * Get default position-based shirt color (fallback if no kit design)
- */
 const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
   switch (positionGroup) {
     case 'goalkeeper':
-      return '#facc15'; // amber — universal GK
+      return 'oklch(0.75 0.16 80)';  // amber
     case 'defender':
-      return '#7c4de8'; // purple-500
+      return 'oklch(0.55 0.18 270)'; // purple
     case 'midfielder':
-      return '#d946ef'; // fuchsia-500 / magenta
+      return 'oklch(0.55 0.20 25)';  // magenta-red
     case 'forward':
-      return '#dc2626'; // red-600
+      return 'oklch(0.62 0.22 25)';  // red
     default:
-      return '#7c4de8';
+      return 'oklch(0.55 0.18 270)';
   }
 };
 
-
 /**
- * FPL-style Player Token Component
- * 
- * Features:
- * - Shirt icon with squad number displayed ON the shirt
- * - Surname label below
- * - Uses actual kit design colors including stripes
- * - Captain badge (optional)
- * 
- * NO number strip below - number is on the shirt itself.
+ * FPL-style Player Token — shirt icon with glass name pill below.
+ * Design based on Formation.html (Origin Sports iOS design bundle).
  */
-/**
- * Get circle background color based on position
- */
-const getCircleBackground = (positionGroup: PositionGroup): string => {
-  switch (positionGroup) {
-    case 'goalkeeper':
-      return 'bg-amber-400/50 border-2 border-amber-300/60';
-    case 'defender':
-      return 'bg-purple-500/50 border-2 border-purple-300/60';
-    case 'midfielder':
-      return 'bg-fuchsia-500/50 border-2 border-fuchsia-300/60';
-    case 'forward':
-      return 'bg-red-400/50 border-2 border-red-300/60';
-    default:
-      return 'bg-purple-500/50 border-2 border-purple-300/60';
-  }
-};
-
 export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   name,
   squadNumber,
@@ -78,41 +49,33 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   nameDisplayOption = 'surname',
 }) => {
   const isPitch = size === 'pitch';
-  const containerSize = isPitch ? 'w-14 h-14' : 'w-11 h-11';
-  const shirtSize = isPitch ? 'w-12 h-12' : 'w-10 h-10';
-  const nameSize = isPitch ? 'text-[11px]' : 'text-[10px]';
-  
-  // Determine which kit to use based on position
+  const shirtSize = isPitch ? 'w-11 h-11' : 'w-9 h-9';
+
   const effectiveKitDesign = positionGroup === 'goalkeeper' ? goalkeeperKitDesign : kitDesign;
   const shirtColor = effectiveKitDesign?.shirtColor || getDefaultShirtColor(positionGroup);
   const stripeColor = effectiveKitDesign?.stripeColor;
   const hasStripes = effectiveKitDesign?.hasStripes || false;
-  
-  // Get circle background color
-  const circleBackground = getCircleBackground(positionGroup);
 
   return (
     <div className={`fpl-player-token ${className}`}>
-      {/* Captain Badge */}
+      {/* Captain badge — purple circle, top-left */}
       {isCaptain && (
         <div className="fpl-captain-badge">
           <span>C</span>
         </div>
       )}
-      
-      {/* Shirt Container with circle background */}
-      <div className={`fpl-shirt-circle ${containerSize} ${circleBackground}`}>
-        <FPLShirtIcon 
-          className={shirtSize}
-          squadNumber={squadNumber}
-          shirtColor={shirtColor}
-          stripeColor={stripeColor}
-          hasStripes={hasStripes}
-        />
-      </div>
 
-      {/* Player Name (formatted per team setting) */}
-      <div className={`fpl-player-name ${nameSize}`}>
+      {/* Shirt — no circle container, shown directly */}
+      <FPLShirtIcon
+        className={shirtSize}
+        squadNumber={squadNumber}
+        shirtColor={shirtColor}
+        stripeColor={stripeColor}
+        hasStripes={hasStripes}
+      />
+
+      {/* Player name — dark glass pill */}
+      <div className="fpl-player-name-glass">
         {formatPlayerName(name, nameDisplayOption)}
       </div>
     </div>
