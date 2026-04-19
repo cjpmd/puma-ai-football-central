@@ -1045,7 +1045,7 @@ export default function CalendarEventsMobile() {
           <>
             {Object.entries(groupedVisibleEvents).map(([period, periodEvents]) => (
               <div key={period} className="space-y-2">
-                <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+                <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider px-1">
                   {period}
                 </h2>
                 
@@ -1061,89 +1061,87 @@ export default function CalendarEventsMobile() {
                     const accentColor = getAccentColor(event);
                     
                     return (
-                    <Card 
-                      key={event.id} 
-                      className={`bg-card shadow-none border cursor-pointer hover:bg-accent/50 transition-colors relative ${
-                        isNextEvent ? 'ring-2 ring-primary shadow-sm' : ''
+                    <div
+                      key={event.id}
+                      className={`ios-card cursor-pointer hover:bg-white/10 transition-colors relative ${
+                        isNextEvent ? 'ring-2 ring-white/40' : ''
                       }`}
-                        onClick={(e) => handleEventClick(event, e)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex gap-3">
-                            {/* Left: Date Column */}
-                            <div className="flex flex-col items-center justify-center min-w-[40px]">
-                              <span className="text-[10px] uppercase font-medium text-muted-foreground">
-                                {format(eventDate, 'MMM')}
+                      onClick={(e) => handleEventClick(event, e)}
+                    >
+                      <div className="p-3">
+                        <div className="flex gap-3">
+                          {/* Left: Date Column */}
+                          <div className="flex flex-col items-center justify-center min-w-[40px]">
+                            <span className="text-[10px] uppercase font-medium text-white/55">
+                              {format(eventDate, 'MMM')}
+                            </span>
+                            <span className="text-xl font-bold text-white leading-tight">
+                              {format(eventDate, 'd')}
+                            </span>
+                          </div>
+                          
+                          {/* Colored accent bar */}
+                          <div className={`w-1 self-stretch rounded-full ${accentColor}`} />
+                          
+                          {/* Right: Event Details */}
+                          <div className="flex-1 min-w-0 space-y-0.5">
+                            {/* Event Title with Color-Coded Type */}
+                            <h3 className="font-semibold truncate text-sm">
+                              <span className="text-white/70 mr-1">
+                                {getEventTypeLabel(event.event_type).label}
                               </span>
-                              <span className="text-xl font-bold text-foreground leading-tight">
-                                {format(eventDate, 'd')}
+                              <span className="text-white">
+                                {isMatchType(event.event_type) && event.opponent 
+                                  ? `vs ${event.opponent}`
+                                  : event.event_type !== 'training' ? event.title : ''
+                                }
                               </span>
-                            </div>
+                            </h3>
                             
-                            {/* Colored accent bar */}
-                            <div className={`w-1 self-stretch rounded-full ${accentColor}`} />
+                            {/* Conversational Time */}
+                            <p className="text-xs text-white/60">
+                              {getConversationalTime(event)}
+                            </p>
                             
-                            {/* Right: Event Details */}
-                            <div className="flex-1 min-w-0 space-y-0.5">
-                              {/* Event Title with Color-Coded Type */}
-                              <h3 className="font-semibold truncate text-sm">
-                                <span className={`${getEventTypeLabel(event.event_type).colorClass} mr-1`}>
-                                  {getEventTypeLabel(event.event_type).label}
-                                </span>
-                                <span className="text-foreground">
-                                  {isMatchType(event.event_type) && event.opponent 
-                                    ? `vs ${event.opponent}`
-                                    : event.event_type !== 'training' ? event.title : ''
-                                  }
-                                </span>
-                              </h3>
-                              
-                              {/* Conversational Time */}
-                              <p className="text-xs text-muted-foreground">
-                                {getConversationalTime(event)}
-                              </p>
-                              
-                              {/* Team Name */}
-                              <p className="text-xs text-muted-foreground truncate">
-                                {team?.name}
-                              </p>
-                              
-                              {/* Scores for completed matches - respect privacy settings */}
-                              {completed && teamScores.length > 0 && shouldShowScoresForEvent(event) && (
-                                <div className="flex items-center gap-2 pt-1">
-                                  {teamScores.map((score, index) => (
-                                    <div key={index} className="flex items-center gap-1">
-                                      <span className="text-xs font-medium">
-                                        {score.ourScore} - {score.opponentScore}
-                                      </span>
-                                      <span className="text-sm">{score.outcomeIcon}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* Availability status indicator removed - now in Event Details */}
-                            </div>
+                            {/* Team Name */}
+                            <p className="text-xs text-white/55 truncate">
+                              {team?.name}
+                            </p>
                             
-                            {/* NEXT badge - absolute top right */}
-                            {isNextEvent && (
-                              <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2">
-                                NEXT
-                              </Badge>
-                            )}
-                            
-                            {/* Team badge - absolute bottom right when viewing all teams */}
-                            {viewMode === 'all' && team && (
-                              <Avatar className="h-6 w-6 absolute bottom-2 right-2">
-                                <AvatarImage src={team.logoUrl} alt={team.name} />
-                                <AvatarFallback className="text-[8px] bg-muted">
-                                  {team.name?.substring(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
+                            {/* Scores for completed matches - respect privacy settings */}
+                            {completed && teamScores.length > 0 && shouldShowScoresForEvent(event) && (
+                              <div className="flex items-center gap-2 pt-1">
+                                {teamScores.map((score, index) => (
+                                  <div key={index} className="flex items-center gap-1">
+                                    <span className="text-xs font-medium text-white">
+                                      {score.ourScore} - {score.opponentScore}
+                                    </span>
+                                    <span className="text-sm">{score.outcomeIcon}</span>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </div>
-                        </CardContent>
-                      </Card>
+                          
+                          {/* NEXT badge - absolute top right */}
+                          {isNextEvent && (
+                            <Badge className="bg-white text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white">
+                              NEXT
+                            </Badge>
+                          )}
+                          
+                          {/* Team badge - absolute bottom right when viewing all teams */}
+                          {viewMode === 'all' && team && (
+                            <Avatar className="h-6 w-6 absolute bottom-2 right-2">
+                              <AvatarImage src={team.logoUrl} alt={team.name} />
+                              <AvatarFallback className="text-[8px] bg-white/15 text-white">
+                                {team.name?.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     );
                   })}
                 </div>
