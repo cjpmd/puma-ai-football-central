@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// Card primitives no longer needed (glass surface uses .ios-card)
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -284,15 +284,15 @@ useEffect(() => {
   const getAvailabilityIcon = (status?: string) => {
     switch (status) {
       case 'available':
-        return <Check className="h-4 w-4 text-green-600" />;
+        return <Check className="h-4 w-4 text-emerald-400" />;
       case 'unavailable':
-        return <X className="h-4 w-4 text-red-600" />;
+        return <X className="h-4 w-4 text-red-400" />;
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-amber-400" />;
       case 'no_account':
-        return <AlertCircle className="h-4 w-4 text-orange-600" />;
+        return <AlertCircle className="h-4 w-4 text-orange-400" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+        return <Clock className="h-4 w-4 text-white/40" />;
     }
   };
 
@@ -312,7 +312,6 @@ useEffect(() => {
   };
 
   const formatRole = (role: string) => {
-    // Handle special role mappings
     const roleMap: { [key: string]: string } = {
       'team_manager': 'Manager',
       'manager': 'Manager',
@@ -332,64 +331,52 @@ useEffect(() => {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Staff Assignment
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">Loading staff...</div>
-        </CardContent>
-      </Card>
+      <div className="ios-card p-4 text-center text-white/80">Loading staff...</div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Staff Assignment
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Select staff members for this event and track their availability
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4 overflow-x-hidden">
+    <div className="ios-card p-3 sm:p-4 text-white">
+      <div className="flex items-center gap-2 mb-1">
+        <Users className="h-4 w-4" />
+        <h3 className="text-sm font-semibold uppercase tracking-wider">Staff Assignment</h3>
+      </div>
+      <p className="text-xs text-white/60 mb-3">
+        Select staff members for this event and track their availability
+      </p>
+      <div className="space-y-3 overflow-x-hidden">
         {staff.length === 0 ? (
-          <div className="text-center py-4 text-muted-foreground">
+          <div className="text-center py-4 text-white/60 text-sm">
             No staff members found for this team.
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {staff.map((staffMember) => (
-              <div key={staffMember.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 ${
+              <div key={staffMember.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-xl border gap-2 ${
                 staffMember.availabilityStatus === 'available' && selectedStaff.includes(staffMember.id) 
-                  ? 'bg-green-50 border-green-200' 
-                  : ''
+                  ? 'bg-emerald-500/[0.08] border-emerald-300/25' 
+                  : 'bg-white/5 border-white/10'
               }`}>
                 <div className="flex items-center gap-3 min-w-0">
                   <Checkbox
                     id={`staff-${staffMember.id}`}
                     checked={selectedStaff.includes(staffMember.id)}
                     onCheckedChange={() => handleStaffToggle(staffMember.id)}
-                    className="shrink-0"
+                    className="shrink-0 border-white/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <label 
                         htmlFor={`staff-${staffMember.id}`} 
-                        className="font-medium cursor-pointer truncate"
+                        className="font-medium cursor-pointer truncate text-white text-sm"
                       >
                         {formatPlayerName(staffMember.name, 'firstName')}
                       </label>
-                      <Badge variant="outline" className="text-xs shrink-0">
+                      <Badge className="text-[10px] px-1.5 h-4 shrink-0 bg-white/10 border-white/15 text-white/85 hover:bg-white/10">
                         {formatRole(staffMember.role)}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground truncate">
+                    <div className="text-xs text-white/55 truncate">
                       {staffMember.email}
                     </div>
                   </div>
@@ -399,7 +386,7 @@ useEffect(() => {
                   {/* Availability Status */}
                   <div className="flex items-center gap-1 sm:gap-2">
                     {getAvailabilityIcon(staffMember.availabilityStatus)}
-                    <span className="text-xs sm:text-sm">
+                    <span className="text-xs text-white/80">
                       {getAvailabilityLabel(staffMember.availabilityStatus)}
                     </span>
                   </div>
@@ -412,13 +399,13 @@ useEffect(() => {
                         size="sm"
                         variant="outline"
                         onClick={() => sendAvailabilityNotification(staffMember)}
-                        className="text-xs px-2"
+                        className="text-xs px-2 bg-white/5 border-white/15 text-white hover:bg-white/10"
                       >
                         Remind
                       </Button>
                     )
                   ) : (
-                    <Badge variant="outline" className="text-orange-600 text-xs">
+                    <Badge className="text-[10px] px-1.5 h-4 bg-orange-500/15 border-orange-300/30 text-orange-200 hover:bg-orange-500/15">
                       Not Linked
                     </Badge>
                   )}
@@ -429,12 +416,12 @@ useEffect(() => {
         )}
 
         {staff.some(s => !s.isLinked) && (
-          <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="mt-2 p-3 rounded-xl bg-orange-500/[0.08] border border-orange-300/25">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-orange-800">Some staff members need account linking</p>
-                <p className="text-orange-700">
+              <AlertCircle className="h-4 w-4 text-orange-300 mt-0.5 shrink-0" />
+              <div className="text-xs">
+                <p className="font-medium text-orange-100">Some staff members need account linking</p>
+                <p className="text-orange-200/80">
                   Staff members without linked accounts won't receive availability notifications. 
                   Use the "Manage Staff Links" feature to link them.
                 </p>
@@ -442,7 +429,7 @@ useEffect(() => {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
