@@ -552,76 +552,66 @@ export default function PlayerManagementMobile() {
   return (
     <MobileLayout>
       <div className="space-y-4">
-        {/* Header Actions */}
+        {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
           <Input
             placeholder="Search by name or squad number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-12"
+            className="pl-10 h-12 ios-card border-white/10 text-white placeholder:text-white/50 focus-visible:ring-white/30"
           />
         </div>
 
         {/* Management Buttons - Role-based visibility */}
         {canManageTeam() && (
           <div className="flex gap-2 w-full">
-            <Button 
-              onClick={() => setShowAddPlayer(true)} 
-              className="flex-1 min-w-0"
-              size="sm"
+            <button
+              onClick={() => setShowAddPlayer(true)}
+              className="flex-1 min-w-0 flex items-center justify-center gap-1 ios-card-strong h-10 px-3 text-sm font-medium text-white active:scale-[0.98] transition-transform"
             >
-              <Plus className="h-4 w-4 mr-1 flex-shrink-0" />
+              <Plus className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">Add Player</span>
-            </Button>
-            <Button 
-              variant="outline" 
+            </button>
+            <button
               onClick={() => setShowCodeManagement(true)}
-              className="flex-shrink-0 px-3 text-foreground"
-              size="sm"
+              className="flex-shrink-0 flex items-center justify-center ios-card h-10 px-3 text-white active:scale-[0.98] transition-transform"
               title="Codes"
             >
               <Key className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">Codes</span>
-            </Button>
+            </button>
             {canManageStaff() && (
-              <Button 
-                variant="outline" 
+              <button
                 onClick={() => setShowStaffManagement(true)}
-                className="flex-shrink-0 px-3 text-foreground"
-                size="sm"
+                className="flex-shrink-0 flex items-center justify-center ios-card h-10 px-3 text-white active:scale-[0.98] transition-transform"
                 title="Staff"
               >
                 <UserPlus className="h-4 w-4" />
-                <span className="hidden sm:inline ml-1">Staff</span>
-              </Button>
+              </button>
             )}
-            <Button 
-              variant="outline" 
+            <button
               onClick={() => setShowMedicalSummary(true)}
-              className="flex-shrink-0 px-3 text-foreground"
-              size="sm"
+              className="flex-shrink-0 flex items-center justify-center ios-card h-10 px-3 text-white active:scale-[0.98] transition-transform"
               title="Medical"
             >
               <Heart className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">Medical</span>
-            </Button>
+            </button>
           </div>
         )}
 
         {/* View toggle + Player Count */}
         <div className="flex items-center justify-between">
-          <Badge variant="secondary" className="text-sm">
+          <Badge className="text-xs bg-white/10 text-white border-white/15 hover:bg-white/10">
             {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
           </Badge>
-          <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+          <div className="inline-flex rounded-full ios-card p-0.5">
             <button
               type="button"
               onClick={() => handleSetViewModeSquad('cards')}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'cards'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-white/70 hover:text-white'
               }`}
               aria-label="Card view"
             >
@@ -631,10 +621,10 @@ export default function PlayerManagementMobile() {
             <button
               type="button"
               onClick={() => handleSetViewModeSquad('list')}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'list'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-white/70 hover:text-white'
               }`}
               aria-label="List view"
             >
