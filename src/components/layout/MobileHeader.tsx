@@ -14,8 +14,11 @@ export function MobileHeader({ title }: MobileHeaderProps) {
 
   return (
     <div
-      className="sticky top-0 z-40 text-white pt-[calc(theme(spacing.safe-top)+0.75rem)]"
+      className="sticky top-0 z-40 text-white"
       style={{
+        paddingTop: 'max(env(safe-area-inset-top), 1rem)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
         background: 'linear-gradient(135deg, oklch(0.42 0.18 290), oklch(0.32 0.16 285))',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
