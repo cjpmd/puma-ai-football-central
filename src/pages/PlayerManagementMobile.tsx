@@ -577,7 +577,7 @@ export default function PlayerManagementMobile() {
             <Button 
               variant="outline" 
               onClick={() => setShowCodeManagement(true)}
-              className="flex-shrink-0 px-3"
+              className="flex-shrink-0 px-3 text-foreground"
               size="sm"
               title="Codes"
             >
@@ -588,7 +588,7 @@ export default function PlayerManagementMobile() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowStaffManagement(true)}
-                className="flex-shrink-0 px-3"
+                className="flex-shrink-0 px-3 text-foreground"
                 size="sm"
                 title="Staff"
               >
@@ -599,7 +599,7 @@ export default function PlayerManagementMobile() {
             <Button 
               variant="outline" 
               onClick={() => setShowMedicalSummary(true)}
-              className="flex-shrink-0 px-3"
+              className="flex-shrink-0 px-3 text-foreground"
               size="sm"
               title="Medical"
             >
@@ -609,11 +609,39 @@ export default function PlayerManagementMobile() {
           </div>
         )}
 
-        {/* Player Count Badge */}
-        <div className="flex justify-center">
+        {/* View toggle + Player Count */}
+        <div className="flex items-center justify-between">
           <Badge variant="secondary" className="text-sm">
             {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
           </Badge>
+          <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+            <button
+              type="button"
+              onClick={() => handleSetViewModeSquad('cards')}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                viewModeSquad === 'cards'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label="Card view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Cards
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetViewModeSquad('list')}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                viewModeSquad === 'list'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label="List view"
+            >
+              <List className="h-3.5 w-3.5" />
+              List
+            </button>
+          </div>
         </div>
 
         {/* Player Cards Grid - Single Column with Max Width */}
