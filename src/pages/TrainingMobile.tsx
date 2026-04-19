@@ -170,152 +170,152 @@ export default function TrainingMobile() {
         {/* Header row with Create Drill */}
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/65">
               Sessions, drills & individual plans
             </p>
           </div>
-          <Button size="sm" onClick={() => setShowCreateDrill(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+          <button
+            onClick={() => setShowCreateDrill(true)}
+            className="flex items-center gap-1 ios-card-strong h-9 px-3 text-sm font-medium text-white active:scale-[0.98] transition-transform"
+          >
+            <Plus className="w-4 h-4" />
             Create Drill
-          </Button>
+          </button>
         </div>
 
         {/* Weekly Load Card */}
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                  Week {weekNumber}
-                </p>
-                <p className="text-sm font-semibold text-foreground mt-0.5">
-                  {sessionsThisWeek} session{sessionsThisWeek !== 1 ? 's' : ''} planned
-                </p>
-              </div>
-              <Badge className={`${loadColor} border-0 font-medium`}>
-                <Activity className="w-3 h-3 mr-1" />
-                {loadLabel}
-              </Badge>
+        <div className="ios-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-white/55 uppercase tracking-wider font-medium">
+                Week {weekNumber}
+              </p>
+              <p className="text-sm font-semibold text-white mt-0.5">
+                {sessionsThisWeek} session{sessionsThisWeek !== 1 ? 's' : ''} planned
+              </p>
             </div>
+            <div className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/12 text-white border border-white/15">
+              <Activity className="w-3 h-3" />
+              {loadLabel}
+            </div>
+          </div>
 
-            {/* 7-day mini bar chart */}
-            <div className="flex items-end justify-between gap-1.5 h-16 pt-2">
-              {weekDays.map((day, i) => {
-                const duration = dayDurations[i];
-                const heightPct = duration > 0 ? Math.max(15, (duration / maxDuration) * 100) : 6;
-                const isCurrentDay = isToday(day);
-                const hasSession = duration > 0;
-                return (
-                  <div key={i} className="flex flex-col items-center gap-1 flex-1">
-                    <div className="flex-1 w-full flex items-end">
-                      <div
-                        className={`w-full rounded-t-sm transition-all ${
-                          hasSession
-                            ? isCurrentDay
-                              ? 'bg-primary'
-                              : 'bg-primary/60'
-                            : 'bg-muted'
-                        }`}
-                        style={{ height: `${heightPct}%` }}
-                      />
-                    </div>
-                    <span className={`text-[10px] ${isCurrentDay ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                      {format(day, 'EEEEE')}
-                    </span>
+          {/* 7-day mini bar chart */}
+          <div className="flex items-end justify-between gap-1.5 h-16 pt-2">
+            {weekDays.map((day, i) => {
+              const duration = dayDurations[i];
+              const heightPct = duration > 0 ? Math.max(15, (duration / maxDuration) * 100) : 6;
+              const isCurrentDay = isToday(day);
+              const hasSession = duration > 0;
+              return (
+                <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                  <div className="flex-1 w-full flex items-end">
+                    <div
+                      className={`w-full rounded-t-sm transition-all ${
+                        hasSession
+                          ? isCurrentDay
+                            ? 'bg-white'
+                            : 'bg-white/55'
+                          : 'bg-white/10'
+                      }`}
+                      style={{ height: `${heightPct}%` }}
+                    />
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  <span className={`text-[10px] ${isCurrentDay ? 'text-white font-semibold' : 'text-white/55'}`}>
+                    {format(day, 'EEEEE')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Today's / Next Session highlight */}
         {todaysSession && (
-          <Card
-            className="cursor-pointer hover:bg-accent/50 transition-colors border-primary/30 bg-primary/5"
+          <div
+            className="ios-card-strong p-4 space-y-2 cursor-pointer hover:bg-white/15 transition-colors"
             onClick={() => handleEventClick(todaysSession.id)}
           >
-            <CardContent className="p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Badge className="bg-primary text-primary-foreground border-0">
-                  {isSameDay(parseISO(todaysSession.date), now) ? 'Today' : format(parseISO(todaysSession.date), 'EEE d MMM')}
-                </Badge>
-                <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); handleEventClick(todaysSession.id); }}>
-                  <Play className="w-3 h-3 mr-1" />
-                  Open
-                </Button>
-              </div>
-              <h3 className="font-semibold text-base text-foreground">{todaysSession.title}</h3>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                {todaysSession.start_time && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {formatTime(todaysSession.start_time)}
-                  </span>
-                )}
-                {todaysSession.game_duration && (
-                  <span>{todaysSession.game_duration} min</span>
-                )}
-                {todaysSession.location && (
-                  <span className="flex items-center gap-1 truncate">
-                    <MapPin className="w-3 h-3" />
-                    <span className="truncate">{todaysSession.location}</span>
-                  </span>
-                )}
-              </div>
-              {todaysSession.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">{todaysSession.description}</p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white text-primary">
+                {isSameDay(parseISO(todaysSession.date), now) ? 'Today' : format(parseISO(todaysSession.date), 'EEE d MMM')}
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleEventClick(todaysSession.id); }}
+                className="flex items-center gap-1 ios-card h-8 px-3 text-xs font-medium text-white active:scale-[0.98] transition-transform"
+              >
+                <Play className="w-3 h-3" />
+                Open
+              </button>
+            </div>
+            <h3 className="font-semibold text-base text-white">{todaysSession.title}</h3>
+            <div className="flex items-center gap-3 text-xs text-white/65 flex-wrap">
+              {todaysSession.start_time && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {formatTime(todaysSession.start_time)}
+                </span>
               )}
-            </CardContent>
-          </Card>
+              {todaysSession.game_duration && (
+                <span>{todaysSession.game_duration} min</span>
+              )}
+              {todaysSession.location && (
+                <span className="flex items-center gap-1 truncate">
+                  <MapPin className="w-3 h-3" />
+                  <span className="truncate">{todaysSession.location}</span>
+                </span>
+              )}
+            </div>
+            {todaysSession.description && (
+              <p className="text-xs text-white/60 line-clamp-2">{todaysSession.description}</p>
+            )}
+          </div>
         )}
 
         {/* Upcoming list */}
         {upcomingSessions.length > 0 && (
           <div className="space-y-2">
-            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+            <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider px-1">
               Upcoming
             </h2>
             <div className="space-y-2">
               {upcomingSessions.map(event => {
                 const eventDate = parseISO(event.date);
                 return (
-                  <Card
+                  <div
                     key={event.id}
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    className="ios-card p-3 cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => handleEventClick(event.id)}
                   >
-                    <CardContent className="p-3">
-                      <div className="flex gap-3">
-                        <div className="flex flex-col items-center justify-center min-w-[40px]">
-                          <span className="text-[10px] uppercase font-medium text-muted-foreground">
-                            {format(eventDate, 'MMM')}
-                          </span>
-                          <span className="text-xl font-bold text-foreground leading-tight">
-                            {format(eventDate, 'd')}
-                          </span>
-                        </div>
-                        <div className="w-1 self-stretch rounded-full bg-purple-500" />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm text-foreground truncate">{event.title}</h3>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                            {event.start_time && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {formatTime(event.start_time)}
-                              </span>
-                            )}
-                            {event.location && (
-                              <span className="flex items-center gap-1 truncate">
-                                <MapPin className="w-3 h-3" />
-                                <span className="truncate">{event.location}</span>
-                              </span>
-                            )}
-                          </div>
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center justify-center min-w-[40px]">
+                        <span className="text-[10px] uppercase font-medium text-white/55">
+                          {format(eventDate, 'MMM')}
+                        </span>
+                        <span className="text-xl font-bold text-white leading-tight">
+                          {format(eventDate, 'd')}
+                        </span>
+                      </div>
+                      <div className="w-1 self-stretch rounded-full bg-white/40" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm text-white truncate">{event.title}</h3>
+                        <div className="flex items-center gap-2 text-xs text-white/60 mt-0.5">
+                          {event.start_time && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatTime(event.start_time)}
+                            </span>
+                          )}
+                          {event.location && (
+                            <span className="flex items-center gap-1 truncate">
+                              <MapPin className="w-3 h-3" />
+                              <span className="truncate">{event.location}</span>
+                            </span>
+                          )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -324,15 +324,16 @@ export default function TrainingMobile() {
 
         {/* Empty state when no sessions at all */}
         {!loadingEvents && !todaysSession && upcomingSessions.length === 0 && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Calendar className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No upcoming training sessions.</p>
-              <Button variant="outline" size="sm" className="mt-3" asChild>
-                <a href="/calendar">Schedule on Calendar</a>
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="ios-card p-6 text-center">
+            <Calendar className="w-8 h-8 mx-auto text-white/50 mb-2" />
+            <p className="text-sm text-white/65">No upcoming training sessions.</p>
+            <a
+              href="/calendar"
+              className="inline-flex items-center mt-3 ios-card h-9 px-4 text-xs font-medium text-white"
+            >
+              Schedule on Calendar
+            </a>
+          </div>
         )}
 
         {/* Existing tabs - kept for power users */}
