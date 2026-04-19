@@ -338,33 +338,27 @@ export default function TrainingMobile() {
 
         {/* Existing tabs - kept for power users */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-2">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="library" className="text-xs">
+          <TabsList className="grid w-full grid-cols-3 ios-card border-0 p-1">
+            <TabsTrigger value="library" className="text-xs text-white/70 data-[state=active]:bg-white data-[state=active]:text-primary">
               <BookOpen className="w-4 h-4 mr-1" />
               Library
             </TabsTrigger>
-            <TabsTrigger value="plans" className="text-xs">
+            <TabsTrigger value="plans" className="text-xs text-white/70 data-[state=active]:bg-white data-[state=active]:text-primary">
               <Users className="w-4 h-4 mr-1" />
               Plans
             </TabsTrigger>
-            <TabsTrigger value="sessions" className="text-xs">
+            <TabsTrigger value="sessions" className="text-xs text-white/70 data-[state=active]:bg-white data-[state=active]:text-primary">
               <Calendar className="w-4 h-4 mr-1" />
               Sessions
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="library" className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Drill Library</CardTitle>
-                <CardDescription className="text-sm">
-                  Manage your training drills
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <DrillLibraryManager />
-              </CardContent>
-            </Card>
+            <div className="ios-card p-4">
+              <h3 className="text-base font-semibold text-white">Drill Library</h3>
+              <p className="text-xs text-white/60 mb-3">Manage your training drills</p>
+              <DrillLibraryManager />
+            </div>
           </TabsContent>
 
           <TabsContent value="plans" className="space-y-4">
@@ -375,26 +369,23 @@ export default function TrainingMobile() {
           </TabsContent>
 
           <TabsContent value="sessions" className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Team Sessions</CardTitle>
-                <CardDescription className="text-sm">
-                  Manage training sessions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-6">
-                  <Calendar className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-                  <h3 className="font-semibold mb-2 text-sm">Team Training Sessions</h3>
-                  <p className="text-muted-foreground mb-4 text-xs">
-                    Sessions are managed in events on the Calendar page.
-                  </p>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/calendar">Go to Calendar</a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="ios-card p-4">
+              <h3 className="text-base font-semibold text-white">Team Sessions</h3>
+              <p className="text-xs text-white/60 mb-3">Manage training sessions</p>
+              <div className="text-center py-6">
+                <Calendar className="w-10 h-10 mx-auto text-white/50 mb-3" />
+                <h3 className="font-semibold mb-2 text-sm text-white">Team Training Sessions</h3>
+                <p className="text-white/60 mb-4 text-xs">
+                  Sessions are managed in events on the Calendar page.
+                </p>
+                <a
+                  href="/calendar"
+                  className="inline-flex items-center ios-card h-9 px-4 text-xs font-medium text-white"
+                >
+                  Go to Calendar
+                </a>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 
