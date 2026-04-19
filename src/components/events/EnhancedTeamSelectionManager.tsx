@@ -919,8 +919,8 @@ const { data: teamData } = useQuery({
 return (
   <>
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden' : ''}`}>
-        <div className={`${isMobile ? 'h-[calc(100dvh-56px)]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0 w-full max-w-full overflow-hidden`}>
+      <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden border-0 bg-transparent shadow-none' : ''}`}>
+        <div className={`${isMobile ? 'h-[calc(100dvh-56px)] ios-wallpaper-dawn text-white' : 'h-[88vh] bg-background'} flex flex-col rounded-xl min-h-0 w-full max-w-full overflow-hidden`}>
           {/* Compact Header - 2 Rows */}
           <div className={`border-b ${isMobile ? 'px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.75rem)]' : 'px-4 py-3'} space-y-2`}>
             {/* Row 1: Teams Only + Close Button on far right */}
