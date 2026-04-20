@@ -147,7 +147,7 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
       case 'comment': return 'bg-purple-100 text-purple-800';
       case 'match': return 'bg-orange-100 text-orange-800';
       case 'transfer': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-white/8 text-white';
     }
   };
 
@@ -181,14 +181,14 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
             <History className="h-5 w-5" />
             Player History
           </SheetTitle>
-          <p className="text-sm text-muted-foreground">{player.name}</p>
+          <p className="text-sm text-white/60">{player.name}</p>
         </SheetHeader>
         
         <ScrollArea className="flex-1 p-6">
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading history...</p>
+              <p className="mt-2 text-sm text-white/60">Loading history...</p>
             </div>
           ) : historyEvents.length > 0 ? (
             <div className="space-y-4">
@@ -203,7 +203,7 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
                           {event.type}
                         </Badge>
                       </div>
-                      <div className="text-xs text-muted-foreground text-right">
+                      <div className="text-xs text-white/60 text-right">
                         <div>{formatDate(event.date)}</div>
                         <div>{getRelativeTime(event.date)}</div>
                       </div>
@@ -230,8 +230,8 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
-                <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No history events found</p>
+                <History className="h-12 w-12 text-white/60 mx-auto mb-4" />
+                <p className="text-white/60">No history events found</p>
               </CardContent>
             </Card>
           )}

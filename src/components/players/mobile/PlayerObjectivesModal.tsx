@@ -151,7 +151,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
           <SheetTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
             Player Objectives - {player.name}
-            {!canEdit && <Lock className="h-4 w-4 text-muted-foreground" />}
+            {!canEdit && <Lock className="h-4 w-4 text-white/60" />}
           </SheetTitle>
         </SheetHeader>
         
@@ -252,7 +252,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
             {objectives.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2 text-white/60">
                     <Target className="h-8 w-8" />
                     <p>No objectives have been set for this player yet</p>
                   </div>
@@ -294,23 +294,23 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                           </div>
                         </div>
                         
-                        <p className="text-sm text-muted-foreground">{objective.description}</p>
+                        <p className="text-sm text-white/60">{objective.description}</p>
                         
                         <div className="flex justify-between text-sm">
                           <div className="flex items-center gap-1">
                             <Star className="h-3 w-3 text-yellow-500" />
-                            <span className="text-muted-foreground">Difficulty:</span>
+                            <span className="text-white/60">Difficulty:</span>
                             <span className="text-yellow-500">{getDifficultyStars(objective.difficultyRating)}</span>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Review:</span>{' '}
+                            <span className="text-white/60">Review:</span>{' '}
                             {format(new Date(objective.reviewDate), 'dd MMM yyyy')}
                           </div>
                         </div>
                         
                         <div className="flex justify-between items-center text-sm">
                           <div>
-                            <span className="text-muted-foreground">Created:</span>{' '}
+                            <span className="text-white/60">Created:</span>{' '}
                             {format(new Date(objective.createdAt), 'dd MMM yyyy')} by {objective.createdBy}
                           </div>
                           

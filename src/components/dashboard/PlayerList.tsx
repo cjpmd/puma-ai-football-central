@@ -112,11 +112,11 @@ export function PlayerList() {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Type</p>
+                  <p className="text-sm font-medium text-white/60">Type</p>
                   <p className="text-sm">{player.type}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Availability</p>
+                  <p className="text-sm font-medium text-white/60">Availability</p>
                   <Badge className={getAvailabilityColor(player.availability)}>
                     {player.availability.charAt(0).toUpperCase() + player.availability.slice(1)}
                   </Badge>

@@ -125,8 +125,8 @@ export default function AuthMobile() {
               className="w-20 h-20"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Origin Sports</h1>
-          <p className="text-muted-foreground">Team Management Made Simple</p>
+          <h1 className="text-2xl font-bold text-white">Origin Sports</h1>
+          <p className="text-white/60">Team Management Made Simple</p>
         </div>
         
         {/* Content */}
@@ -137,64 +137,64 @@ export default function AuthMobile() {
             {/* Join Existing Team */}
             <button
               onClick={() => setShowJoinTeamWizard(true)}
-              className="w-full p-4 bg-card border border-border rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              className="w-full p-4 bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Users className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Join an Existing Team</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-white">Join an Existing Team</h3>
+                  <p className="text-sm text-white/60">
                     I have a team code to join
                   </p>
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-white/60 flex-shrink-0" />
             </button>
 
             {/* Set Up New Team */}
             <button
               onClick={() => setShowTeamSetupWizard(true)}
-              className="w-full p-4 bg-card border border-border rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              className="w-full p-4 bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserPlus className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Set Up A New Team</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-white">Set Up A New Team</h3>
+                  <p className="text-sm text-white/60">
                     I want to create and manage my own team
                   </p>
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-white/60 flex-shrink-0" />
             </button>
 
             {/* Set Up New Club */}
             <button
               onClick={() => setShowClubSetupWizard(true)}
-              className="w-full p-4 bg-card border border-border rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              className="w-full p-4 bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Set Up A New Club</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-white">Set Up A New Club</h3>
+                  <p className="text-sm text-white/60">
                     I want to create a club with multiple teams
                   </p>
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-white/60 flex-shrink-0" />
             </button>
           </div>
 
           {/* Sign In Link */}
           <div className="mt-auto pt-8 pb-4 text-center">
-            <p className="text-muted-foreground">Already have an account?</p>
+            <p className="text-white/60">Already have an account?</p>
             <Button 
               variant="link" 
               onClick={() => setView('login')}
@@ -239,7 +239,7 @@ export default function AuthMobile() {
         <Button
           variant="ghost"
           onClick={() => setView('options')}
-          className="flex items-center gap-2 text-muted-foreground"
+          className="flex items-center gap-2 text-white/60"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
@@ -254,8 +254,8 @@ export default function AuthMobile() {
               className="w-16 h-16"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
-          <p className="text-muted-foreground">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
+          <p className="text-white/60">Sign in to your account</p>
         </div>
 
         {/* Login Form */}
@@ -263,9 +263,9 @@ export default function AuthMobile() {
           <CardContent className="pt-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email</label>
+                <label className="text-sm font-medium text-white">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                   <Input
                     type="email"
                     placeholder="Enter your email"
@@ -278,9 +278,9 @@ export default function AuthMobile() {
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Password</label>
+                <label className="text-sm font-medium text-white">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
@@ -292,7 +292,7 @@ export default function AuthMobile() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -311,7 +311,7 @@ export default function AuthMobile() {
             <div className="mt-4 text-center">
               <Button 
                 variant="link" 
-                className="text-sm text-muted-foreground"
+                className="text-sm text-white/60"
                 onClick={() => setShowForgotPassword(true)}
               >
                 Forgot your password?
@@ -329,9 +329,9 @@ export default function AuthMobile() {
                 </SheetHeader>
                 <form onSubmit={handleForgotPassword} className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <label className="text-sm font-medium text-white">Email</label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                       <Input
                         type="email"
                         value={forgotPasswordEmail}
@@ -374,7 +374,7 @@ export default function AuthMobile() {
 
         {/* Sign Up Link */}
         <div className="text-center">
-          <p className="text-muted-foreground">Don't have an account?</p>
+          <p className="text-white/60">Don't have an account?</p>
           <Button 
             variant="link" 
             onClick={() => setView('options')}

@@ -59,7 +59,7 @@ const getEventTypeLabel = (eventType: string): { label: string; colorClass: stri
     case 'festival':
       return { label: 'Festival', colorClass: 'text-amber-600' };
     default:
-      return { label: eventType.charAt(0).toUpperCase() + eventType.slice(1), colorClass: 'text-muted-foreground' };
+      return { label: eventType.charAt(0).toUpperCase() + eventType.slice(1), colorClass: 'text-white/60' };
   }
 };
 
@@ -115,7 +115,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
             <button
               aria-label="Create event"
               onClick={onCreate}
-              className="h-7 w-7 flex items-center justify-center rounded-md bg-white text-primary hover:bg-white/90"
+              className="h-7 w-7 flex items-center justify-center rounded-md bg-white/[0.06] backdrop-blur-xl text-primary hover:bg-white/90"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -149,7 +149,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
               key={key}
               onClick={() => onSelectDate(isSelected ? null : day)}
               className={`h-8 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors
-                ${isSelected ? 'bg-white text-primary font-semibold' : ''}
+                ${isSelected ? 'bg-white/[0.06] backdrop-blur-xl text-primary font-semibold' : ''}
                 ${!isSelected && isCurrentDay ? 'ring-1 ring-white/70 text-white font-semibold' : ''}
                 ${!isSelected && !isCurrentDay && isPastDay ? 'text-white/35' : ''}
                 ${!isSelected && !isCurrentDay && !isPastDay ? 'text-white hover:bg-white/10' : ''}
@@ -1037,7 +1037,7 @@ export default function CalendarEventsMobile() {
           </div>
         ) : paginatedVisibleEvents.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">
+            <p className="text-white/60">
               {selectedDate ? 'No events on this day' : 'No events scheduled'}
             </p>
           </div>
@@ -1125,7 +1125,7 @@ export default function CalendarEventsMobile() {
                           
                           {/* NEXT badge - absolute top right */}
                           {isNextEvent && (
-                            <Badge className="bg-white text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white">
+                            <Badge className="bg-white/[0.06] backdrop-blur-xl text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white/[0.06] backdrop-blur-xl">
                               NEXT
                             </Badge>
                           )}
@@ -1202,7 +1202,7 @@ export default function CalendarEventsMobile() {
               </div>
               
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-white/60">
                   <Calendar className="h-4 w-4" />
                   <span>{format(new Date(selectedEvent.date), 'EEE d MMM')}</span>
                   {selectedEvent.start_time && (
@@ -1229,7 +1229,7 @@ export default function CalendarEventsMobile() {
                       stripeColor={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.stripeColor}
                       hasStripes={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.hasStripes}
                     />
-                    <span className="text-sm text-muted-foreground capitalize">
+                    <span className="text-sm text-white/60 capitalize">
                       {selectedEvent.kit_selection || 'home'} Kit
                     </span>
                   </div>
@@ -1240,7 +1240,7 @@ export default function CalendarEventsMobile() {
                 
                 {selectedEvent.location && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-sm text-white/60">
                       <MapPin className="h-4 w-4" />
                       <span className="truncate">{selectedEvent.location}</span>
                     </div>
@@ -1346,28 +1346,28 @@ export default function CalendarEventsMobile() {
               {selectedEvent.description && (
                 <div>
                   <h4 className="font-medium mb-2">Description</h4>
-                  <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                  <p className="text-sm text-white/70">{selectedEvent.description}</p>
                 </div>
               )}
               
               {selectedEvent.notes && (
                 <div>
                   <h4 className="font-medium mb-2">Notes</h4>
-                  <p className="text-sm text-gray-600">{selectedEvent.notes}</p>
+                  <p className="text-sm text-white/70">{selectedEvent.notes}</p>
                 </div>
               )}
               
               {selectedEvent.coach_notes && (
                 <div>
                   <h4 className="font-medium mb-2">Coach Notes</h4>
-                  <p className="text-sm text-gray-600">{selectedEvent.coach_notes}</p>
+                  <p className="text-sm text-white/70">{selectedEvent.coach_notes}</p>
                 </div>
               )}
               
               {selectedEvent.training_notes && (
                 <div>
                   <h4 className="font-medium mb-2">Training Notes</h4>
-                  <p className="text-sm text-gray-600">{selectedEvent.training_notes}</p>
+                  <p className="text-sm text-white/70">{selectedEvent.training_notes}</p>
                 </div>
               )}
               
@@ -1566,7 +1566,7 @@ const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {
       </div>
       <div className="grid grid-cols-2 gap-4">
         {teamTimes.map((team) => (
-          <div key={team.team_number} className="text-sm text-gray-600">
+          <div key={team.team_number} className="text-sm text-white/70">
             <div className="font-medium mb-1">Team {team.team_number}:</div>
             {team.meeting_time && team.start_time ? (
               <div className="space-y-1">

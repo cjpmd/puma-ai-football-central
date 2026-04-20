@@ -134,7 +134,7 @@ export default function ClubManagementMobile() {
         {/* Search and Actions */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
             <Input
               placeholder="Search clubs..."
               value={searchTerm}
@@ -152,12 +152,12 @@ export default function ClubManagementMobile() {
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading clubs...</p>
+              <p className="mt-2 text-sm text-white/60">Loading clubs...</p>
             </div>
           ) : filteredClubs.length === 0 ? (
             <div className="text-center py-8">
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No clubs found</p>
+              <Building2 className="h-12 w-12 text-white/60 mx-auto mb-4" />
+              <p className="text-white/60">No clubs found</p>
               <Button 
                 variant="link" 
                 className="mt-2"
@@ -188,19 +188,19 @@ export default function ClubManagementMobile() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium text-lg truncate">{club.name}</h3>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <ChevronRight className="h-5 w-5 text-white/60 flex-shrink-0" />
                       </div>
                       <div className="flex items-center space-x-2 mt-1">
                         <Badge className={`text-white text-xs ${getSubscriptionColor(club.subscription_type)}`}>
                           {club.subscription_type}
                         </Badge>
-                        <div className="flex items-center text-sm text-muted-foreground">
+                        <div className="flex items-center text-sm text-white/60">
                           <Trophy className="h-3 w-3 mr-1" />
                           <span>{club.team_count} teams</span>
                         </div>
                       </div>
                       {club.serial_number && (
-                        <div className="text-sm text-muted-foreground mt-1 font-mono">
+                        <div className="text-sm text-white/60 mt-1 font-mono">
                           #{club.serial_number}
                         </div>
                       )}

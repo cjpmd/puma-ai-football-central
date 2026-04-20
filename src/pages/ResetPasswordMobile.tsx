@@ -103,7 +103,7 @@ export default function ResetPasswordMobile() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-muted-foreground">Verifying reset link...</p>
+          <p className="text-white/60">Verifying reset link...</p>
         </div>
       </div>
     );
@@ -116,8 +116,8 @@ export default function ResetPasswordMobile() {
         <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
           <AlertCircle className="h-8 w-8 text-destructive" />
         </div>
-        <h1 className="text-xl font-bold text-foreground mb-2">Link Expired</h1>
-        <p className="text-muted-foreground text-center mb-6">
+        <h1 className="text-xl font-bold text-white mb-2">Link Expired</h1>
+        <p className="text-white/60 text-center mb-6">
           This password reset link has expired or is invalid. Please request a new one.
         </p>
         <Button onClick={() => navigate('/auth')} className="w-full max-w-xs">
@@ -134,8 +134,8 @@ export default function ResetPasswordMobile() {
         <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
-        <h1 className="text-xl font-bold text-foreground mb-2">Password Reset!</h1>
-        <p className="text-muted-foreground text-center mb-6">
+        <h1 className="text-xl font-bold text-white mb-2">Password Reset!</h1>
+        <p className="text-white/60 text-center mb-6">
           Your password has been successfully updated. Redirecting to login...
         </p>
         <Button onClick={() => navigate('/auth')} className="w-full max-w-xs">
@@ -158,8 +158,8 @@ export default function ResetPasswordMobile() {
               className="w-16 h-16"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Reset Password</h1>
-          <p className="text-muted-foreground mt-1">Enter your new password</p>
+          <h1 className="text-2xl font-bold text-white">Reset Password</h1>
+          <p className="text-white/60 mt-1">Enter your new password</p>
         </div>
 
         {/* Form */}
@@ -167,9 +167,9 @@ export default function ResetPasswordMobile() {
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">New Password</label>
+                <label className="text-sm font-medium text-white">New Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
@@ -182,7 +182,7 @@ export default function ResetPasswordMobile() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -191,9 +191,9 @@ export default function ResetPasswordMobile() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Confirm Password</label>
+                <label className="text-sm font-medium text-white">Confirm Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                   <Input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
@@ -205,7 +205,7 @@ export default function ResetPasswordMobile() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60"
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

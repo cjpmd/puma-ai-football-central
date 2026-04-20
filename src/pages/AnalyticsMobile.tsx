@@ -286,14 +286,14 @@ export default function AnalyticsMobile() {
             <CardContent className="p-4 text-center">
               <Trophy className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
               <div className="text-2xl font-bold">{analytics.totalWins}</div>
-              <div className="text-sm text-muted-foreground">Wins</div>
+              <div className="text-sm text-white/60">Wins</div>
             </CardContent>
           </Card>
           <Card className="touch-manipulation">
             <CardContent className="p-4 text-center">
               <Target className="h-8 w-8 mx-auto mb-2 text-green-600" />
               <div className="text-2xl font-bold">{analytics.winRate}%</div>
-              <div className="text-sm text-muted-foreground">Win Rate</div>
+              <div className="text-sm text-white/60">Win Rate</div>
             </CardContent>
           </Card>
         </div>
@@ -311,29 +311,29 @@ export default function AnalyticsMobile() {
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <Target className="h-6 w-6 mx-auto mb-1 text-blue-600" />
                 <div className="text-xl font-bold">{analytics.totalGoals}</div>
-                <div className="text-xs text-muted-foreground">Goals</div>
+                <div className="text-xs text-white/60">Goals</div>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg">
                 <Target className="h-6 w-6 mx-auto mb-1 text-green-600" />
                 <div className="text-xl font-bold">{analytics.totalAssists}</div>
-                <div className="text-xs text-muted-foreground">Assists</div>
+                <div className="text-xs text-white/60">Assists</div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
                 <Shield className="h-6 w-6 mx-auto mb-1 text-purple-600" />
                 <div className="text-xl font-bold">{analytics.totalSaves}</div>
-                <div className="text-xs text-muted-foreground">Saves</div>
+                <div className="text-xs text-white/60">Saves</div>
               </div>
               <div className="text-center p-3 bg-yellow-50 rounded-lg">
                 <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
                 <div className="text-xl font-bold">{analytics.yellowCards}</div>
-                <div className="text-xs text-muted-foreground">Yellow Cards</div>
+                <div className="text-xs text-white/60">Yellow Cards</div>
               </div>
             </div>
             {analytics.redCards > 0 && (
               <div className="mt-3 text-center p-3 bg-red-50 rounded-lg">
                 <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-red-600" />
                 <div className="text-xl font-bold text-red-600">{analytics.redCards}</div>
-                <div className="text-xs text-muted-foreground">Red Cards</div>
+                <div className="text-xs text-white/60">Red Cards</div>
               </div>
             )}
           </CardContent>
@@ -353,7 +353,7 @@ export default function AnalyticsMobile() {
                 <span className="text-sm font-medium">Goals Scored</span>
                 <Badge className="bg-green-500">{analytics.goalsScored}</Badge>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-white/10 rounded-full h-2">
                 <div 
                   className="bg-green-500 h-2 rounded-full" 
                   style={{ width: analytics.goalsScored > 0 ? `${Math.min((analytics.goalsScored / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
@@ -366,7 +366,7 @@ export default function AnalyticsMobile() {
                 <span className="text-sm font-medium">Goals Conceded</span>
                 <Badge variant="destructive">{analytics.goalsConceded}</Badge>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-white/10 rounded-full h-2">
                 <div 
                   className="bg-red-500 h-2 rounded-full" 
                   style={{ width: analytics.goalsConceded > 0 ? `${Math.min((analytics.goalsConceded / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
@@ -402,15 +402,15 @@ export default function AnalyticsMobile() {
                 }
 
                 return (
-                  <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={event.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                     <div>
                       <div className="font-medium">vs {event.opponent}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-white/60">
                         {new Date(event.date).toLocaleDateString()}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-gray-600">{scoreDisplay}</div>
+                      <div className="font-bold text-white/70">{scoreDisplay}</div>
                       {result && (
                         <Badge className={`text-white text-xs ${result.color}`}>
                           {result.text}
@@ -421,7 +421,7 @@ export default function AnalyticsMobile() {
                 );
               })
             ) : (
-              <p className="text-muted-foreground text-center py-4">No recent results</p>
+              <p className="text-white/60 text-center py-4">No recent results</p>
             )}
           </CardContent>
         </Card>
@@ -442,7 +442,7 @@ export default function AnalyticsMobile() {
                   <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                     <div>
                       <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-white/60">
                         {stats?.totalGames || 0} games
                       </div>
                     </div>
@@ -472,7 +472,7 @@ export default function AnalyticsMobile() {
                   <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                     <div>
                       <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-white/60">
                         {stats?.totalGames || 0} games
                       </div>
                     </div>
@@ -500,7 +500,7 @@ export default function AnalyticsMobile() {
                 <div key={index} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                   <div>
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-white/60">
                       {player.appearances} appearances
                     </div>
                   </div>
@@ -510,7 +510,7 @@ export default function AnalyticsMobile() {
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground text-center py-4">No performance data available</p>
+              <p className="text-white/60 text-center py-4">No performance data available</p>
             )}
           </CardContent>
         </Card>

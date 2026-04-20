@@ -222,7 +222,7 @@ export default function TeamSettingsMobile() {
     return (
       <MobileLayout headerTitle="Team Settings">
         <div className="flex flex-col items-center justify-center h-64 text-center">
-          <p className="text-gray-500">Team not found</p>
+          <p className="text-white/60">Team not found</p>
           <Button variant="link" onClick={() => navigate('/dashboard')}>
             Return to Dashboard
           </Button>
@@ -233,13 +233,13 @@ export default function TeamSettingsMobile() {
 
   return (
     <MobileLayout headerTitle={`Settings: ${team.name}`}>
-      <div className="min-h-screen bg-gray-50 -mx-4 -mt-4 px-4 pt-4">
+      <div className="min-h-screen bg-white/5 -mx-4 -mt-4 px-4 pt-4">
         <div className="space-y-4 pb-safe-bottom">
           
           {/* Back to Dashboard */}
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-2 text-sm text-white/70 hover:text-white"
           >
             <ChevronLeft className="w-4 h-4" />
             Back to Dashboard
@@ -247,28 +247,28 @@ export default function TeamSettingsMobile() {
 
           {/* Settings Groups */}
           {Object.entries(groupedSections).map(([group, sections]) => (
-            <div key={group} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2 border-b border-gray-100">
-                <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">{group}</h2>
+            <div key={group} className="bg-white/[0.06] backdrop-blur-xl rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-4 py-2 border-b border-white/10">
+                <h2 className="text-xs font-medium text-white/60 uppercase tracking-wide">{group}</h2>
               </div>
               
               {sections.map((section, index) => (
                 <div key={section.id}>
-                  {index > 0 && <div className="h-px bg-gray-100 mx-4" />}
+                  {index > 0 && <div className="h-px bg-white/8 mx-4" />}
                   <button
                     onClick={() => setActiveSection(section.id)}
                     className="w-full flex items-center justify-between px-4 py-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600">
+                      <div className="w-10 h-10 rounded-xl bg-white/8 flex items-center justify-center text-white/70">
                         {section.icon}
                       </div>
                       <div className="text-left">
-                        <span className="text-sm font-medium text-gray-900 block">{section.label}</span>
-                        <span className="text-xs text-gray-500">{section.description}</span>
+                        <span className="text-sm font-medium text-white block">{section.label}</span>
+                        <span className="text-xs text-white/60">{section.description}</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <ChevronRight className="w-5 h-5 text-white/50" />
                   </button>
                 </div>
               ))}

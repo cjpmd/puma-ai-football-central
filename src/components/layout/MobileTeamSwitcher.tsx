@@ -58,7 +58,7 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
             </div>
             <div className="flex-1 text-left">
               <div className="font-semibold">All Teams</div>
-              <div className="text-sm text-muted-foreground">View integrated calendar</div>
+              <div className="text-sm text-white/60">View integrated calendar</div>
             </div>
             {isAllTeamsSelected && (
               <Check className="h-5 w-5 text-primary flex-shrink-0" />
@@ -93,7 +93,7 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
                 <div className="flex-1 text-left">
                   <div className="font-semibold">{team.name}</div>
                   {team.ageGroup && (
-                    <div className="text-sm text-muted-foreground">{team.ageGroup}</div>
+                    <div className="text-sm text-white/60">{team.ageGroup}</div>
                   )}
                 </div>
                 {isSelected && (

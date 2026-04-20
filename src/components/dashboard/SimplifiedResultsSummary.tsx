@@ -214,7 +214,7 @@ export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> =
       
       <CardContent>
         {results.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-8 text-white/60">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No recent results available.</p>
           </div>
@@ -254,7 +254,7 @@ export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> =
                     )}
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <Users className="h-4 w-4 text-white/60" />
                         <span className="font-medium">{team.teamName}</span>
                       </div>
                     </TableCell>
@@ -265,7 +265,7 @@ export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> =
                     </TableCell>
                     <TableCell>
                       {result.opponent && (
-                        <span className="text-muted-foreground">vs {result.opponent}</span>
+                        <span className="text-white/60">vs {result.opponent}</span>
                       )}
                     </TableCell>
                     <TableCell>

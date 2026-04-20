@@ -89,7 +89,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
           <SheetTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
             Coach Comments - {player.name}
-            {!canEdit && <Lock className="h-4 w-4 text-muted-foreground" />}
+            {!canEdit && <Lock className="h-4 w-4 text-white/60" />}
           </SheetTitle>
         </SheetHeader>
         
@@ -135,7 +135,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
               {comments.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center">
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2 text-white/60">
                       <MessageSquare className="h-8 w-8" />
                       <p>No coaching comments have been added yet</p>
                     </div>
@@ -159,7 +159,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
                         
                         <div className="space-y-2 pr-8">
                           <p className="text-sm whitespace-pre-wrap">{comment.text}</p>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-white/60">
                             Added by {comment.createdBy} on {formatDate(comment.createdAt, 'PPp')}
                           </div>
                         </div>

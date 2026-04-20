@@ -236,7 +236,7 @@ export function UpcomingEvents() {
                   <CardDescription>
                     {nextEvent.team_context?.name || nextEvent.team_name}
                     {nextEvent.team_context?.club_name && (
-                      <span className="text-muted-foreground"> • {nextEvent.team_context.club_name}</span>
+                      <span className="text-white/60"> • {nextEvent.team_context.club_name}</span>
                     )}
                   </CardDescription>
                 </div>
@@ -275,16 +275,16 @@ export function UpcomingEvents() {
                       />
                     );
                   })()}
-                  <span className="text-muted-foreground">vs</span>
+                  <span className="text-white/60">vs</span>
                   <span className="font-semibold">{nextEvent.opponent}</span>
                 </div>
               )}
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/60">
                 {format(new Date(nextEvent.date), 'EEEE, MMMM d, yyyy')}
                 {nextEvent.start_time && ` at ${nextEvent.start_time}`}
               </p>
               {nextEvent.location && (
-                <p className="text-sm text-muted-foreground">📍 {nextEvent.location}</p>
+                <p className="text-sm text-white/60">📍 {nextEvent.location}</p>
               )}
               {nextEvent.scores && (
                 <p className="text-sm font-medium">
@@ -353,7 +353,7 @@ export function UpcomingEvents() {
                               {event.team_context?.name?.slice(0, 1).toUpperCase() || event.team_name.slice(0, 1).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-sm font-medium text-foreground">
+                          <span className="text-sm font-medium text-white">
                             {event.team_context?.name || event.team_name}
                           </span>
                         </div>
@@ -376,20 +376,20 @@ export function UpcomingEvents() {
                             className="w-4 h-4 rounded-full"
                           />
                         )}
-                        <span className="text-xs text-muted-foreground">vs</span>
+                        <span className="text-xs text-white/60">vs</span>
                         <span className="font-medium">{event.opponent}</span>
                       </div>
                     )}
                     
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-white/60">
                       {format(new Date(event.date), 'MMM d')}
                       {event.start_time && ` at ${event.start_time}`}
                     </p>
                     {event.location && (
-                      <p className="text-xs text-muted-foreground">📍 {event.location}</p>
+                      <p className="text-xs text-white/60">📍 {event.location}</p>
                     )}
                     {event.scores && (
-                      <p className="text-xs font-medium text-muted-foreground">
+                      <p className="text-xs font-medium text-white/60">
                         Score: {event.scores.home} - {event.scores.away}
                       </p>
                     )}
@@ -434,9 +434,9 @@ export function UpcomingEvents() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <Calendar className="h-12 w-12 text-white/60 mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">No upcoming events</h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-white/60 mb-4">
                 Create your first event to get started with team management.
               </p>
               <Button onClick={handleViewCalendar}>

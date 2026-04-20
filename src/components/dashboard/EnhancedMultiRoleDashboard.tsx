@@ -96,7 +96,7 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
                   alt="Team Manager Logo" 
                   className="w-8 h-8"
                 />
-                <h1 className="text-xl font-bold text-foreground">Team Manager</h1>
+                <h1 className="text-xl font-bold text-white">Team Manager</h1>
               </div>
             </div>
             <div className="flex-1 overflow-auto py-4">
@@ -111,7 +111,7 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
                         'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
                         isActive
                           ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                          : 'text-white/60 hover:bg-accent hover:text-accent-foreground'
                       )}
                     >
                       <item.icon className="h-5 w-5" />
@@ -156,7 +156,7 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
                         alt="Team Manager Logo" 
                         className="w-8 h-8"
                       />
-                      <h1 className="text-xl font-bold text-foreground">Team Manager</h1>
+                      <h1 className="text-xl font-bold text-white">Team Manager</h1>
                     </div>
                   </div>
                   <div className="flex-1 overflow-auto py-4">
@@ -171,7 +171,7 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
                               'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
                               isActive
                                 ? 'bg-accent text-accent-foreground'
-                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                : 'text-white/60 hover:bg-accent hover:text-accent-foreground'
                             )}
                             onClick={() => setSidebarOpen(false)}
                           >

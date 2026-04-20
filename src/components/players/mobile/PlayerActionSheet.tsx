@@ -139,7 +139,7 @@ export const PlayerActionSheet: React.FC<PlayerActionSheetProps> = ({
           <div className="p-6 space-y-6">
             {/* Player Actions */}
             <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              <h3 className="text-sm font-medium text-white/60 uppercase tracking-wide">
                 Player Actions
               </h3>
               <div className="grid grid-cols-3 gap-3">
@@ -166,7 +166,7 @@ export const PlayerActionSheet: React.FC<PlayerActionSheetProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-amber-600" />
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wide">
                       Admin Actions
                     </h3>
                   </div>
@@ -195,7 +195,7 @@ export const PlayerActionSheet: React.FC<PlayerActionSheetProps> = ({
                 <ShieldCheck className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Access Level</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-white/60">
                     {canManageTransfers 
                       ? 'You have full management access including transfers'
                       : 'Standard access - some actions may be restricted'

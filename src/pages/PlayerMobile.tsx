@@ -136,7 +136,7 @@ const PlayerMobile = () => {
     return (
       <MobileLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading player progress...</div>
+          <div className="text-white/60">Loading player progress...</div>
         </div>
       </MobileLayout>
     );
@@ -147,7 +147,7 @@ const PlayerMobile = () => {
       <MobileLayout>
         <div className="text-center py-12">
           <h2 className="text-xl font-bold mb-4">No Players Found</h2>
-          <p className="text-muted-foreground mb-6 text-sm">
+          <p className="text-white/60 mb-6 text-sm">
             You don't have any players linked to your account yet.
           </p>
           <Button onClick={loadChildrenData} size="sm">Refresh</Button>

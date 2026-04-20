@@ -108,7 +108,7 @@ export function SmartDashboardContent() {
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground max-w-2xl">
+            <p className="text-white/60 max-w-2xl">
               {welcomeData.description}
             </p>
           </div>
@@ -122,7 +122,7 @@ export function SmartDashboardContent() {
                 <stat.icon className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <div className="text-sm text-white/60">{stat.label}</div>
                 <div className="font-semibold">{stat.value}</div>
               </div>
             </div>
@@ -173,22 +173,22 @@ export function SmartDashboardContent() {
           <CardContent>
             <div className="space-y-3">
               {currentView === 'parent' && connectedPlayers.length > 0 && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   Check your children's recent training sessions and upcoming matches.
                 </div>
               )}
               {(currentView === 'coach' || currentView === 'team_manager') && teams.length > 0 && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   Recent team activities and upcoming training sessions will appear here.
                 </div>
               )}
               {currentView === 'club_admin' && clubs.length > 0 && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   Club-wide activities and administrative updates will be shown here.
                 </div>
               )}
               {currentView === 'global_admin' && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   System-wide activities and administrative alerts will appear here.
                 </div>
               )}
@@ -210,22 +210,22 @@ export function SmartDashboardContent() {
           <CardContent>
             <div className="space-y-3">
               {currentView === 'parent' && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   Your children's progress and participation rates will be displayed here.
                 </div>
               )}
               {(currentView === 'coach' || currentView === 'team_manager') && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   Team performance metrics and training effectiveness data.
                 </div>
               )}
               {currentView === 'club_admin' && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   Club-wide performance metrics and operational insights.
                 </div>
               )}
               {currentView === 'global_admin' && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-white/60">
                   Platform usage statistics and system health metrics.
                 </div>
               )}

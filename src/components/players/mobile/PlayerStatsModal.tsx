@@ -71,7 +71,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             <BarChart3 className="h-5 w-5" />
             Player Statistics
           </SheetTitle>
-          <p className="text-sm text-muted-foreground">{player.name}</p>
+          <p className="text-sm text-white/60">{player.name}</p>
         </SheetHeader>
         
         <Tabs defaultValue="summary" className="flex-1 flex flex-col min-h-0">
@@ -113,7 +113,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{totalGames}</div>
-                    <p className="text-xs text-muted-foreground">Total matches</p>
+                    <p className="text-xs text-white/60">Total matches</p>
                   </CardContent>
                 </Card>
 
@@ -126,7 +126,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{totalMinutes}</div>
-                    <p className="text-xs text-muted-foreground">Avg: {averageMinutes} per game</p>
+                    <p className="text-xs text-white/60">Avg: {averageMinutes} per game</p>
                   </CardContent>
                 </Card>
 
@@ -139,7 +139,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{captainGames}</div>
-                    <p className="text-xs text-muted-foreground">Times as captain</p>
+                    <p className="text-xs text-white/60">Times as captain</p>
                   </CardContent>
                 </Card>
 
@@ -152,7 +152,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{potmCount}</div>
-                    <p className="text-xs text-muted-foreground">Player of the Match</p>
+                    <p className="text-xs text-white/60">Player of the Match</p>
                   </CardContent>
                 </Card>
 
@@ -166,7 +166,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.totalGoals || 0}</div>
-                    <p className="text-xs text-muted-foreground">Total goals scored</p>
+                    <p className="text-xs text-white/60">Total goals scored</p>
                   </CardContent>
                 </Card>
 
@@ -179,7 +179,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.totalAssists || 0}</div>
-                    <p className="text-xs text-muted-foreground">Total assists</p>
+                    <p className="text-xs text-white/60">Total assists</p>
                   </CardContent>
                 </Card>
 
@@ -194,7 +194,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{stats.totalSaves || 0}</div>
-                      <p className="text-xs text-muted-foreground">Total saves</p>
+                      <p className="text-xs text-white/60">Total saves</p>
                     </CardContent>
                   </Card>
                 )}
@@ -219,7 +219,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           <span className="text-xl font-bold">{stats.redCards || 0}</span>
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">Yellow / Red</p>
+                      <p className="text-xs text-white/60">Yellow / Red</p>
                     </CardContent>
                   </Card>
                 )}
@@ -244,7 +244,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             </Badge>
                             <span className="text-sm">{Number(minutes)} min</span>
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-white/60">
                             #{index + 1}
                           </div>
                         </div>
@@ -257,7 +257,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   {totalGames === 0 && (
                     <Card>
                       <CardContent className="py-8 text-center">
-                        <p className="text-muted-foreground">No match statistics available</p>
+                        <p className="text-white/60">No match statistics available</p>
                       </CardContent>
                     </Card>
                   )}
@@ -288,7 +288,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-medium">{Number(minutes)} min</div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-white/60">
                               {totalMinutes > 0 ? Math.round((Number(minutes) / totalMinutes) * 100) : 0}% of total
                             </div>
                           </div>
@@ -296,7 +296,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       ))}
                     </div>
                     ) : (
-                      <p className="text-muted-foreground text-center py-8">No position data available</p>
+                      <p className="text-white/60 text-center py-8">No position data available</p>
                     )}
                   </CardContent>
                 </Card>
@@ -327,15 +327,15 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           </div>
                           <div className="grid grid-cols-2 gap-4 text-xs">
                             <div>
-                              <span className="text-muted-foreground">Total Minutes:</span>
+                              <span className="text-white/60">Total Minutes:</span>
                               <div className="font-medium">{stats.minutes}</div>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Avg Minutes:</span>
+                              <span className="text-white/60">Avg Minutes:</span>
                               <div className="font-medium">{stats.averageMinutes}</div>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">As Captain:</span>
+                              <span className="text-white/60">As Captain:</span>
                               <div className="font-medium">{stats.captainGames}</div>
                             </div>
                           </div>
@@ -343,7 +343,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       ))}
                     </div>
                     ) : (
-                      <p className="text-muted-foreground text-center py-8">No performance category data available</p>
+                      <p className="text-white/60 text-center py-8">No performance category data available</p>
                     )}
                   </CardContent>
                 </Card>
@@ -358,7 +358,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     <Card>
                       <CardContent className="py-8 text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                        <p className="mt-2 text-sm text-muted-foreground">Loading availability...</p>
+                        <p className="mt-2 text-sm text-white/60">Loading availability...</p>
                       </CardContent>
                     </Card>
                   ) : availabilityHistory.length > 0 ? (
@@ -400,19 +400,19 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                                         <div className="text-lg font-bold text-green-600">
                                           {typedStats.total > 0 ? Math.round((typedStats.available / typedStats.total) * 100) : 0}%
                                         </div>
-                                        <div className="text-xs text-muted-foreground">Available</div>
+                                        <div className="text-xs text-white/60">Available</div>
                                       </div>
                                       <div className="text-center">
                                         <div className="text-lg font-bold text-red-600">
                                           {typedStats.total > 0 ? Math.round((typedStats.unavailable / typedStats.total) * 100) : 0}%
                                         </div>
-                                        <div className="text-xs text-muted-foreground">Unavailable</div>
+                                        <div className="text-xs text-white/60">Unavailable</div>
                                       </div>
                                       <div className="text-center">
                                         <div className="text-lg font-bold text-amber-600">
                                           {typedStats.total > 0 ? Math.round((typedStats.pending / typedStats.total) * 100) : 0}%
                                         </div>
-                                        <div className="text-xs text-muted-foreground">Pending</div>
+                                        <div className="text-xs text-white/60">Pending</div>
                                       </div>
                                     </div>
                                   </div>
@@ -459,7 +459,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                                   <div className="text-xs font-medium">
                                     {item.eventTitle || 'Untitled Event'}
                                   </div>
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-white/60">
                                     {formatDate(item.eventDate, 'dd MMM yyyy')}
                                     {item.opponent && ` vs ${item.opponent}`}
                                   </div>
@@ -473,7 +473,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   ) : (
                     <Card>
                       <CardContent className="py-8 text-center">
-                        <p className="text-muted-foreground">No availability history found</p>
+                        <p className="text-white/60">No availability history found</p>
                       </CardContent>
                     </Card>
                   )}
@@ -504,23 +504,23 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                               {game.captain && <Crown className="h-3 w-3 text-yellow-500" />}
                               {game.playerOfTheMatch && <Trophy className="h-3 w-3 text-amber-500" />}
                             </div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-white/60">
                               {new Date(game.date).toLocaleDateString()}
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-4 text-xs">
                             <div>
-                              <span className="text-muted-foreground">Minutes:</span>
+                              <span className="text-white/60">Minutes:</span>
                               <div className="font-medium">{game.minutes}</div>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Performance:</span>
+                              <span className="text-white/60">Performance:</span>
                               <div className="font-medium">{game.performanceCategory || 'None'}</div>
                             </div>
                           </div>
                           {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 && (
                             <div className="mt-2 pt-2 border-t">
-                              <span className="text-xs text-muted-foreground">Positions:</span>
+                              <span className="text-xs text-white/60">Positions:</span>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {Object.entries(game.minutesByPosition).map(([pos, mins]) => (
                                   <Badge key={pos} variant="outline" className="text-xs">
@@ -534,7 +534,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                        ))}
                     </div>
                     ) : (
-                      <p className="text-muted-foreground text-center py-8">No match history available</p>
+                      <p className="text-white/60 text-center py-8">No match history available</p>
                     )}
                   </CardContent>
                 </Card>
