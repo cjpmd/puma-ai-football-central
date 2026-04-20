@@ -67,17 +67,51 @@ const getEventTypeLabel = (eventType: string): { label: string; colorClass: stri
 interface MiniMonthGridProps {
   month: Date;
   selectedDate: Date | null;
-  eventDates: Set<string>; // 'yyyy-MM-dd'
+  eventTypesByDate: Map<string, Set<string>>; // 'yyyy-MM-dd' -> set of event types
   onSelectDate: (date: Date | null) => void;
   onMonthChange: (date: Date) => void;
   onCreate?: () => void;
   showCreate?: boolean;
 }
 
+// Map event type -> tile bg + dot colour. Returns null if no events.
+const getDayTint = (
+  types: Set<string> | undefined
+): { tile: string; dot: string } | null => {
+  if (!types || types.size === 0) return null;
+  // Normalise: match + fixture share blue
+  const norm = new Set<string>();
+  types.forEach((t) => norm.add(t === 'fixture' ? 'match' : t));
+
+  if (norm.size > 1) {
+    return {
+      tile: 'bg-white/15 border border-white/25',
+      dot: 'bg-white/80',
+    };
+  }
+  const only = Array.from(norm)[0];
+  switch (only) {
+    case 'match':
+      return { tile: 'bg-blue-500/25 border border-blue-400/40', dot: 'bg-blue-400' };
+    case 'friendly':
+      return { tile: 'bg-emerald-500/25 border border-emerald-400/40', dot: 'bg-emerald-400' };
+    case 'training':
+      return { tile: 'bg-purple-500/25 border border-purple-400/40', dot: 'bg-purple-400' };
+    case 'tournament':
+      return { tile: 'bg-orange-500/25 border border-orange-400/40', dot: 'bg-orange-400' };
+    case 'festival':
+      return { tile: 'bg-amber-500/25 border border-amber-400/40', dot: 'bg-amber-400' };
+    case 'social':
+      return { tile: 'bg-pink-500/25 border border-pink-400/40', dot: 'bg-pink-400' };
+    default:
+      return { tile: 'bg-white/10 border border-white/20', dot: 'bg-white/70' };
+  }
+};
+
 const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
   month,
   selectedDate,
-  eventDates,
+  eventTypesByDate,
   onSelectDate,
   onMonthChange,
   onCreate,
@@ -91,8 +125,8 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
   const today = new Date();
 
   return (
-    <div className="ios-card p-3">
-      <div className="flex items-center justify-between mb-2">
+    <div className="ios-card p-2">
+      <div className="flex items-center justify-between mb-1">
         <button
           aria-label="Previous month"
           onClick={() => onMonthChange(subMonths(month, 1))}
@@ -135,31 +169,41 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
       {/* Day grid */}
       <div className="grid grid-cols-7 gap-0.5">
         {Array.from({ length: firstDayIdx }).map((_, i) => (
-          <div key={`pad-${i}`} className="h-8" />
+          <div key={`pad-${i}`} className="h-7" />
         ))}
         {days.map((day) => {
           const key = format(day, 'yyyy-MM-dd');
           const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === key;
           const isCurrentDay = format(today, 'yyyy-MM-dd') === key;
-          const hasEvent = eventDates.has(key);
+          const tint = getDayTint(eventTypesByDate.get(key));
+          const hasEvent = !!tint;
           const isPastDay = isBefore(day, today) && !isCurrentDay;
+
+          // Build tile classes with priority: selected > tint > hover
+          let tileClasses = '';
+          if (isSelected) {
+            tileClasses = 'bg-white/20 backdrop-blur-xl border border-white/30 text-white font-semibold';
+          } else if (hasEvent) {
+            tileClasses = `${tint!.tile} text-white font-medium`;
+          } else if (isPastDay) {
+            tileClasses = 'text-white/35';
+          } else {
+            tileClasses = 'text-white hover:bg-white/10';
+          }
+
+          const ringClass = !isSelected && isCurrentDay ? 'ring-1 ring-white/70' : '';
 
           return (
             <button
               key={key}
               onClick={() => onSelectDate(isSelected ? null : day)}
-              className={`h-8 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors
-                ${isSelected ? 'bg-white/[0.06] backdrop-blur-xl text-primary font-semibold' : ''}
-                ${!isSelected && isCurrentDay ? 'ring-1 ring-white/70 text-white font-semibold' : ''}
-                ${!isSelected && !isCurrentDay && isPastDay ? 'text-white/35' : ''}
-                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-white hover:bg-white/10' : ''}
-              `}
+              className={`h-7 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors ${tileClasses} ${ringClass}`}
             >
               <span className="leading-none">{format(day, 'd')}</span>
               {hasEvent && (
                 <span
                   className={`w-1 h-1 rounded-full mt-0.5 ${
-                    isSelected ? 'bg-primary' : 'bg-white/80'
+                    isSelected ? 'bg-white' : tint!.dot
                   }`}
                 />
               )}
@@ -167,17 +211,6 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
           );
         })}
       </div>
-
-      {selectedDate && (
-        <div className="mt-2 flex justify-center">
-          <button
-            onClick={() => onSelectDate(null)}
-            className="text-xs px-3 py-1 rounded-full bg-white/10 text-white/80 hover:bg-white/15"
-          >
-            Show all
-          </button>
-        </div>
-      )}
     </div>
   );
 };
@@ -908,11 +941,15 @@ export default function CalendarEventsMobile() {
   
   const groupedEvents = groupEventsByPeriod(paginatedEvents);
 
-  // Build event date set for the mini grid (all events for current team scope)
-  const eventDateSet = React.useMemo(() => {
-    const set = new Set<string>();
-    filteredEvents.forEach(e => set.add(format(new Date(e.date), 'yyyy-MM-dd')));
-    return set;
+  // Build event-types-by-date map for the mini grid (all events for current team scope)
+  const eventTypesByDate = React.useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    filteredEvents.forEach((e) => {
+      const key = format(new Date(e.date), 'yyyy-MM-dd');
+      if (!map.has(key)) map.set(key, new Set<string>());
+      map.get(key)!.add(e.event_type);
+    });
+    return map;
   }, [filteredEvents]);
 
   // Apply selected-date filter to ordered events when active
@@ -1018,7 +1055,7 @@ export default function CalendarEventsMobile() {
         <MiniMonthGrid
           month={calendarMonth}
           selectedDate={selectedDate}
-          eventDates={eventDateSet}
+          eventTypesByDate={eventTypesByDate}
           onSelectDate={(d) => {
             setSelectedDate(d);
             if (d) setCalendarMonth(d);
