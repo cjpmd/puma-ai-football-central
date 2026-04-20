@@ -590,42 +590,49 @@ export default function CalendarEventsMobile() {
   };
 
   const handleAddTeam = async () => {
-    if (!selectedEvent || !teams?.[0]?.id) return;
-    
+    if (!selectedEvent?.team_id) {
+      toast({ title: 'Cannot add team', description: 'Event has no team assigned', variant: 'destructive' });
+      return;
+    }
+
     try {
-      // Get current team count
+      // Get current team count for this event + team
       const { data: existingSelections } = await supabase
         .from('event_selections')
         .select('team_number')
         .eq('event_id', selectedEvent.id)
-        .eq('team_id', teams[0].id);
-      
+        .eq('team_id', selectedEvent.team_id);
+
       const teamNumbers = existingSelections?.map(s => s.team_number) || [];
       const newTeamNumber = teamNumbers.length > 0 ? Math.max(...teamNumbers) + 1 : 1;
-      
+
       // Insert new team selection
       const { error } = await supabase
         .from('event_selections')
         .insert({
           event_id: selectedEvent.id,
-          team_id: teams[0].id,
+          team_id: selectedEvent.team_id,
           team_number: newTeamNumber,
           period_number: 1,
           formation: '4-3-3',
           duration_minutes: selectedEvent.game_duration || 50,
           player_positions: [],
-          substitutes: []
+          substitute_players: []
         });
-      
+
       if (error) throw error;
-      
-      // Update event teams array
-      const newTeamsArray = [...teamNumbers.map(String), newTeamNumber.toString()];
+
+      // Update events.teams array, preserving existing entries
+      const existingTeamsArray = Array.isArray(selectedEvent.teams)
+        ? (selectedEvent.teams as any[]).map(String)
+        : teamNumbers.map(String);
+      const newTeamsArray = Array.from(new Set([...existingTeamsArray, newTeamNumber.toString()]));
+
       await supabase
         .from('events')
         .update({ teams: newTeamsArray })
         .eq('id', selectedEvent.id);
-      
+
       toast({ title: 'Team added successfully' });
       setTeamRefreshTrigger(prev => prev + 1);
       loadEvents();
