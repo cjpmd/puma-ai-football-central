@@ -1357,7 +1357,7 @@ export default function CalendarEventsMobile() {
 
               {/* Team Selection Section */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 pr-1">
                   <h4 className="font-medium flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     Team Selection
@@ -1367,7 +1367,7 @@ export default function CalendarEventsMobile() {
                       variant="ghost" 
                       size="sm"
                       onClick={() => handleAddTeam()}
-                      className="h-8 px-2"
+                      className="h-8 w-8 p-0 shrink-0 focus-visible:ring-1 focus-visible:ring-offset-0"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
