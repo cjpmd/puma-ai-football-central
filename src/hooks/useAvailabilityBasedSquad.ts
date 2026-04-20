@@ -44,52 +44,22 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       let playersError;
       
       if (eventId) {
-        // Get invited player IDs from event_invitations
+        // Single query for all invitations (any type) visible to this user under RLS
         const { data: invitations, error: invError } = await supabase
           .from('event_invitations')
-          .select('player_id')
-          .eq('event_id', eventId)
-          .eq('invitee_type', 'player')
-          .not('player_id', 'is', null);
-        
+          .select('id, player_id, invitee_type')
+          .eq('event_id', eventId);
+
         if (invError) {
           logger.error(`[${contextId}] Error loading event invitations:`, invError);
           throw invError;
         }
-        
-        const invitedPlayerIds = invitations?.map(inv => inv.player_id).filter(Boolean) || [];
-        
-        if (invitedPlayerIds.length === 0) {
-          // No invitations found - check if it's an "everyone" event by checking if there are any invitations at all
-          const { data: anyInvitations, error: anyInvError } = await supabase
-            .from('event_invitations')
-            .select('id')
-            .eq('event_id', eventId)
-            .limit(1);
-          
-          if (anyInvError) {
-            logger.warn(`[${contextId}] Error checking for invitations:`, anyInvError);
-          }
-          
-          // If no invitations exist at all, it's an "everyone" event - load all players
-          if (!anyInvitations || anyInvitations.length === 0) {
-            logger.log(`[${contextId}] No invitations found - loading all team players (everyone invited)`);
-            const result = await supabase
-              .from('players')
-              .select('id, name, squad_number, type, photo_url')
-              .eq('team_id', teamId)
-              .eq('status', 'active')
-              .order('squad_number');
-            
-            teamPlayersData = result.data;
-            playersError = result.error;
-          } else {
-            // Invitations exist but none for players - no players to show
-            logger.log(`[${contextId}] Event has invitations but no players invited`);
-            teamPlayersData = [];
-            playersError = null;
-          }
-        } else {
+
+        const invitedPlayerIds = (invitations || [])
+          .filter(inv => inv.invitee_type === 'player' && inv.player_id)
+          .map(inv => inv.player_id as string);
+
+        if (invitedPlayerIds.length > 0) {
           // Load only invited players
           logger.log(`[${contextId}] Loading ${invitedPlayerIds.length} invited players`);
           const result = await supabase
@@ -98,7 +68,20 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
             .in('id', invitedPlayerIds)
             .eq('status', 'active')
             .order('squad_number');
-          
+
+          teamPlayersData = result.data;
+          playersError = result.error;
+        } else {
+          // No player invitations visible (either none sent, or RLS hides them).
+          // Safer default: load full active team roster so squad can still be built.
+          logger.log(`[${contextId}] No visible player invitations - loading all active team players as fallback`);
+          const result = await supabase
+            .from('players')
+            .select('id, name, squad_number, type, photo_url')
+            .eq('team_id', teamId)
+            .eq('status', 'active')
+            .order('squad_number');
+
           teamPlayersData = result.data;
           playersError = result.error;
         }
