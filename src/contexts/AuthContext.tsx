@@ -264,22 +264,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logger.log('Fetching teams for user:', userId);
       
-      // First, get teams from user_teams (direct team roles)
-      const { data, error } = await supabase
-        .from('user_teams')
-        .select(`
-          role,
-          teams!fk_user_teams_team_id (
-            id, name, age_group, season_start, season_end, club_id,
-            year_group_id, game_format, subscription_type,
-            performance_categories, kit_icons, logo_url, kit_designs,
-            manager_name, manager_email, manager_phone, game_duration,
-            header_display_type, header_image_url, name_display_option,
-            created_at, updated_at
-          )
-        `)
-        .eq('user_id', userId);
+      // Fetch direct team memberships and club memberships in parallel
+      const teamFields = `
+        id, name, age_group, season_start, season_end, club_id,
+        year_group_id, game_format, subscription_type,
+        performance_categories, kit_icons, logo_url, kit_designs,
+        manager_name, manager_email, manager_phone, game_duration,
+        header_display_type, header_image_url, name_display_option,
+        created_at, updated_at
+      `;
 
+      const [userTeamsResult, userClubsResult] = await Promise.all([
+        supabase
+          .from('user_teams')
+          .select(`role, teams!fk_user_teams_team_id (${teamFields})`)
+          .eq('user_id', userId),
+        supabase
+          .from('user_clubs')
+          .select('club_id')
+          .eq('user_id', userId),
+      ]);
+
+      const { data, error } = userTeamsResult;
       if (error) {
         logger.error('Error fetching teams:', error);
         throw error;
@@ -289,7 +295,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Deduplicate teams by team ID and aggregate roles
       const teamMap = new Map<string, Team>();
-      
+
       data?.forEach((item: any) => {
         const teamId = item.teams.id;
         
@@ -331,12 +337,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
 
-      // Also fetch teams linked to user's clubs (for club-only admins)
-      const { data: userClubsData } = await supabase
-        .from('user_clubs')
-        .select('club_id')
-        .eq('user_id', userId);
-      
+      // Use the already-fetched club memberships (loaded in parallel above)
+      const userClubsData = userClubsResult.data;
+
       if (userClubsData && userClubsData.length > 0) {
         const clubIds = userClubsData.map(uc => uc.club_id);
         logger.log('User belongs to clubs:', clubIds);

@@ -58,49 +58,54 @@ export const DualRoleManagement: React.FC = () => {
 
       if (error) throw error;
 
-      const dualUsers: DualRoleUser[] = [];
+      // Only process users with multiple roles
+      const multiRoleProfiles = (profiles || []).filter(
+        p => p.roles && p.roles.length > 1
+      );
+      const userIds = multiRoleProfiles.map(p => p.id);
 
-      for (const profile of profiles || []) {
-        if (profile.roles && profile.roles.length > 1) {
-          // Get staff links
-          const { data: staffLinks } = await supabase
-            .from('user_staff')
-            .select(`
-              staff_id,
-              team_staff!inner(id, name, role, team_id, teams!inner(name))
-            `)
-            .eq('user_id', profile.id);
+      // Bulk-load staff links and player links for all users in two queries (not N×2)
+      const [staffLinksResult, playerLinksResult] = await Promise.all([
+        userIds.length > 0
+          ? supabase
+              .from('user_staff')
+              .select('user_id, staff_id, team_staff!inner(id, name, role, team_id, teams!inner(name))')
+              .in('user_id', userIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+        userIds.length > 0
+          ? supabase
+              .from('user_players')
+              .select('user_id, player_id, relationship, players!inner(id, name, team_id, teams!inner(name))')
+              .in('user_id', userIds)
+              .in('relationship', ['parent', 'guardian'])
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
 
-          // Get player links (as parent)
-          const { data: playerLinks } = await supabase
-            .from('user_players')
-            .select(`
-              player_id, relationship,
-              players!inner(id, name, team_id, teams!inner(name))
-            `)
-            .eq('user_id', profile.id)
-            .in('relationship', ['parent', 'guardian']);
+      const allStaffLinks = staffLinksResult.data || [];
+      const allPlayerLinks = playerLinksResult.data || [];
 
-          dualUsers.push({
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-            roles: profile.roles,
-            staff_links: staffLinks?.map(link => ({
-              id: (link as any).team_staff.id,
-              name: (link as any).team_staff.name,
-              role: (link as any).team_staff.role,
-              team_name: (link as any).team_staff.teams.name
-            })) || [],
-            player_links: playerLinks?.map(link => ({
-              id: (link as any).players.id,
-              name: (link as any).players.name,
-              team_name: (link as any).players.teams.name,
-              relationship: link.relationship
-            })) || []
-          });
-        }
-      }
+      const dualUsers: DualRoleUser[] = multiRoleProfiles.map(profile => ({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        roles: profile.roles,
+        staff_links: allStaffLinks
+          .filter(l => l.user_id === profile.id)
+          .map(link => ({
+            id: (link as any).team_staff.id,
+            name: (link as any).team_staff.name,
+            role: (link as any).team_staff.role,
+            team_name: (link as any).team_staff.teams.name,
+          })),
+        player_links: allPlayerLinks
+          .filter(l => l.user_id === profile.id)
+          .map(link => ({
+            id: (link as any).players.id,
+            name: (link as any).players.name,
+            team_name: (link as any).players.teams.name,
+            relationship: link.relationship,
+          })),
+      }));
 
       setDualRoleUsers(dualUsers);
     } catch (error) {

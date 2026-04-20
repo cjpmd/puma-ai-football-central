@@ -38,7 +38,8 @@ export default function UserManagementMobile() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('name');
+        .order('name')
+        .limit(500);
 
       if (error) throw error;
       

@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => ({
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024 // 3 MB — 10 MB caused OOM on low-end mobile
       }
     })
   ].filter(Boolean),
