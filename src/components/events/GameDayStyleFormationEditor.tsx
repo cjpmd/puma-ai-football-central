@@ -527,23 +527,8 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         onTouchStart={isMobile ? handleTouchStart : undefined}
         onTouchEnd={isMobile ? handleTouchEnd : undefined}
       >
-        {/* Formation Selector - Ultra Compact (glass) */}
-        <div className={`flex items-center justify-between px-2 border-b border-white/10 shrink-0 bg-white/[0.04] ${isMobile ? 'py-1' : 'py-1.5'}`}>
-          <Select
-            value={currentPeriod.formation}
-            onValueChange={(value) => updatePeriodFormation(currentPeriod.id, value)}
-            disabled={effectivelyLocked}
-          >
-            <SelectTrigger className={`bg-white/10 border-white/15 text-white ${isMobile ? 'w-24 h-6 text-[10px]' : 'w-28 h-7 text-xs'}`}>
-              <SelectValue placeholder="Formation" />
-            </SelectTrigger>
-            <SelectContent>
-              {gameFormatFormations.map((f) => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
+        {/* Period indicator only - formation now controlled in header hero */}
+        <div className={`flex items-center justify-end px-2 border-b border-white/10 shrink-0 bg-white/[0.04] ${isMobile ? 'py-1' : 'py-1.5'}`}>
           <div className={`text-white/60 ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
             Period {activePeriodIndex + 1}/{periods.length}
           </div>
