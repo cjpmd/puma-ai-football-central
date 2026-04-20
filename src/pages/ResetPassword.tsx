@@ -107,7 +107,7 @@ const ResetPassword = () => {
   // Loading state
   if (isValidToken === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
@@ -121,7 +121,7 @@ const ResetPassword = () => {
   // Invalid/expired token
   if (!isValidToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-4">
@@ -153,14 +153,14 @@ const ResetPassword = () => {
   // Success state
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <div className="flex justify-center mb-4">
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
+          <div className="flex justify-center mb-4">
+            <div className="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 text-emerald-300" />
             </div>
+          </div>
             <CardTitle className="text-2xl text-center">Password Reset!</CardTitle>
             <CardDescription className="text-center">
               Your password has been successfully updated.
@@ -184,7 +184,7 @@ const ResetPassword = () => {
 
   // Password reset form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">

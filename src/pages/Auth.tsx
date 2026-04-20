@@ -39,7 +39,7 @@ const Auth = () => {
   // If there's an invitation code, render the modal directly.
   if (invitationCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center">
         <EnhancedSignupModal
           isOpen={true}
           onClose={() => navigate('/auth', { replace: true })}
@@ -132,7 +132,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">

@@ -78,6 +78,7 @@ export default function TeamSettingsMobile() {
         seasonStart: data.season_start || '',
         seasonEnd: data.season_end || '',
         clubId: data.club_id,
+        yearGroupId: data.year_group_id,
         subscriptionType: (data.subscription_type || 'free') as any,
         gameFormat: (data.game_format || '7-a-side') as any,
         gameDuration: data.game_duration,

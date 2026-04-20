@@ -1036,15 +1036,15 @@ return (
               )}
 
               {/* Right: Opponent + Date */}
-              <div className="ios-card p-2 flex flex-col items-center justify-center text-center">
-                <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5">
+              <div className="ios-card p-2 flex flex-col items-center justify-center text-center min-w-0 overflow-hidden">
+                <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5 truncate w-full">
                   {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
                 </div>
                 <div className="text-sm font-semibold text-white leading-tight truncate w-full">
                   {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
                 </div>
                 {event.opponent && event.date && (
-                  <div className="text-[9px] text-white/55 leading-tight mt-0.5">
+                  <div className="text-[9px] text-white/55 leading-tight mt-0.5 truncate w-full">
                     {formatDate(parseISO(event.date), 'EEE d MMM')}
                   </div>
                 )}
