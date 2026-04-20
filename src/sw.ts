@@ -25,18 +25,25 @@ self.addEventListener('message', (event) => {
 // Claim clients immediately
 clientsClaim();
 
-// Cache Supabase API calls
+// Cache Supabase REST/Storage GET responses only.
+// Auth endpoints and all non-GET requests are excluded:
+// - POST/PATCH/DELETE mutations cannot be stored in the Cache API
+// - Intercepting auth token requests (/auth/v1/) blocks session refresh on mobile
+//   and causes "FetchEvent.respondWith received an error: no-response"
 registerRoute(
-  /^https:\/\/.*\.supabase\.co\/.*/i,
+  ({ url, request }) =>
+    /^https:\/\/.*\.supabase\.co\/.*/i.test(url.href) &&
+    !url.pathname.startsWith('/auth/') &&
+    request.method === 'GET',
   new NetworkFirst({
     cacheName: 'supabase-cache',
     plugins: [
       new ExpirationPlugin({
         maxEntries: 100,
-        maxAgeSeconds: 60 * 60 * 24 // 24 hours
+        maxAgeSeconds: 60 * 5 // 5 minutes — auth state can change frequently
       }),
       new CacheableResponsePlugin({
-        statuses: [0, 200]
+        statuses: [200]
       })
     ]
   })

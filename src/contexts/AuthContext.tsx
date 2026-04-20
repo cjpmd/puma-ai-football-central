@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -47,6 +47,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  // Prevents onAuthStateChange and getSession() from both triggering data loads
+  const dataLoadStarted = useRef(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               logger.log('User session found, setting user data...');
               setUser(session.user);
               setSession(session);
-              
+
               // Enhanced security: Track session and validate security
               setTimeout(() => {
                 if (mounted) {
@@ -78,22 +80,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   });
                 }
               }, 100);
-              
-              // Load user data without blocking
-              setTimeout(() => {
-                if (mounted) {
-                  Promise.all([
-                    fetchProfile(session.user.id),
-                    fetchTeams(session.user.id),
-                    fetchClubs(session.user.id),
-                    fetchConnectedPlayers(session.user.id)
-                  ]).catch(error => {
-                    logger.error('Error loading user data after auth change:', error);
-                  });
-                }
-              }, 0);
+
+              // Load user data without blocking — guard prevents double-load when
+              // both onAuthStateChange(INITIAL_SESSION) and getSession() fire together
+              if (!dataLoadStarted.current) {
+                dataLoadStarted.current = true;
+                setTimeout(() => {
+                  if (mounted) {
+                    Promise.all([
+                      fetchProfile(session.user.id),
+                      fetchTeams(session.user.id),
+                      fetchClubs(session.user.id),
+                      fetchConnectedPlayers(session.user.id)
+                    ]).catch(error => {
+                      logger.error('Error loading user data after auth change:', error);
+                    });
+                  }
+                }, 0);
+              }
             } else {
               logger.log('No user session, clearing data...');
+              dataLoadStarted.current = false; // allow reload on next sign-in
               setUser(null);
               setSession(null);
               setTeams([]);
@@ -126,26 +133,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           logger.log('Existing session found, setting initial state...');
           setUser(existingSession.user);
           setSession(existingSession);
-          
-          // Load user data in parallel
-          setTimeout(() => {
-            if (mounted) {
-              Promise.all([
-                fetchProfile(existingSession.user.id),
-                fetchTeams(existingSession.user.id),
-                fetchClubs(existingSession.user.id),
-                fetchConnectedPlayers(existingSession.user.id)
-              ]).catch(error => {
-                logger.error('Error loading initial user data:', error);
-              }).finally(() => {
-                if (mounted && !initialized) {
-                  logger.log('Initial data load complete');
-                  setLoading(false);
-                  setInitialized(true);
-                }
-              });
-            }
-          }, 0);
+
+          // Only load data if onAuthStateChange didn't already start it
+          if (!dataLoadStarted.current) {
+            dataLoadStarted.current = true;
+            setTimeout(() => {
+              if (mounted) {
+                Promise.all([
+                  fetchProfile(existingSession.user.id),
+                  fetchTeams(existingSession.user.id),
+                  fetchClubs(existingSession.user.id),
+                  fetchConnectedPlayers(existingSession.user.id)
+                ]).catch(error => {
+                  logger.error('Error loading initial user data:', error);
+                }).finally(() => {
+                  if (mounted && !initialized) {
+                    logger.log('Initial data load complete');
+                    setLoading(false);
+                    setInitialized(true);
+                  }
+                });
+              }
+            }, 0);
+          }
         } else {
           logger.log('No existing session found');
           if (mounted && !initialized) {
@@ -427,37 +437,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      const clubDetails = await Promise.all(
-        clubsData.map(async (userClub) => {
-          const { data: clubData, error: clubError } = await supabase
-            .from('clubs')
-            .select('*')
-            .eq('id', userClub.club_id)
-            .single();
+      const clubIds = clubsData.map(uc => uc.club_id);
+      const { data: clubRows, error: clubFetchError } = await supabase
+        .from('clubs')
+        .select('*')
+        .in('id', clubIds);
 
-          if (clubError) {
-            logger.error(`Error fetching club ${userClub.club_id}:`, clubError);
-            return null;
-          }
-          
-          return {
-            id: clubData.id,
-            name: clubData.name,
-            referenceNumber: clubData.reference_number,
-            serialNumber: clubData.serial_number,
-            logoUrl: clubData.logo_url,
-            teams: [],
-            subscriptionType: clubData.subscription_type,
-            officials: [],
-            facilities: [],
-            createdAt: clubData.created_at,
-            updatedAt: clubData.updated_at,
-          } as Club;
-        })
-      );
+      if (clubFetchError) {
+        throw clubFetchError;
+      }
 
-      const validClubs = clubDetails.filter(club => club !== null);
-      setClubs(validClubs as Club[]);
+      const validClubs: Club[] = (clubRows || []).map(clubData => ({
+        id: clubData.id,
+        name: clubData.name,
+        referenceNumber: clubData.reference_number,
+        serialNumber: clubData.serial_number,
+        logoUrl: clubData.logo_url,
+        teams: [],
+        subscriptionType: clubData.subscription_type,
+        officials: [],
+        facilities: [],
+        createdAt: clubData.created_at,
+        updatedAt: clubData.updated_at,
+      }));
+
+      setClubs(validClubs);
       logger.log('Clubs loaded successfully:', validClubs.length);
 
     } catch (error: any) {
