@@ -941,11 +941,15 @@ export default function CalendarEventsMobile() {
   
   const groupedEvents = groupEventsByPeriod(paginatedEvents);
 
-  // Build event date set for the mini grid (all events for current team scope)
-  const eventDateSet = React.useMemo(() => {
-    const set = new Set<string>();
-    filteredEvents.forEach(e => set.add(format(new Date(e.date), 'yyyy-MM-dd')));
-    return set;
+  // Build event-types-by-date map for the mini grid (all events for current team scope)
+  const eventTypesByDate = React.useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    filteredEvents.forEach((e) => {
+      const key = format(new Date(e.date), 'yyyy-MM-dd');
+      if (!map.has(key)) map.set(key, new Set<string>());
+      map.get(key)!.add(e.event_type);
+    });
+    return map;
   }, [filteredEvents]);
 
   // Apply selected-date filter to ordered events when active
