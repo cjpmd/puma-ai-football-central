@@ -98,7 +98,7 @@ export default function UserManagementMobile() {
         {/* Search and Actions */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
             <Input
               placeholder="Search users..."
               value={searchTerm}
@@ -116,12 +116,12 @@ export default function UserManagementMobile() {
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading users...</p>
+              <p className="mt-2 text-sm text-white/60">Loading users...</p>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="text-center py-8">
-              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No users found</p>
+              <User className="h-12 w-12 text-white/60 mx-auto mb-4" />
+              <p className="text-white/60">No users found</p>
             </div>
           ) : (
             filteredUsers.map((userProfile) => (
@@ -141,7 +141,7 @@ export default function UserManagementMobile() {
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="text-sm text-muted-foreground truncate mb-2">
+                      <div className="text-sm text-white/60 truncate mb-2">
                         {userProfile.email}
                       </div>
                       <div className="flex items-center space-x-2 flex-wrap">
@@ -155,7 +155,7 @@ export default function UserManagementMobile() {
                           </Badge>
                         ))}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="text-xs text-white/60 mt-1">
                         Joined {formatDate(userProfile.created_at)}
                       </div>
                     </div>

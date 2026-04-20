@@ -124,7 +124,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
                   disabled={!canEditSquadNumber}
                 />
                 {!canEditSquadNumber && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-white/60">
                     Only managers and admins can edit squad numbers
                   </p>
                 )}

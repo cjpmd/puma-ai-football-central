@@ -316,7 +316,7 @@ export function PitchView({ gameFormat, availablePlayers }: PitchViewProps) {
                       if (!player) return null;
                       
                       return (
-                        <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                        <div key={player.id} className="flex items-center justify-between p-2 bg-white/5 rounded-md">
                           <div className="flex items-center">
                             <Avatar className="h-8 w-8 mr-2">
                               <AvatarFallback className="bg-puma-blue-100 text-puma-blue-600 text-xs font-bold">
@@ -340,7 +340,7 @@ export function PitchView({ gameFormat, availablePlayers }: PitchViewProps) {
                     })}
                     
                     {substitutes.length === 0 && (
-                      <div className="text-sm text-muted-foreground text-center py-2">
+                      <div className="text-sm text-white/60 text-center py-2">
                         No substitutes selected
                       </div>
                     )}
@@ -351,7 +351,7 @@ export function PitchView({ gameFormat, availablePlayers }: PitchViewProps) {
                   <h3 className="font-medium mb-2">Selected Players</h3>
                   <div className="space-y-2">
                     {playerPositions.map(player => (
-                      <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                      <div key={player.id} className="flex items-center justify-between p-2 bg-white/5 rounded-md">
                         <div className="flex items-center">
                           <Avatar className="h-8 w-8 mr-2">
                             <AvatarFallback className="bg-puma-blue-100 text-puma-blue-600 text-xs font-bold">
@@ -360,7 +360,7 @@ export function PitchView({ gameFormat, availablePlayers }: PitchViewProps) {
                           </Avatar>
                           <div>
                             <span className="text-sm font-medium">{player.name}</span>
-                            <div className="text-xs text-muted-foreground">{getPositionLabel(player.position)}</div>
+                            <div className="text-xs text-white/60">{getPositionLabel(player.position)}</div>
                           </div>
                         </div>
                         <Button 
@@ -375,7 +375,7 @@ export function PitchView({ gameFormat, availablePlayers }: PitchViewProps) {
                     ))}
                     
                     {playerPositions.length === 0 && (
-                      <div className="text-sm text-muted-foreground text-center py-2">
+                      <div className="text-sm text-white/60 text-center py-2">
                         No players selected
                       </div>
                     )}

@@ -298,7 +298,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
             <Users className="h-5 w-5" />
             Manage Parents
           </SheetTitle>
-          <p className="text-sm text-muted-foreground">{player.name}</p>
+          <p className="text-sm text-white/60">{player.name}</p>
         </SheetHeader>
         
         <ScrollArea className="flex-1 p-6">
@@ -349,7 +349,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading parents...</p>
+              <p className="mt-2 text-sm text-white/60">Loading parents...</p>
             </div>
           ) : parents.length > 0 ? (
             <div className="space-y-4">
@@ -361,7 +361,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <Users className="h-4 w-4 text-white/60" />
                           {isEditing ? (
                             <Input
                               value={editData.name}
@@ -431,7 +431,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                       
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <Mail className="h-4 w-4 text-white/60" />
                           {isEditing ? (
                             <Input
                               type="email"
@@ -444,7 +444,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <Phone className="h-4 w-4 text-white/60" />
                           {isEditing ? (
                             <Input
                               type="tel"
@@ -465,7 +465,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                             <>
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
-                                  <Link className="h-4 w-4 text-muted-foreground" />
+                                  <Link className="h-4 w-4 text-white/60" />
                                   <span className="text-xs font-medium">Link Code:</span>
                                   <Badge variant="outline" className="text-xs">
                                     {parent.linkCode}
@@ -511,8 +511,8 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No parents/guardians added yet</p>
+                <Users className="h-12 w-12 text-white/60 mx-auto mb-4" />
+                <p className="text-white/60">No parents/guardians added yet</p>
               </CardContent>
             </Card>
             )}

@@ -789,8 +789,8 @@ export default function DashboardMobile() {
                           <Users className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 text-left">
-                          <p className="text-sm font-semibold text-foreground">All Teams</p>
-                          <p className="text-xs text-muted-foreground">Integrated view across teams</p>
+                          <p className="text-sm font-semibold text-white">All Teams</p>
+                          <p className="text-xs text-white/60">Integrated view across teams</p>
                         </div>
                         {viewMode === 'all' && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
                       </button>
@@ -812,8 +812,8 @@ export default function DashboardMobile() {
                               </div>
                             )}
                             <div className="flex-1 text-left min-w-0">
-                              <p className="text-sm font-semibold text-foreground truncate">{team.name}</p>
-                              {team.ageGroup && <p className="text-xs text-muted-foreground truncate">{team.ageGroup}</p>}
+                              <p className="text-sm font-semibold text-white truncate">{team.name}</p>
+                              {team.ageGroup && <p className="text-xs text-white/60 truncate">{team.ageGroup}</p>}
                             </div>
                             {isSelected && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
                           </button>

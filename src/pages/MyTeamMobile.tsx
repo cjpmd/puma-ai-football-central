@@ -386,28 +386,28 @@ export default function MyTeamMobile() {
             <CardContent className="p-3 text-center">
               <Calendar className="h-6 w-6 mx-auto mb-1 text-primary" />
               <div className="text-2xl font-bold">{analytics.totalGames}</div>
-              <div className="text-xs text-muted-foreground">Games</div>
+              <div className="text-xs text-white/60">Games</div>
             </CardContent>
           </Card>
           <Card className="touch-manipulation">
             <CardContent className="p-3 text-center">
               <Trophy className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
               <div className="text-2xl font-bold">{analytics.totalWins}</div>
-              <div className="text-xs text-muted-foreground">Wins</div>
+              <div className="text-xs text-white/60">Wins</div>
             </CardContent>
           </Card>
           <Card className="touch-manipulation">
             <CardContent className="p-3 text-center">
               <Target className="h-6 w-6 mx-auto mb-1 text-green-600" />
               <div className="text-2xl font-bold">{analytics.winRate}%</div>
-              <div className="text-xs text-muted-foreground">Win Rate</div>
+              <div className="text-xs text-white/60">Win Rate</div>
             </CardContent>
           </Card>
           <Card className="touch-manipulation">
             <CardContent className="p-3 text-center">
               <TrendingUp className="h-6 w-6 mx-auto mb-1 text-blue-600" />
               <div className="text-2xl font-bold">{analytics.goalDifference >= 0 ? '+' : ''}{analytics.goalDifference}</div>
-              <div className="text-xs text-muted-foreground">Goal Diff</div>
+              <div className="text-xs text-white/60">Goal Diff</div>
             </CardContent>
           </Card>
         </div>
@@ -419,11 +419,11 @@ export default function MyTeamMobile() {
               <div className="text-sm font-medium">Season Record</div>
               <div className="flex gap-2 text-sm">
                 <span className="text-green-600 font-semibold">W{analytics.totalWins}</span>
-                <span className="text-muted-foreground font-semibold">D{analytics.totalDraws}</span>
+                <span className="text-white/60 font-semibold">D{analytics.totalDraws}</span>
                 <span className="text-destructive font-semibold">L{analytics.totalLosses}</span>
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+            <div className="mt-2 flex items-center justify-between text-sm text-white/60">
               <span>Avg Goals/Game: {analytics.avgGoalsPerGame}</span>
               <span>Points: {analytics.totalWins * 3 + analytics.totalDraws}</span>
             </div>
@@ -446,10 +446,10 @@ export default function MyTeamMobile() {
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex gap-2">
                       <span className="text-green-600 font-semibold">W{cat.wins}</span>
-                      <span className="text-muted-foreground font-semibold">D{cat.draws}</span>
+                      <span className="text-white/60 font-semibold">D{cat.draws}</span>
                       <span className="text-destructive font-semibold">L{cat.losses}</span>
                     </div>
-                    <div className="flex gap-3 text-muted-foreground">
+                    <div className="flex gap-3 text-white/60">
                       <span>GF: {cat.goalsFor}</span>
                       <span>GA: {cat.goalsAgainst}</span>
                       <span className={cat.goalsFor - cat.goalsAgainst >= 0 ? 'text-green-600' : 'text-destructive'}>
@@ -476,29 +476,29 @@ export default function MyTeamMobile() {
               <div className="text-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                 <Target className="h-6 w-6 mx-auto mb-1 text-blue-600" />
                 <div className="text-xl font-bold">{analytics.totalGoals}</div>
-                <div className="text-xs text-muted-foreground">Goals</div>
+                <div className="text-xs text-white/60">Goals</div>
               </div>
               <div className="text-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                 <Target className="h-6 w-6 mx-auto mb-1 text-green-600" />
                 <div className="text-xl font-bold">{analytics.totalAssists}</div>
-                <div className="text-xs text-muted-foreground">Assists</div>
+                <div className="text-xs text-white/60">Assists</div>
               </div>
               <div className="text-center p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
                 <Shield className="h-6 w-6 mx-auto mb-1 text-purple-600" />
                 <div className="text-xl font-bold">{analytics.totalSaves}</div>
-                <div className="text-xs text-muted-foreground">Saves</div>
+                <div className="text-xs text-white/60">Saves</div>
               </div>
               <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
                 <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
                 <div className="text-xl font-bold">{analytics.yellowCards}</div>
-                <div className="text-xs text-muted-foreground">Yellow Cards</div>
+                <div className="text-xs text-white/60">Yellow Cards</div>
               </div>
             </div>
             {analytics.redCards > 0 && (
               <div className="mt-3 text-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
                 <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-red-600" />
                 <div className="text-xl font-bold text-red-600">{analytics.redCards}</div>
-                <div className="text-xs text-muted-foreground">Red Cards</div>
+                <div className="text-xs text-white/60">Red Cards</div>
               </div>
             )}
           </CardContent>
@@ -558,7 +558,7 @@ export default function MyTeamMobile() {
                   <div key={event.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div>
                       <div className="font-medium">vs {event.opponent || 'Unknown'}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-white/60">
                         {new Date(event.date).toLocaleDateString()}
                       </div>
                     </div>
@@ -576,7 +576,7 @@ export default function MyTeamMobile() {
                 );
               })
             ) : (
-              <p className="text-muted-foreground text-center py-4">No recent results</p>
+              <p className="text-white/60 text-center py-4">No recent results</p>
             )}
           </CardContent>
         </Card>
@@ -597,7 +597,7 @@ export default function MyTeamMobile() {
                   <div key={index} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                     <div>
                       <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-white/60">
                         {stats?.totalGames || 0} games
                       </div>
                     </div>
@@ -627,7 +627,7 @@ export default function MyTeamMobile() {
                   <div key={index} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                     <div>
                       <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-white/60">
                         {stats?.totalGames || 0} games
                       </div>
                     </div>
@@ -655,7 +655,7 @@ export default function MyTeamMobile() {
                 <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div>
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-white/60">
                       {player.totalMinutes} minutes played
                     </div>
                   </div>

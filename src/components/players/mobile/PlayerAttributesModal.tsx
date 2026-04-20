@@ -202,7 +202,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
           <SheetTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
             Player Attributes - {player.name}
-            {!canEdit && <Lock className="h-4 w-4 text-muted-foreground" />}
+            {!canEdit && <Lock className="h-4 w-4 text-white/60" />}
           </SheetTitle>
         </SheetHeader>
         
@@ -238,7 +238,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
                     {getAttributesByGroup(group).length === 0 ? (
                       <Card>
                         <CardContent className="py-8 text-center">
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <div className="flex flex-col items-center gap-2 text-white/60">
                             {getGroupIcon(group)}
                             <p>No {group} attributes defined</p>
                           </div>
@@ -253,7 +253,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
                                 <div className="flex items-center justify-between">
                                   <Label 
                                     htmlFor={attribute.id} 
-                                    className={`font-medium text-sm ${attribute.enabled ? '' : 'text-muted-foreground'}`}
+                                    className={`font-medium text-sm ${attribute.enabled ? '' : 'text-white/60'}`}
                                   >
                                     {attribute.name}
                                   </Label>

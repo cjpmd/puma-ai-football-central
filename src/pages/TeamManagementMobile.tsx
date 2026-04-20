@@ -117,7 +117,7 @@ export default function TeamManagementMobile() {
         {/* Search and Actions */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
             <Input
               placeholder="Search teams..."
               value={searchTerm}
@@ -138,8 +138,8 @@ export default function TeamManagementMobile() {
             </div>
           ) : filteredTeams.length === 0 ? (
             <div className="text-center py-8">
-              <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No teams found</p>
+              <Trophy className="h-12 w-12 text-white/60 mx-auto mb-4" />
+              <p className="text-white/60">No teams found</p>
             </div>
           ) : (
             filteredTeams.map((team) => (
@@ -167,11 +167,11 @@ export default function TeamManagementMobile() {
                         <Badge variant="outline" className="text-xs">
                           {team.age_group}
                         </Badge>
-                        <div className="flex items-center text-sm text-muted-foreground">
+                        <div className="flex items-center text-sm text-white/60">
                           <Users className="h-3 w-3 mr-1" />
                           <span>{team.player_count} players</span>
                         </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
+                        <div className="flex items-center text-sm text-white/60">
                           <Calendar className="h-3 w-3 mr-1" />
                           <span>{team.upcoming_events} events</span>
                         </div>

@@ -349,7 +349,7 @@ export default function StaffManagementMobile() {
         {/* Search and Actions */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
             <Input
               placeholder="Search staff..."
               value={searchTerm}
@@ -394,12 +394,12 @@ export default function StaffManagementMobile() {
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading staff...</p>
+              <p className="mt-2 text-sm text-white/60">Loading staff...</p>
             </div>
           ) : filteredStaff.length === 0 ? (
             <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No staff members found</p>
+              <Users className="h-12 w-12 text-white/60 mx-auto mb-4" />
+              <p className="text-white/60">No staff members found</p>
             </div>
           ) : (
             filteredStaff.map((member) => (
@@ -460,13 +460,13 @@ export default function StaffManagementMobile() {
                         )}
                       </div>
                       {member.qualifications && member.qualifications.length > 0 && (
-                        <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                        <div className="flex items-center mt-1 text-sm text-white/60">
                           <Award className="h-3 w-3 mr-1" />
                           <span>{member.qualifications.length} qualification{member.qualifications.length !== 1 ? 's' : ''}</span>
                         </div>
                       )}
                       {member.email && (
-                        <div className="flex items-center text-sm text-muted-foreground mt-1">
+                        <div className="flex items-center text-sm text-white/60 mt-1">
                           <Mail className="h-3 w-3 mr-1" />
                           <span className="truncate">{member.email}</span>
                         </div>
@@ -512,7 +512,7 @@ export default function StaffManagementMobile() {
                     ) : newStaff.name ? (
                       <span>{newStaff.name} (New)</span>
                     ) : (
-                      <span className="text-muted-foreground">Search or type name...</span>
+                      <span className="text-white/60">Search or type name...</span>
                     )}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -557,7 +557,7 @@ export default function StaffManagementMobile() {
                               />
                               <div className="flex flex-col">
                                 <span>{member.name}</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-xs text-white/60">
                                   {member.currentRole} • {member.email}
                                 </span>
                               </div>
@@ -612,7 +612,7 @@ export default function StaffManagementMobile() {
                 disabled={!!selectedUser}
               />
               {!selectedUser && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/60">
                   Used to automatically link when they sign up
                 </p>
               )}

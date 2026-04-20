@@ -351,7 +351,7 @@ export const EnhancedDashboardContent = () => {
         <h1 className="text-3xl font-bold tracking-tight">
           Welcome back, {getPersonalizedGreeting(profile, user?.email)}!
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-white/60 mt-2">
           Here's what's happening with your teams today.
         </p>
       </div>
@@ -362,7 +362,7 @@ export const EnhancedDashboardContent = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Teams</p>
+                <p className="text-sm font-medium text-white/60">Teams</p>
                 <p className="text-3xl font-bold text-primary">{(allTeams?.length || teams?.length || 0)}</p>
               </div>
               <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
@@ -376,7 +376,7 @@ export const EnhancedDashboardContent = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Players</p>
+                <p className="text-sm font-medium text-white/60">Players</p>
                 <p className="text-3xl font-bold text-blue-600">{stats.playersCount}</p>
               </div>
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
@@ -390,7 +390,7 @@ export const EnhancedDashboardContent = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Upcoming Events</p>
+                <p className="text-sm font-medium text-white/60">Upcoming Events</p>
                 <p className="text-3xl font-bold text-green-600">{stats.eventsCount}</p>
               </div>
               <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
@@ -404,7 +404,7 @@ export const EnhancedDashboardContent = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
+                <p className="text-sm font-medium text-white/60">Pending Requests</p>
                 <p className="text-3xl font-bold text-orange-600">{stats.pendingAvailability.length}</p>
               </div>
               <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
@@ -449,7 +449,7 @@ export const EnhancedDashboardContent = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold truncate">{team.name}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-white/60">
                             {team.ageGroup || 'Team'} • {team.gameFormat || 'Football'}
                           </p>
                         </div>
@@ -459,7 +459,7 @@ export const EnhancedDashboardContent = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-white/60">
                 <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p>No teams found</p>
                 {canManageTeam() && (
@@ -501,7 +501,7 @@ export const EnhancedDashboardContent = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold truncate">{player.name}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-white/60">
                             Player
                           </p>
                         </div>
@@ -511,7 +511,7 @@ export const EnhancedDashboardContent = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-white/60">
                 <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p>No connected players</p>
               </div>
@@ -551,7 +551,7 @@ export const EnhancedDashboardContent = () => {
                               {availability.events.team_context?.name?.slice(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-sm font-medium text-muted-foreground">
+                          <span className="text-sm font-medium text-white/60">
                             {availability.events.team_context?.name}
                           </span>
                         </div>
@@ -560,7 +560,7 @@ export const EnhancedDashboardContent = () => {
                             ? availability.events.title 
                             : `vs ${availability.events.opponent || 'TBD'}`}
                         </h4>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-white/60">
                           {new Date(availability.events.date).toLocaleDateString()}
                           {availability.events.start_time && `, ${availability.events.start_time}`}
                         </p>
@@ -577,7 +577,7 @@ export const EnhancedDashboardContent = () => {
               ))}
             </div>
             {stats.pendingAvailability.length > 4 && (
-              <p className="text-sm text-center text-muted-foreground">
+              <p className="text-sm text-center text-white/60">
                 +{stats.pendingAvailability.length - 4} more requests available
               </p>
             )}
@@ -681,7 +681,7 @@ export const EnhancedDashboardContent = () => {
                               {event.team_context?.name?.slice(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-xs text-muted-foreground truncate">
+                          <span className="text-xs text-white/60 truncate">
                             {event.team_context?.name || 'Unknown Team'}
                           </span>
                         </div>
@@ -701,7 +701,7 @@ export const EnhancedDashboardContent = () => {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-white/60">
                         {new Date(event.date).toLocaleDateString()}
                       </p>
                     </div>
@@ -709,7 +709,7 @@ export const EnhancedDashboardContent = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-white/60">
                 <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <h3 className="font-medium mb-2">No recent results</h3>
                 <p className="text-sm">
@@ -729,9 +729,9 @@ export const EnhancedDashboardContent = () => {
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
-              <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <Trophy className="h-12 w-12 text-white/60 mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Get started with your first team</h3>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-white/60 mb-6">
                 Create a team to start managing players, scheduling events, and tracking performance.
               </p>
               <Button onClick={handleCreateTeam} size="lg">

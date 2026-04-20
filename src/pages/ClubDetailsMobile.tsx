@@ -94,8 +94,8 @@ export default function ClubDetailsMobile() {
     return (
       <MobileLayout headerTitle="Club Details">
         <div className="flex flex-col items-center justify-center h-64 text-center">
-          <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Club not found</p>
+          <Building2 className="h-12 w-12 text-white/60 mb-4" />
+          <p className="text-white/60">Club not found</p>
           <Button variant="link" onClick={() => navigate('/clubs')}>
             Return to Clubs
           </Button>
@@ -110,14 +110,14 @@ export default function ClubDetailsMobile() {
         {/* Back Button */}
         <button
           onClick={() => navigate('/clubs')}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-2 text-sm text-white/60 hover:text-white"
         >
           <ChevronLeft className="w-4 h-4" />
           Back to Clubs
         </button>
 
         {/* Club Header */}
-        <div className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-sm">
+        <div className="flex items-center gap-4 p-4 bg-white/[0.06] backdrop-blur-xl rounded-xl shadow-sm">
           <Avatar className="h-16 w-16">
             {club.logoUrl ? (
               <AvatarImage src={club.logoUrl} alt={club.name} />

@@ -610,7 +610,7 @@ export default function PlayerManagementMobile() {
               onClick={() => handleSetViewModeSquad('cards')}
               className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'cards'
-                  ? 'bg-white text-primary shadow-sm'
+                  ? 'bg-white/[0.06] backdrop-blur-xl text-primary shadow-sm'
                   : 'text-white/70 hover:text-white'
               }`}
               aria-label="Card view"
@@ -623,7 +623,7 @@ export default function PlayerManagementMobile() {
               onClick={() => handleSetViewModeSquad('list')}
               className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'list'
-                  ? 'bg-white text-primary shadow-sm'
+                  ? 'bg-white/[0.06] backdrop-blur-xl text-primary shadow-sm'
                   : 'text-white/70 hover:text-white'
               }`}
               aria-label="List view"
@@ -642,7 +642,7 @@ export default function PlayerManagementMobile() {
             </div>
           ) : filteredPlayers.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No players found</p>
+              <p className="text-white/60">No players found</p>
             </div>
           ) : viewModeSquad === 'cards' ? (
             <div className="grid grid-cols-1 gap-4">
@@ -874,7 +874,7 @@ export default function PlayerManagementMobile() {
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {players.filter(p => p.medicalConditions || p.medicalTreatment).length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-white/60">
                 <Heart className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No players with medical conditions recorded</p>
               </div>
@@ -893,20 +893,20 @@ export default function PlayerManagementMobile() {
                       )}
                       <div>
                         <h4 className="font-semibold">{player.name}</h4>
-                        <p className="text-sm text-muted-foreground">#{player.squadNumber}</p>
+                        <p className="text-sm text-white/60">#{player.squadNumber}</p>
                       </div>
                     </div>
                     
                     {player.medicalConditions && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground">Conditions</p>
+                        <p className="text-xs font-medium text-white/60">Conditions</p>
                         <p className="text-sm">{player.medicalConditions}</p>
                       </div>
                     )}
                     
                     {player.medicalTreatment && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground">Treatment / Medicines</p>
+                        <p className="text-xs font-medium text-white/60">Treatment / Medicines</p>
                         <p className="text-sm">{player.medicalTreatment}</p>
                       </div>
                     )}

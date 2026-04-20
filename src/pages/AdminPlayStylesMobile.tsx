@@ -199,7 +199,7 @@ export default function AdminPlayStylesMobile() {
     return (
       <div className="p-4">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-white/60">Loading...</p>
         </div>
       </div>
     );
@@ -210,7 +210,7 @@ export default function AdminPlayStylesMobile() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Play Styles</h1>
-          <p className="text-sm text-muted-foreground">Manage platform styles</p>
+          <p className="text-sm text-white/60">Manage platform styles</p>
         </div>
         <Button size="sm" onClick={() => handleOpenDialog()}>
           <Plus className="w-4 h-4" />
@@ -276,7 +276,7 @@ export default function AdminPlayStylesMobile() {
             
             {(!groupedStyles[category] || groupedStyles[category].length === 0) && (
               <Card>
-                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                <CardContent className="py-8 text-center text-sm text-white/60">
                   No styles yet
                 </CardContent>
               </Card>
@@ -399,7 +399,7 @@ export default function AdminPlayStylesMobile() {
                     </Button>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/60">
                   PNG/JPEG, max 500KB
                 </p>
               </div>

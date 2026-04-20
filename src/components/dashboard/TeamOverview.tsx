@@ -141,7 +141,7 @@ export function TeamOverview() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">{stats.totalPlayers}</div>
-              <Users className="h-5 w-5 text-muted-foreground" />
+              <Users className="h-5 w-5 text-white/60" />
             </div>
           </CardContent>
         </Card>
@@ -153,9 +153,9 @@ export function TeamOverview() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">{stats.upcomingEvents}</div>
-              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <Calendar className="h-5 w-5 text-white/60" />
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-white/60 mt-2">
               {stats.nextEvent ? `Next: ${formatDate(stats.nextEvent.date)}` : 'No upcoming events'}
             </p>
           </CardContent>
@@ -168,9 +168,9 @@ export function TeamOverview() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">{stats.trainingHours}</div>
-              <Clock className="h-5 w-5 text-muted-foreground" />
+              <Clock className="h-5 w-5 text-white/60" />
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-white/60 mt-2">
               This month ({Math.ceil(stats.trainingHours / 1.5)} sessions)
             </p>
           </CardContent>
@@ -196,7 +196,7 @@ export function TeamOverview() {
                   </div>
                   <div>
                     <h3 className="font-semibold">{stats.nextEvent.title}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-white/60">
                       {stats.nextEvent.type.charAt(0).toUpperCase() + stats.nextEvent.type.slice(1)}
                     </p>
                   </div>
@@ -209,13 +209,13 @@ export function TeamOverview() {
               <div className="pt-2 space-y-2">
                 {stats.nextEvent.time && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Start Time</span>
+                    <span className="text-white/60">Start Time</span>
                     <span className="font-medium">{formatTime(stats.nextEvent.time)}</span>
                   </div>
                 )}
                 {stats.nextEvent.location && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Location</span>
+                    <span className="text-white/60">Location</span>
                     <span className="font-medium">{stats.nextEvent.location}</span>
                   </div>
                 )}
@@ -223,9 +223,9 @@ export function TeamOverview() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <Calendar className="h-12 w-12 text-white/60 mx-auto mb-4" />
               <h3 className="font-semibold mb-2">No Upcoming Events</h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-white/60 mb-4">
                 No events scheduled. Create your first event to get started.
               </p>
               <Button onClick={() => window.location.href = '/calendar'}>

@@ -119,7 +119,7 @@ export default function SubscriptionManagementMobile() {
       case 'basic':
         return 'border-green-500 bg-green-50';
       default:
-        return 'border-gray-200 bg-gray-50';
+        return 'border-white/10 bg-white/5';
     }
   };
 
@@ -138,13 +138,13 @@ export default function SubscriptionManagementMobile() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-lg capitalize">{currentPlan} Plan</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-white/60">
                   {subscriptionPlans.find(p => p.id === currentPlan)?.price}
                 </p>
               </div>
               <Badge className="bg-green-500">Active</Badge>
             </div>
-            <div className="mt-4 text-sm text-muted-foreground">
+            <div className="mt-4 text-sm text-white/60">
               <div className="flex items-center">
                 <Check className="h-4 w-4 mr-2 text-green-500" />
                 Currently managing {teams?.length || 0} team{teams?.length !== 1 ? 's' : ''}
@@ -218,15 +218,15 @@ export default function SubscriptionManagementMobile() {
           <CardContent>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Next billing date:</span>
+                <span className="text-white/60">Next billing date:</span>
                 <span>March 15, 2024</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Payment method:</span>
+                <span className="text-white/60">Payment method:</span>
                 <span>•••• •••• •••• 1234</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Billing email:</span>
+                <span className="text-white/60">Billing email:</span>
                 <span className="truncate">{user?.email}</span>
               </div>
             </div>
