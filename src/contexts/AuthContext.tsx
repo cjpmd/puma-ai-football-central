@@ -427,37 +427,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      const clubDetails = await Promise.all(
-        clubsData.map(async (userClub) => {
-          const { data: clubData, error: clubError } = await supabase
-            .from('clubs')
-            .select('*')
-            .eq('id', userClub.club_id)
-            .single();
+      const clubIds = clubsData.map(uc => uc.club_id);
+      const { data: clubRows, error: clubFetchError } = await supabase
+        .from('clubs')
+        .select('*')
+        .in('id', clubIds);
 
-          if (clubError) {
-            logger.error(`Error fetching club ${userClub.club_id}:`, clubError);
-            return null;
-          }
-          
-          return {
-            id: clubData.id,
-            name: clubData.name,
-            referenceNumber: clubData.reference_number,
-            serialNumber: clubData.serial_number,
-            logoUrl: clubData.logo_url,
-            teams: [],
-            subscriptionType: clubData.subscription_type,
-            officials: [],
-            facilities: [],
-            createdAt: clubData.created_at,
-            updatedAt: clubData.updated_at,
-          } as Club;
-        })
-      );
+      if (clubFetchError) {
+        throw clubFetchError;
+      }
 
-      const validClubs = clubDetails.filter(club => club !== null);
-      setClubs(validClubs as Club[]);
+      const validClubs: Club[] = (clubRows || []).map(clubData => ({
+        id: clubData.id,
+        name: clubData.name,
+        referenceNumber: clubData.reference_number,
+        serialNumber: clubData.serial_number,
+        logoUrl: clubData.logo_url,
+        teams: [],
+        subscriptionType: clubData.subscription_type,
+        officials: [],
+        facilities: [],
+        createdAt: clubData.created_at,
+        updatedAt: clubData.updated_at,
+      }));
+
+      setClubs(validClubs);
       logger.log('Clubs loaded successfully:', validClubs.length);
 
     } catch (error: any) {
