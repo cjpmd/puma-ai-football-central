@@ -1,66 +1,45 @@
 
 
-## Plan: Redesign Team Selection Manager — Squad / Staff / Formation Tabs
+## Plan: Simplify Team Selection Header
 
-Restructure the Team Selection screen to match the attached Claude design, unifying it with the rest of the mobile glass design system.
+Reorganise the top of the Team Selection modal to free up vertical space and give the formation pitch more room.
 
-### 1. New page-level layout (replaces current `TeamSelectionManager` modal contents on mobile)
+### 1. Remove from top action bar
+- Team tabs (T1, T2, +) — multi-team selection moves elsewhere later if needed
+- AI Builder button (hidden, code preserved for later)
+- Lock Team button
+- Performance Category dropdown
+- Separate Save + X buttons
 
-Top header block (inside the dialog/page, glass styled, on the dark purple gradient):
-- Back chevron (left), "TEAM SELECTION" eyebrow + team name (centre), `+` action (right)
-- **Opponent line** under the title (e.g. "vs Riverside FC · H") — currently buried in event details
-- **Period switcher pill** — `< Matchday 14 · Sat >` style chips (re-uses the period nav already in `GameDayStyleFormationEditor`, lifted up to the header)
+### 2. New top action bar (single row)
+- Left: back chevron / close (X)
+- Right: **Save & Close** button (combines save + dismiss)
 
-Hero row (Formation tab only, hidden on Squad/Staff):
-- Left stat: `15 — Avg last 5`
-- Centre **glass card** (purple-tinted, prominent): `36 — Projected pts` + `Formation 3-4-3` chip
-- Right stat: `93 — Season best`
-- Space to the **left of the Projected Pts card** reserved for a **Performance Category** chip (e.g. "A Team", colour-coded), reading from the team's performance categories
+### 3. Repurpose the 3 hero boxes (persistent across Squad / Staff / Formation tabs)
 
-### 2. Tab bar — Squad / Staff / Formation
+| Box | Content | Behaviour |
+|-----|---------|-----------|
+| Left | **Performance Category** chip (e.g. "A Team") | Tap → opens picker (replaces removed top dropdown) |
+| Centre | **Formation** (e.g. "1-2-3-1") | Tap → opens formation picker (replaces removed dropdown under tabs) |
+| Right | **Opponent** + event date (e.g. "vs Forfar Blacks · H" / "Sat 19 Apr") | Read-only |
 
-Replace today's separate flows with a single segmented control under the hero:
-- **Squad** — list of selected match-day players (uses the same glass row design as `PlayerManagementMobile.tsx` list view: shirt avatar, name, position abbr · squad number · availability dot, chevron). Tap a row → existing player action sheet.
-- **Staff** — same glass row design for assigned coaches/managers (icon avatar, name, role badge, availability). Tap → existing staff edit/availability controls.
-- **Formation** — current `GameDayStyleFormationEditor` content but restyled (see §3). Includes Pitch / List sub-toggle (matching screenshot 282) so users can flip between the pitch view and a position-grouped list (GOALKEEPER / DEFENDERS · n / MIDFIELDERS · n / FORWARDS · n).
+### 4. Remove from below tabs
+- Standalone opponent line ("vs Forfar Blacks · H") — now lives in right box
+- Formation dropdown above the pitch — now lives in centre box
+- Period label ("Period 1/1") stays where it is, paired with the period nav arrows
 
-The existing `AvailabilityDrivenSquadManagement` already wires squad ↔ formation; we'll keep its data layer and just re-skin + re-organise into these three tabs.
+### 5. Multi-team handling
+Single-team events: works as-is. Multi-team events (rare): default to first team; we'll add a small inline switcher later if needed (out of scope this round).
 
-### 3. Formation tab visual updates
-
-- **Pitch background**: keep `FPLPitch` but render inside a glass card (`.ios-card`) so it sits on the purple gradient cleanly (no white panel)
-- **Player tokens**: keep `FPLPlayerToken` but show **two-line label** under the shirt — `Name` (white) on line 1 and `position abbr · squad #` (white/60) on line 2, matching screenshot 282
-- **Bench**: convert `GameDayStubstituteBench` / `SubstituteBench` to the same glass card style as the pitch (no white background); header reads `BENCH · n` with a `drag to swap` hint on the right
-- **List sub-view** (new): position-grouped glass rows; each row shows shirt avatar, name, `POS · squad # · AST/HOM` meta, projected pts pill on the right, drag handle
-
-### 4. Squad & Staff tabs — consistent design
-
-- Reuse `.ios-card` translucent rows from `PlayerManagementMobile.tsx`
-- Squad rows: shirt avatar (kit colour), name, `position · #squad` meta, availability dot, chevron
-- Staff rows: role-icon avatar, name, role badge (Manager / Coach / Physio…), availability dot, chevron
-- Empty states: glass card with muted-white copy
-
-### 5. Files to modify
+### 6. Files to modify
 
 | File | Change |
 |------|--------|
-| `src/components/events/TeamSelectionManager.tsx` | Replace contents: header + hero + Squad/Staff/Formation tabs wrapper |
-| `src/components/events/AvailabilityDrivenSquadManagement.tsx` | Split internal sections into the three tab panels; expose period switcher to the header |
-| `src/components/events/GameDayStyleFormationEditor.tsx` | Re-skin pitch + bench to glass; move period nav out (now lives in header); add Pitch/List sub-toggle |
-| `src/components/events/SubstituteBench.tsx` (and/or `GameDaySubstituteBench.tsx`) | Glass background, white text, "drag to swap" hint |
-| `src/components/events/FPLPlayerToken.tsx` (label area) or wrapper in formation editor | Two-line label (name + pos·#) under the shirt |
-| `src/components/events/PlayerSelectionPanel.tsx` (or new lightweight Squad list) | Glass row design for the Squad tab |
-| `src/components/events/StaffSelectionSection.tsx` | Glass row design for the Staff tab |
+| `src/components/events/EnhancedTeamSelectionManager.tsx` | Strip top action bar to back + Save & Close; remove team tabs / AI / Lock / Perf-cat buttons; rebuild 3 hero boxes (perf-cat picker, formation picker, opponent+date); make hero persistent across all tabs; remove standalone opponent line under header |
+| `src/components/events/GameDayStyleFormationEditor.tsx` | Remove inline `FormationSelector` dropdown above the pitch (now controlled by hero centre box); keep period nav + pitch + bench |
 
-### 6. Data sources (already available — no schema changes)
-
-- Performance Category: from `players.performance_category` / team's `performance_categories` table → renders coloured chip
-- Opponent: from `events.opponent`
-- Projected pts / Avg last 5 / Season best: **placeholder values for now** (no analytics table yet) — will render visually but flagged as "—" until real metrics are wired
-
-### 7. Out of scope (call out for later)
-
-- Real "Projected pts / Avg last 5 / Season best" calculations (needs a player/team performance metrics service — placeholder UI only this round)
-- Drag-to-swap interactions in the new List sub-view (Formation list will show order but not yet support reordering — pitch view keeps existing dnd-kit behaviour)
-- Desktop redesign — only mobile variant updated this round
+### 7. Out of scope
+- Restoring AI Builder UI (kept hidden, re-introduce later)
+- Multi-team switcher replacement
+- Real values for projected pts / season best (still placeholders — left box now uses that slot for perf-cat instead)
 
