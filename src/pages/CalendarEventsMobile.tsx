@@ -1055,7 +1055,7 @@ export default function CalendarEventsMobile() {
         <MiniMonthGrid
           month={calendarMonth}
           selectedDate={selectedDate}
-          eventDates={eventDateSet}
+          eventTypesByDate={eventTypesByDate}
           onSelectDate={(d) => {
             setSelectedDate(d);
             if (d) setCalendarMonth(d);
