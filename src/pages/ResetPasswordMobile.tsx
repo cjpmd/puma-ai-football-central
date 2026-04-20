@@ -100,7 +100,7 @@ export default function ResetPasswordMobile() {
   // Loading state
   if (isValidToken === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen ios-wallpaper-twilight flex items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-white/60">Verifying reset link...</p>
@@ -112,7 +112,7 @@ export default function ResetPasswordMobile() {
   // Invalid/expired token
   if (!isValidToken) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen ios-wallpaper-twilight flex flex-col items-center justify-center p-6">
         <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
           <AlertCircle className="h-8 w-8 text-destructive" />
         </div>
@@ -130,7 +130,7 @@ export default function ResetPasswordMobile() {
   // Success state
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen ios-wallpaper-twilight flex flex-col items-center justify-center p-6">
         <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
@@ -147,7 +147,7 @@ export default function ResetPasswordMobile() {
 
   // Password reset form
   return (
-    <div className="min-h-screen bg-background flex flex-col p-6">
+    <div className="min-h-screen ios-wallpaper-twilight flex flex-col p-6">
       <div className="flex-1 flex flex-col justify-center">
         {/* Header */}
         <div className="text-center mb-8">

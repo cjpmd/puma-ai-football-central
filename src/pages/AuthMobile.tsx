@@ -115,7 +115,7 @@ export default function AuthMobile() {
   // Options View - Spond-style entry screen
   if (view === 'options') {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen ios-wallpaper-twilight flex flex-col">
         {/* Top Header with Logo */}
         <div className="pt-safe px-6 py-8 text-center">
           <div className="flex justify-center mb-3">
@@ -233,7 +233,7 @@ export default function AuthMobile() {
 
   // Login View
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen ios-wallpaper-twilight flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Back Button */}
         <Button
