@@ -1125,7 +1125,7 @@ export default function CalendarEventsMobile() {
                           
                           {/* NEXT badge - absolute top right */}
                           {isNextEvent && (
-                            <Badge className="bg-white/[0.06] backdrop-blur-xl text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white/[0.06] backdrop-blur-xl">
+                            <Badge className="bg-white/15 backdrop-blur-xl text-white text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white/20">
                               NEXT
                             </Badge>
                           )}
