@@ -196,10 +196,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 onChange={(e) => handleInputChange('ageGroup', e.target.value)}
                 placeholder="e.g., U12, U16, Senior"
                 disabled={isClubTeam && !!yearGroup}
-                className={isClubTeam && yearGroup ? 'bg-muted' : ''}
+                className={isClubTeam && yearGroup ? 'bg-white/[0.04] text-white/70' : ''}
               />
               {isClubTeam && yearGroup && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-emerald-300 mt-1">
                   Age group is managed by the year group: <strong>{yearGroup.name}</strong>
                 </p>
               )}
@@ -282,7 +282,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
               This will be used as the default location for home games. If you can't find your exact location, try typing a nearby street or postcode.
             </p>
             {formData.homeLatitude && formData.homeLongitude && (
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs text-emerald-300 mt-1">
                 ✓ Location coordinates saved: {Number(formData.homeLatitude).toFixed(6)}, {Number(formData.homeLongitude).toFixed(6)}
               </p>
             )}

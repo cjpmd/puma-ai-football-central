@@ -17,46 +17,48 @@
 
 @layer base {
   :root {
-    --background: 270 20% 98%;
-    --foreground: 270 10% 10%;
+    /* Dark purple glass theme — applied app-wide so primitives (Card, Dialog, Sheet, Input)
+       that were converted to white-on-glass render with sufficient contrast everywhere. */
+    --background: 270 35% 6%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 270 10% 10%;
+    --card: 270 30% 9%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 270 10% 10%;
+    --popover: 270 30% 9%;
+    --popover-foreground: 0 0% 98%;
 
     /* Purple primary — mirrors oklch(0.58 0.19 295) */
-    --primary: 270 65% 58%;
+    --primary: 270 65% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 30% 94%;
-    --secondary-foreground: 270 20% 20%;
+    --secondary: 270 25% 16%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 270 20% 94%;
-    --muted-foreground: 270 10% 46%;
+    --muted: 270 25% 14%;
+    --muted-foreground: 270 10% 70%;
 
     /* Magenta accent — mirrors oklch(0.66 0.18 340) */
-    --accent: 320 60% 60%;
+    --accent: 320 55% 55%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 20% 88%;
-    --input: 270 20% 88%;
-    --ring: 270 65% 58%;
+    --border: 270 20% 20%;
+    --input: 270 20% 18%;
+    --ring: 270 65% 60%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 270 15% 97%;
-    --sidebar-foreground: 270 10% 26%;
-    --sidebar-primary: 270 65% 50%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 270 20% 92%;
-    --sidebar-accent-foreground: 270 10% 20%;
-    --sidebar-border: 270 15% 88%;
-    --sidebar-ring: 270 65% 58%;
+    --sidebar-background: 270 30% 8%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 270 65% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 20% 14%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 270 20% 18%;
+    --sidebar-ring: 270 65% 60%;
 
     /* iOS liquid glass tokens */
     --ios-bg: #0A0511;
@@ -112,7 +114,13 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background:
+      radial-gradient(ellipse 1100px 900px at 80% -10%, oklch(0.50 0.20 275 / 0.85), transparent 55%),
+      radial-gradient(ellipse 800px 700px at 0% 60%, oklch(0.55 0.22 340 / 0.55), transparent 60%),
+      linear-gradient(180deg, #120823 0%, #070311 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 }
 
