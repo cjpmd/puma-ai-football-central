@@ -67,17 +67,51 @@ const getEventTypeLabel = (eventType: string): { label: string; colorClass: stri
 interface MiniMonthGridProps {
   month: Date;
   selectedDate: Date | null;
-  eventDates: Set<string>; // 'yyyy-MM-dd'
+  eventTypesByDate: Map<string, Set<string>>; // 'yyyy-MM-dd' -> set of event types
   onSelectDate: (date: Date | null) => void;
   onMonthChange: (date: Date) => void;
   onCreate?: () => void;
   showCreate?: boolean;
 }
 
+// Map event type -> tile bg + dot colour. Returns null if no events.
+const getDayTint = (
+  types: Set<string> | undefined
+): { tile: string; dot: string } | null => {
+  if (!types || types.size === 0) return null;
+  // Normalise: match + fixture share blue
+  const norm = new Set<string>();
+  types.forEach((t) => norm.add(t === 'fixture' ? 'match' : t));
+
+  if (norm.size > 1) {
+    return {
+      tile: 'bg-white/15 border border-white/25',
+      dot: 'bg-white/80',
+    };
+  }
+  const only = Array.from(norm)[0];
+  switch (only) {
+    case 'match':
+      return { tile: 'bg-blue-500/25 border border-blue-400/40', dot: 'bg-blue-400' };
+    case 'friendly':
+      return { tile: 'bg-emerald-500/25 border border-emerald-400/40', dot: 'bg-emerald-400' };
+    case 'training':
+      return { tile: 'bg-purple-500/25 border border-purple-400/40', dot: 'bg-purple-400' };
+    case 'tournament':
+      return { tile: 'bg-orange-500/25 border border-orange-400/40', dot: 'bg-orange-400' };
+    case 'festival':
+      return { tile: 'bg-amber-500/25 border border-amber-400/40', dot: 'bg-amber-400' };
+    case 'social':
+      return { tile: 'bg-pink-500/25 border border-pink-400/40', dot: 'bg-pink-400' };
+    default:
+      return { tile: 'bg-white/10 border border-white/20', dot: 'bg-white/70' };
+  }
+};
+
 const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
   month,
   selectedDate,
-  eventDates,
+  eventTypesByDate,
   onSelectDate,
   onMonthChange,
   onCreate,
