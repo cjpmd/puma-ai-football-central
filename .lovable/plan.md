@@ -1,44 +1,54 @@
 
 
-## Plan: Fix "Failed to add team" + "+" button overflow
+## Plan: Fix blank Squad tab in Team Selection
 
-### Issue 1 — Failed to add team (data bug)
-`handleAddTeam` in `src/pages/CalendarEventsMobile.tsx` (line 592-636) uses the wrong team ID and a column that doesn't exist on `event_selections`.
+### Root cause
 
-Problems:
-1. Uses `teams[0].id` (the user's first team in their list) instead of the event's actual team — causes RLS denials and inserts against the wrong team.
-2. Inserts a `substitutes: []` column. The schema column is `substitute_players` (Json, nullable). `substitutes` is also a column but `NOT NULL` with no default in some rows — safer to use `substitute_players`.
-3. Updates `events.teams` using the *raw* `teamNumbers` from the existing rows, but those numbers are stored as integers; `event.teams` array expects strings — current code does `teamNumbers.map(String)` correctly, but the new entry should also be appended without losing prior string entries already in `event.teams`. We should source from `selectedEvent.teams` rather than rebuild.
+`useAvailabilityBasedSquad` (the hook powering the Squad tab) decides whether to show "only invited players" or "all team players" using a fragile two-step probe:
 
-Fix:
-- Replace `teams[0].id` with `selectedEvent.team_id` everywhere in `handleAddTeam`.
-- Insert `substitute_players: []` (matches `MobileTeamSelectionView.handleDeleteTeam` which already uses this column).
-- Build `newTeamsArray` from existing `selectedEvent.teams` (preserving prior values) plus the new team number as a string.
-- Add a guard: only proceed if `selectedEvent.team_id` is defined; show clearer error toast otherwise.
+1. Query `event_invitations` filtered to `invitee_type = 'player'`.
+2. If that returns 0 rows, query `event_invitations` again with no `invitee_type` filter to see whether **any** invitation exists.
+   - If any → assume "this event has selective invitations but no players" → show **0 players** (blank squad).
+   - If none → assume "everyone invited" → load all team players.
 
-### Issue 2 — "+" button purple ring overflows the dialog
-The Plus button uses `variant="ghost"` with no border, but inherits the global focus ring from `button.tsx`:
-```
-focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-```
-After click, the button retains focus → a 2px purple ring + 2px offset (4px total) appears, and because the button sits flush with the dialog's `p-6` right edge, the ring visibly exceeds the frame on mobile.
+This breaks in two real scenarios:
 
-Fix (scoped, no global change):
-- In `CalendarEventsMobile.tsx` change the "+" button to `size="icon"` look but explicitly pad: `className="h-8 w-8 p-0 rounded-full mr-[-4px]"` is wrong — instead add `focus-visible:ring-offset-0` and reduce to `focus-visible:ring-1`, plus give it `shrink-0`.
-- Wrap header row with `pr-1` so the focus ring has room to render inside the dialog.
-- As an extra safety net add `overflow-hidden` to the immediate parent of the row (the section already has it via DialogContent → already has `overflow-x-hidden`, fine).
+- **RLS visibility gaps.** RLS on `event_invitations` only grants SELECT to `team_manager / team_assistant_manager / team_coach` (or the invitee themselves). Any other role with squad-edit access (e.g. `team_admin`, `club_admin`, `club_chair`, `global_admin`) sees zero player invitations but may still see a single staff invitation (because `user_id = auth.uid()` matches them). The hook then falls into "invitations exist but none for players" → **blank squad**.
+- **Newly added second team (Team 2).** After "+ Add Team", Team 2 has no `team_squads` rows. The hook should load all 9 invited players into "Available". If the invitations probe misfires (above), Team 2 also renders blank.
+
+The DB confirms event `040b1f2a` has 9 player invitations + 1 staff invitation, matching this exact failure pattern for staff users without manager/coach role.
+
+### Fix
+
+In `src/hooks/useAvailabilityBasedSquad.ts`:
+
+1. **Single query**, not two probes. Select `id, player_id, invitee_type` from `event_invitations` for the event in one round trip.
+2. Compute:
+   - `playerInvitations` = rows where `invitee_type = 'player'` AND `player_id` is not null
+   - `hasAnyInvitations` = total rows > 0
+3. Decide what to load:
+   - `playerInvitations.length > 0` → load only those player IDs (current behaviour, preserved).
+   - `playerInvitations.length === 0` → **load all active team players** for the event's team. (Safer default. The previous "invitations exist but none for players → show 0" behaviour was a footgun: RLS makes "0 visible" indistinguishable from "0 sent", and an event with only staff invitations should still let staff build a squad from the full roster.)
+4. Drop the second probe query entirely.
+
+This keeps the "everyone invited" UX, restores the squad list for `team_admin` / club / global-admin roles, and correctly populates Team 2 after "+ Add Team".
 
 ### Files modified
+
 | File | Change |
 |------|--------|
-| `src/pages/CalendarEventsMobile.tsx` | Fix `handleAddTeam` (correct team_id, correct column name, preserve teams array). Adjust the "+" button classes to keep focus ring inside the dialog. |
+| `src/hooks/useAvailabilityBasedSquad.ts` | Replace the two-step invitation probe (lines ~46–116) with a single query that returns player invitations and falls back to loading the full active team roster when there are no player-typed invitations. |
 
 ### Out of scope
-- Global Button focus-ring changes (might affect dozens of screens — handled locally).
-- DialogContent width/border behavior.
-- Behaviour of `MobileTeamSelectionView` (delete already uses correct columns).
+
+- RLS policy changes on `event_invitations` (separate hardening task — would require auditing every consumer).
+- Visual/glass styling changes to `AvailabilityDrivenSquadManagement`.
+- `MobileTeamSelectionView` summary counts (separate code path).
 
 ### Verification
-- Open an event → Event Details → tap "+" next to Team Selection → toast "Team added successfully", a new Team 2/Group 2 chip appears.
-- Tap "+" again → focus ring stays inside the dialog frame on a 390px viewport.
+
+- Open event "Arbroath" (`040b1f2a-…`) on mobile → Event Details → Open Team Manager → Squad tab.
+- Team 1 shows the 9 invited players (already in Selected Squad as recovered from `team_squads`).
+- Switch to Team 2 → Selected Squad empty, Available Players shows the same 9 invited players, each addable.
+- Repeat as a `team_coach` user (already worked) and as a non-manager staff user (was previously blank) — both now populated.
 
