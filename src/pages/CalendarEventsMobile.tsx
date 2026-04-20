@@ -125,8 +125,8 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
   const today = new Date();
 
   return (
-    <div className="ios-card p-3">
-      <div className="flex items-center justify-between mb-2">
+    <div className="ios-card p-2">
+      <div className="flex items-center justify-between mb-1">
         <button
           aria-label="Previous month"
           onClick={() => onMonthChange(subMonths(month, 1))}
@@ -169,31 +169,41 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
       {/* Day grid */}
       <div className="grid grid-cols-7 gap-0.5">
         {Array.from({ length: firstDayIdx }).map((_, i) => (
-          <div key={`pad-${i}`} className="h-8" />
+          <div key={`pad-${i}`} className="h-7" />
         ))}
         {days.map((day) => {
           const key = format(day, 'yyyy-MM-dd');
           const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === key;
           const isCurrentDay = format(today, 'yyyy-MM-dd') === key;
-          const hasEvent = eventDates.has(key);
+          const tint = getDayTint(eventTypesByDate.get(key));
+          const hasEvent = !!tint;
           const isPastDay = isBefore(day, today) && !isCurrentDay;
+
+          // Build tile classes with priority: selected > tint > hover
+          let tileClasses = '';
+          if (isSelected) {
+            tileClasses = 'bg-white/20 backdrop-blur-xl border border-white/30 text-white font-semibold';
+          } else if (hasEvent) {
+            tileClasses = `${tint!.tile} text-white font-medium`;
+          } else if (isPastDay) {
+            tileClasses = 'text-white/35';
+          } else {
+            tileClasses = 'text-white hover:bg-white/10';
+          }
+
+          const ringClass = !isSelected && isCurrentDay ? 'ring-1 ring-white/70' : '';
 
           return (
             <button
               key={key}
               onClick={() => onSelectDate(isSelected ? null : day)}
-              className={`h-8 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors
-                ${isSelected ? 'bg-white/[0.06] backdrop-blur-xl text-primary font-semibold' : ''}
-                ${!isSelected && isCurrentDay ? 'ring-1 ring-white/70 text-white font-semibold' : ''}
-                ${!isSelected && !isCurrentDay && isPastDay ? 'text-white/35' : ''}
-                ${!isSelected && !isCurrentDay && !isPastDay ? 'text-white hover:bg-white/10' : ''}
-              `}
+              className={`h-7 flex flex-col items-center justify-center rounded-md text-xs relative transition-colors ${tileClasses} ${ringClass}`}
             >
               <span className="leading-none">{format(day, 'd')}</span>
               {hasEvent && (
                 <span
                   className={`w-1 h-1 rounded-full mt-0.5 ${
-                    isSelected ? 'bg-primary' : 'bg-white/80'
+                    isSelected ? 'bg-white' : tint!.dot
                   }`}
                 />
               )}
@@ -201,17 +211,6 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
           );
         })}
       </div>
-
-      {selectedDate && (
-        <div className="mt-2 flex justify-center">
-          <button
-            onClick={() => onSelectDate(null)}
-            className="text-xs px-3 py-1 rounded-full bg-white/10 text-white/80 hover:bg-white/15"
-          >
-            Show all
-          </button>
-        </div>
-      )}
     </div>
   );
 };
