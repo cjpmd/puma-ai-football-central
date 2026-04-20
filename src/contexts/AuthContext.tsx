@@ -457,7 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         serialNumber: clubData.serial_number,
         logoUrl: clubData.logo_url,
         teams: [],
-        subscriptionType: clubData.subscription_type,
+        subscriptionType: (clubData.subscription_type || 'free') as Club['subscriptionType'],
         officials: [],
         facilities: [],
         createdAt: clubData.created_at,
