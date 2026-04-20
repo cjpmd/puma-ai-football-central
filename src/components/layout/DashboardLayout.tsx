@@ -109,15 +109,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const headerEntity = getHeaderEntity();
 
   const Sidebar = ({ className }: { className?: string }) => (
-    <div className={cn('flex h-full w-64 flex-col bg-background', className)}>
-      <div className="flex h-16 shrink-0 items-center border-b px-6">
+    <div className={cn('flex h-full w-64 flex-col bg-white/[0.04] backdrop-blur-xl', className)}>
+      <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-6">
         <div className="flex items-center gap-3">
           <img 
             src="/lovable-uploads/0e7b2d9e-64e2-46da-8a4f-01a3e2cd50df.png" 
             alt="Team Manager Logo" 
             className="w-8 h-8"
           />
-          <h1 className="text-xl font-bold text-foreground">Team Manager</h1>
+          <h1 className="text-xl font-bold text-white">Team Manager</h1>
         </div>
       </div>
       <ScrollArea className="flex-1">
@@ -125,7 +125,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Quick Actions Section */}
           {quickActions.length > 0 && (
             <div className="mb-6">
-              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="px-3 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">
                 Quick Actions
               </div>
               <div className="flex flex-col gap-1">
@@ -133,7 +133,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <Link
                     key={action.name}
                     to={action.href}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-dashed border-muted-foreground/20"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-white/70 hover:bg-white/10 hover:text-white border border-dashed border-white/15"
                     onClick={() => setSidebarOpen(false)}
                   >
                     <Zap className="h-4 w-4" />
@@ -145,7 +145,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           )}
 
           {/* Main Navigation */}
-          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="px-3 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">
             Navigation
           </div>
           {navigation.map((item) => {
@@ -157,8 +157,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    ? 'bg-white/15 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                 )}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -166,7 +166,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="flex-1">
                   {item.name}
                   {item.description && (
-                    <div className="text-xs text-muted-foreground/70 mt-0.5">
+                    <div className="text-xs text-white/50 mt-0.5">
                       {item.description}
                     </div>
                   )}
@@ -176,10 +176,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           })}
         </nav>
       </ScrollArea>
-      <div className="border-t p-4">
+      <div className="border-t border-white/10 p-4">
         <Button
           variant="ghost"
-          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="w-full justify-start text-red-300 hover:text-red-200 hover:bg-red-500/15"
           onClick={handleSignOut}
         >
           <LogOut className="h-5 w-5 mr-3" />
@@ -190,10 +190,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   );
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:block">
-        <Sidebar className="border-r" />
+        <Sidebar className="border-r border-white/10" />
       </div>
 
       {/* Mobile sidebar */}
@@ -215,8 +215,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top header with entity logo, name, and role switcher */}
-        <div className="h-16 border-b bg-background flex items-center px-6">
-          <div className="flex-1">
+        <div className="h-16 border-b border-white/10 bg-white/[0.03] backdrop-blur-xl flex items-center px-6">
+          <div className="flex-1 min-w-0">
             <HeaderEntitySwitcher variant="desktop" />
           </div>
           
