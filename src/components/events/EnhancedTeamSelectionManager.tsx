@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard, Sparkles } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard, Sparkles, ChevronLeft } from 'lucide-react';
+import { format as formatDate, parseISO } from 'date-fns';
 import { GameDayStyleFormationEditor } from './GameDayStyleFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { TrainingPlanEditor } from './TrainingPlanEditor';
@@ -921,105 +922,65 @@ return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden border-0 bg-transparent shadow-none' : ''}`}>
         <div className={`${isMobile ? 'h-[calc(100dvh-56px)] ios-wallpaper-dawn text-white' : 'h-[88vh] bg-background'} flex flex-col rounded-xl min-h-0 w-full max-w-full overflow-hidden`}>
-          {/* Compact Header - 2 Rows */}
-          <div className={`border-b ${isMobile ? 'border-white/10 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-white/[0.03]' : 'px-4 py-3'} space-y-2`}>
-            {/* Row 1: Teams Only + Close Button on far right */}
+          {/* Simplified Header - Single action row */}
+          <div className={`border-b ${isMobile ? 'border-white/10 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-white/[0.03]' : 'px-4 py-3'}`}>
             <div className="flex items-center gap-2">
-              {/* Team Buttons */}
-              <div className="flex items-center gap-1 flex-wrap">
-                {teamSelections.map((team, index) => (
-                  <Button
-                    key={team.teamNumber}
-                    variant={index === currentTeamIndex ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => {
-                      setCurrentTeamIndex(index);
-                      setActiveTab('squad');
-                    }}
-                    className={`${isMobile ? 'h-10 text-sm px-3 min-w-[44px]' : 'h-7 text-xs px-2'}`}
-                  >
-                    {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
-                    {team.squadPlayers.length > 0 && (
-                      <span className={`ml-1 opacity-70 ${isMobile ? 'text-xs' : 'text-[10px]'}`}>({team.squadPlayers.length})</span>
-                    )}
-                  </Button>
-                ))}
-                {/* Add/Remove team buttons - desktop only */}
-                {!isMobile && (
-                  <>
-                    <Button onClick={addTeam} variant="outline" size="sm" className="h-7 px-2">
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                    {teamSelections.length > 1 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteTeam(currentTeamIndex)}
-                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Spacer */}
-              <div className="flex-1" />
-
-              {/* Close Button - far right */}
+              {/* Back / Close - left */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className={`${isMobile ? 'h-10 w-10' : 'h-7 w-7'} p-0 shrink-0`}
+                className={`${isMobile ? 'h-10 w-10 text-white hover:bg-white/10' : 'h-8 w-8'} p-0 shrink-0`}
+                aria-label="Close"
               >
-                <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
+                {isMobile ? <ChevronLeft className="h-5 w-5" /> : <X className="h-4 w-4" />}
               </Button>
+
+              {/* Title */}
+              <div className={`flex-1 min-w-0 text-center ${isMobile ? 'text-white' : ''}`}>
+                <div className={`${isMobile ? 'text-[10px] uppercase tracking-wider text-white/55' : 'text-xs uppercase tracking-wider text-muted-foreground'}`}>
+                  Team Selection
+                </div>
+                <div className={`truncate font-semibold ${isMobile ? 'text-sm text-white' : 'text-sm'}`}>
+                  {teamData?.name || event.title}
+                </div>
+              </div>
+
+              {/* Save & Close - right */}
+              {!isFormationReadOnly ? (
+                <Button
+                  onClick={async () => { await saveSelections(); onClose(); }}
+                  disabled={saving}
+                  size="sm"
+                  className={`${isMobile ? 'h-10 px-3 bg-primary text-primary-foreground' : 'h-8 px-3'} shrink-0`}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  <span className="ml-1.5 text-xs">Save & Close</span>
+                </Button>
+              ) : (
+                <div className={`${isMobile ? 'h-10 w-10' : 'h-8 w-8'} shrink-0`} />
+              )}
             </div>
+          </div>
 
-            {/* Row 2: AI, Lock, Category, Save - Hidden when read-only for restricted parents/players */}
-            <div className="flex items-center gap-2">
-              {/* AI Builder - hidden for read-only */}
-              {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && !isFormationReadOnly && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAIBuilder(true)}
-                  className={`${isMobile ? 'h-9 w-9 p-0' : 'h-7 px-2'}`}
-                  title="AI Builder"
-                >
-                  <Sparkles className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
-                </Button>
-              )}
-
-              {/* Lock/Unlock - hidden for read-only */}
-              {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && !isFormationReadOnly && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTogglePositionsLock}
-                  className={`${isMobile ? 'h-9 w-9 p-0' : 'h-7 px-2'} ${
-                    currentTeam.isPositionsLocked 
-                      ? 'bg-red-50 border-red-200 text-red-700' 
-                      : 'bg-green-50 border-green-200 text-green-700'
-                  }`}
-                  title={currentTeam.isPositionsLocked ? 'Unlock' : 'Lock'}
-                >
-                  {currentTeam.isPositionsLocked 
-                    ? <Lock className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} /> 
-                    : <Unlock className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />}
-                </Button>
-              )}
-
-              {/* Category Selector - hidden for read-only */}
-              {performanceCategories.length > 0 && currentTeam && !isFormationReadOnly && (
-                <Select 
-                  value={currentTeam.performanceCategory || 'none'} 
+        {/* Persistent 3-box hero - all tabs (mobile, non-training) */}
+        {isMobile && !isTrainingEvent && currentTeam && (
+          <div className="px-3 pt-2 pb-1 flex-shrink-0">
+            <div className="grid grid-cols-3 gap-2 items-stretch">
+              {/* Left: Performance Category picker */}
+              {!isFormationReadOnly && performanceCategories.length > 0 ? (
+                <Select
+                  value={currentTeam.performanceCategory || 'none'}
                   onValueChange={handlePerformanceCategoryChange}
                 >
-                  <SelectTrigger className={`${isMobile ? 'h-9 w-32 text-sm' : 'h-7 w-28 text-xs'}`}>
-                    <SelectValue placeholder="Category" />
+                  <SelectTrigger className="ios-card h-auto p-2 flex flex-col items-center justify-center text-center border-0 bg-white/[0.04] [&>svg]:hidden gap-0">
+                    <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5">Category</div>
+                    <div className="text-sm font-semibold text-white leading-tight truncate w-full">
+                      {(() => {
+                        const cat = performanceCategories.find(c => c.id === currentTeam.performanceCategory);
+                        return cat ? cat.name : 'None';
+                      })()}
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No category</SelectItem>
@@ -1030,76 +991,65 @@ return (
                     ))}
                   </SelectContent>
                 </Select>
+              ) : (
+                <div className="ios-card p-2 flex flex-col items-center justify-center text-center">
+                  <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5">Category</div>
+                  <div className="text-sm font-semibold text-white leading-tight">
+                    {(() => {
+                      const cat = performanceCategories.find(c => c.id === currentTeam.performanceCategory);
+                      return cat ? cat.name : '—';
+                    })()}
+                  </div>
+                </div>
               )}
 
-              {/* Spacer */}
-              <div className="flex-1" />
+              {/* Centre: Formation picker */}
+              {!isFormationReadOnly && currentTeam.periods[0] ? (
+                <Select
+                  value={currentTeam.periods[0]?.formation || ''}
+                  onValueChange={(value) => {
+                    const updatedPeriods = currentTeam.periods.map((p, i) =>
+                      i === 0 ? { ...p, formation: value, positions: [] } : p
+                    );
+                    handlePeriodsChange(updatedPeriods);
+                  }}
+                >
+                  <SelectTrigger className="rounded-2xl bg-primary/25 border border-primary/40 backdrop-blur-xl h-auto p-2 flex flex-col items-center justify-center text-center [&>svg]:hidden gap-0">
+                    <div className="text-[9px] uppercase tracking-wider text-white/70 leading-tight mb-0.5">Formation</div>
+                    <div className="text-base font-bold text-white leading-tight">
+                      {currentTeam.periods[0]?.formation || '—'}
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getFormationsByFormat(event.game_format as any).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="rounded-2xl bg-primary/25 border border-primary/40 backdrop-blur-xl p-2 flex flex-col items-center justify-center text-center">
+                  <div className="text-[9px] uppercase tracking-wider text-white/70 leading-tight mb-0.5">Formation</div>
+                  <div className="text-base font-bold text-white leading-tight">
+                    {currentTeam.periods[0]?.formation || '—'}
+                  </div>
+                </div>
+              )}
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1.5">
-                {!isMobile && !isFormationReadOnly && (
-                  <>
-                    <Button onClick={handleCopyTeams} variant="outline" size="sm" className="h-7 px-2">
-                      <Clipboard className="h-3 w-3" />
-                    </Button>
-                    <Button onClick={() => setShowMatchDayPack(true)} variant="outline" size="sm" className="h-7 px-2">
-                      <FileText className="h-3 w-3" />
-                    </Button>
-                  </>
-                )}
-                
-                {/* Save button - hidden for read-only */}
-                {!isFormationReadOnly && (
-                  <Button onClick={saveSelections} disabled={saving} size="sm" className={`${isMobile ? 'h-9 px-4' : 'h-7 px-3'}`}>
-                    {saving ? <Loader2 className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'} animate-spin`} /> : <Save className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />}
-                    <span className={`ml-1 ${isMobile ? 'text-sm' : 'text-xs'}`}>Save</span>
-                  </Button>
+              {/* Right: Opponent + Date */}
+              <div className="ios-card p-2 flex flex-col items-center justify-center text-center">
+                <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5">
+                  {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
+                </div>
+                <div className="text-sm font-semibold text-white leading-tight truncate w-full">
+                  {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
+                </div>
+                {event.opponent && event.date && (
+                  <div className="text-[9px] text-white/55 leading-tight mt-0.5">
+                    {formatDate(parseISO(event.date), 'EEE d MMM')}
+                  </div>
                 )}
               </div>
             </div>
-          </div>
-
-        {/* Opponent line + Hero row (mobile only, formation tab) */}
-        {isMobile && !isTrainingEvent && (event.opponent || activeTab === 'formation') && (
-          <div className="px-3 pt-2 pb-1 space-y-2 flex-shrink-0">
-            {event.opponent && (
-              <div className="text-center text-xs text-white/70">
-                vs <span className="text-white font-medium">{event.opponent}</span>
-                {event.is_home !== undefined && (
-                  <span className="ml-1 text-white/50">· {event.is_home ? 'H' : 'A'}</span>
-                )}
-              </div>
-            )}
-            {activeTab === 'formation' && currentTeam && (
-              <div className="grid grid-cols-3 gap-2 items-stretch">
-                {/* Left: Avg last 5 + Performance Category chip */}
-                <div className="ios-card p-2 flex flex-col items-center justify-center text-center">
-                  {(() => {
-                    const cat = performanceCategories.find(c => c.id === currentTeam.performanceCategory);
-                    return cat ? (
-                      <Badge className="mb-1 bg-primary/30 border-primary/40 text-white text-[10px] px-1.5 py-0 hover:bg-primary/30">
-                        {cat.name}
-                      </Badge>
-                    ) : null;
-                  })()}
-                  <div className="text-lg font-bold text-white leading-tight">—</div>
-                  <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight">Avg last 5</div>
-                </div>
-                {/* Centre: Projected pts */}
-                <div className="rounded-2xl bg-primary/25 border border-primary/40 p-2 flex flex-col items-center justify-center text-center backdrop-blur-xl">
-                  <div className="text-2xl font-bold text-white leading-tight">—</div>
-                  <div className="text-[9px] uppercase tracking-wider text-white/70 leading-tight">Projected pts</div>
-                  <Badge className="mt-1 bg-white/15 border-white/20 text-white text-[9px] px-1.5 py-0 hover:bg-white/15">
-                    {currentTeam.periods[0]?.formation || '—'}
-                  </Badge>
-                </div>
-                {/* Right: Season best */}
-                <div className="ios-card p-2 flex flex-col items-center justify-center text-center">
-                  <div className="text-lg font-bold text-white leading-tight">—</div>
-                  <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight">Season best</div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
