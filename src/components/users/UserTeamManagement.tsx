@@ -79,51 +79,27 @@ export const UserTeamManagement = () => {
       setLoading(true);
       logger.log('=== LOADING COMPREHENSIVE USER DATA AS GLOBAL ADMIN ===');
       
-      // Load teams first
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('id, name, age_group')
-        .order('name');
+      // Run all four independent queries in parallel
+      const [teamsResult, userTeamsResult, profilesResult, invitationsResult] = await Promise.all([
+        supabase.from('teams').select('id, name, age_group').order('name'),
+        supabase.from('user_teams').select('id, user_id, team_id, role').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id, name, email, roles, created_at').order('created_at', { ascending: false }).limit(500),
+        supabase.from('user_invitations').select('id, email, name, role, team_id, status, created_at').order('created_at', { ascending: false }),
+      ]);
 
-      if (teamsError) {
-        logger.error('Error loading teams:', teamsError);
-        throw teamsError;
-      }
+      if (teamsResult.error) { logger.error('Error loading teams:', teamsResult.error); throw teamsResult.error; }
+      if (userTeamsResult.error) { logger.error('Error loading user teams:', userTeamsResult.error); throw userTeamsResult.error; }
+      if (profilesResult.error) { logger.error('Error loading profiles:', profilesResult.error); throw profilesResult.error; }
+      if (invitationsResult.error) { logger.error('Error loading invitations:', invitationsResult.error); }
+
+      const teamsData = teamsResult.data;
+      const userTeamsData = userTeamsResult.data;
+      const profilesData = profilesResult.data;
+      const invitationsData = invitationsResult.data;
+
       logger.log('Teams loaded:', teamsData?.length || 0);
-
-      // Load all user-team relationships
-      const { data: userTeamsData, error: userTeamsError } = await supabase
-        .from('user_teams')
-        .select('id, user_id, team_id, role')
-        .order('created_at', { ascending: false });
-
-      if (userTeamsError) {
-        logger.error('Error loading user teams:', userTeamsError);
-        throw userTeamsError;
-      }
       logger.log('User teams loaded:', userTeamsData?.length || 0);
-
-      // Load all profiles (should work now with updated RLS policy)
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, email, roles, created_at')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) {
-        logger.error('Error loading profiles:', profilesError);
-        throw profilesError;
-      }
       logger.log('Profiles loaded:', profilesData?.length || 0);
-
-      // Load pending invitations
-      const { data: invitationsData, error: invitationsError } = await supabase
-        .from('user_invitations')
-        .select('id, email, name, role, team_id, status, created_at')
-        .order('created_at', { ascending: false });
-
-      if (invitationsError) {
-        logger.error('Error loading invitations:', invitationsError);
-      }
       logger.log('Invitations loaded:', invitationsData?.length || 0);
 
       // Create comprehensive user map

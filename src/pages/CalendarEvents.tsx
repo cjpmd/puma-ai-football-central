@@ -84,11 +84,22 @@ export default function CalendarEvents() {
 
       logger.log('Loading events for teams:', teamIds);
 
+      // Limit to a rolling window: 6 months back → 12 months forward.
+      // Without a date range this returns the entire event history for all teams.
+      const now = new Date();
+      const windowStart = new Date(now);
+      windowStart.setMonth(windowStart.getMonth() - 6);
+      const windowEnd = new Date(now);
+      windowEnd.setMonth(windowEnd.getMonth() + 12);
+
       const { data, error } = await supabase
         .from('events')
         .select('*')
         .in('team_id', teamIds)
-        .order('date', { ascending: true });
+        .gte('date', windowStart.toISOString().split('T')[0])
+        .lte('date', windowEnd.toISOString().split('T')[0])
+        .order('date', { ascending: true })
+        .limit(500);
 
       if (error) throw error;
       

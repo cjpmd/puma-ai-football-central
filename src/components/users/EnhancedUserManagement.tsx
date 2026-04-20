@@ -66,7 +66,8 @@ export const EnhancedUserManagement = () => {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (profilesError) throw profilesError;
 
@@ -78,29 +79,33 @@ export const EnhancedUserManagement = () => {
       // For each user, load their role contexts
       const enhancedUsers: EnhancedUserProfile[] = [];
 
-      // Preload staff roles for all users
       const profileIds = profiles.map((p) => p.id);
-      const { data: staffRoles, error: staffRolesError } = await supabase
-        .from('user_teams')
-        .select('user_id, team_id, role, teams!user_teams_team_id_fkey (name)')
-        .in('user_id', profileIds);
-      if (staffRolesError) {
-        logger.error('Error loading staff roles:', staffRolesError);
+
+      // Preload staff roles and player links for ALL users in two queries (not N+1)
+      const [staffRolesResult, allPlayerLinksResult] = await Promise.all([
+        supabase
+          .from('user_teams')
+          .select('user_id, team_id, role, teams!user_teams_team_id_fkey (name)')
+          .in('user_id', profileIds),
+        supabase
+          .from('user_players')
+          .select('user_id, relationship, players!inner(name, teams!inner(name))')
+          .in('user_id', profileIds),
+      ]);
+
+      if (staffRolesResult.error) {
+        logger.error('Error loading staff roles:', staffRolesResult.error);
       }
+      const staffRoles = staffRolesResult.data;
+      const allPlayerLinks = allPlayerLinksResult.data || [];
 
       for (const profile of profiles) {
         const roleContexts: { type: 'player' | 'parent' | 'staff' | 'admin'; context: string; count: number; }[] = [];
 
-        // Check player roles
-        const { data: playerData } = await supabase
-          .from('user_players')
-          .select(`
-            relationship,
-            players!inner(name, teams!inner(name))
-          `)
-          .eq('user_id', profile.id);
+        // Filter from preloaded bulk data — no per-user DB call
+        const playerData = allPlayerLinks.filter(p => p.user_id === profile.id);
 
-        if (playerData) {
+        if (playerData.length > 0) {
           const playerRoles = playerData.filter(p => p.relationship === 'self');
           const parentRoles = playerData.filter(p => p.relationship === 'parent');
 

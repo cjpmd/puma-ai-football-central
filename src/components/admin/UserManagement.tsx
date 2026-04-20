@@ -53,7 +53,8 @@ export const UserManagement: React.FC = () => {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (profilesError) {
         logger.error('Error loading profiles:', profilesError);

@@ -387,45 +387,56 @@ export default function CalendarEventsMobile() {
 
       const teamIds = teamsToQuery.map(t => t.id);
 
-      // Load privacy settings for all teams
-      const { data: privacyData } = await supabase
-        .from('team_privacy_settings')
-        .select('team_id, show_scores_to_parents, show_scores_to_players')
-        .in('team_id', teamIds);
-      
+      // Rolling window: 3 months back → 6 months forward (mobile shows a tighter range)
+      const now = new Date();
+      const windowStart = new Date(now);
+      windowStart.setMonth(windowStart.getMonth() - 3);
+      const windowEnd = new Date(now);
+      windowEnd.setMonth(windowEnd.getMonth() + 6);
+      const startDateStr = windowStart.toISOString().split('T')[0];
+      const endDateStr = windowEnd.toISOString().split('T')[0];
+
+      // Run all three queries in parallel — previously 3 sequential round-trips
+      const [privacyResult, eventsResult, selectionsResult] = await Promise.all([
+        supabase
+          .from('team_privacy_settings')
+          .select('team_id, show_scores_to_parents, show_scores_to_players')
+          .in('team_id', teamIds),
+        supabase
+          .from('events')
+          .select('*')
+          .in('team_id', teamIds)
+          .gte('date', startDateStr)
+          .lte('date', endDateStr)
+          .order('date', { ascending: false })
+          .limit(300),
+        supabase
+          .from('event_selections')
+          .select(`
+            event_id,
+            team_number,
+            team_id,
+            performance_category_id,
+            performance_categories!inner(name)
+          `)
+          .in('team_id', teamIds),
+      ]);
+
+      if (eventsResult.error) throw eventsResult.error;
+      if (selectionsResult.error) throw selectionsResult.error;
+
       const settingsMap = new Map<string, any>();
-      privacyData?.forEach(setting => {
+      privacyResult.data?.forEach(setting => {
         settingsMap.set(setting.team_id, setting);
       });
       setTeamPrivacySettings(settingsMap);
 
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .in('team_id', teamIds)
-        .order('date', { ascending: false });
+      logger.log('Loaded events:', eventsResult.data?.length, 'View mode:', viewMode);
+      setEvents((eventsResult.data || []) as DatabaseEvent[]);
 
-      if (error) throw error;
-      logger.log('Loaded events:', data?.length, 'View mode:', viewMode);
-      setEvents((data || []) as DatabaseEvent[]);
-      
-      // Load event selections to get proper performance category mappings
-      const { data: selectionsData, error: selectionsError } = await supabase
-        .from('event_selections')
-        .select(`
-          event_id,
-          team_number,
-          team_id,
-          performance_category_id,
-          performance_categories!inner(name)
-        `)
-        .in('team_id', teamIds);
-
-      if (selectionsError) throw selectionsError;
-      
       // Group selections by event_id for easy lookup
       const selectionsByEvent: {[key: string]: any[]} = {};
-      selectionsData?.forEach(selection => {
+      selectionsResult.data?.forEach(selection => {
         if (!selectionsByEvent[selection.event_id]) {
           selectionsByEvent[selection.event_id] = [];
         }

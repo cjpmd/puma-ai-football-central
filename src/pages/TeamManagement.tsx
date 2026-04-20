@@ -161,7 +161,19 @@ const TeamManagement = () => {
 
   const loadAllClubs = async () => {
     try {
-      const { data, error } = await supabase.from('clubs').select('*');
+      // Scope to the user's clubs — avoid loading the entire clubs table
+      const { data: userClubLinks } = await supabase
+        .from('user_clubs')
+        .select('club_id')
+        .eq('user_id', user?.id || '');
+
+      const clubIds = (userClubLinks || []).map(uc => uc.club_id);
+      if (clubIds.length === 0) { setAllClubs([]); return; }
+
+      const { data, error } = await supabase
+        .from('clubs')
+        .select('*')
+        .in('id', clubIds);
       if (error) throw error;
 
       const convertedClubs: Club[] = (data || []).map(club => ({
