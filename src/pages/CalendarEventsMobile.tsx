@@ -1232,12 +1232,14 @@ export default function CalendarEventsMobile() {
 
       {/* Event Details Modal */}
       <Dialog open={showEventDetails} onOpenChange={setShowEventDetails}>
-        <DialogContent className="w-full max-w-full sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-          <DialogHeader>
+        <DialogContent
+          className="w-full max-w-full sm:max-w-[425px] sm:max-h-[90vh] sm:overflow-y-auto overflow-x-hidden max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-screen max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:flex max-sm:flex-col max-sm:p-0"
+        >
+          <DialogHeader className="max-sm:px-6 max-sm:pt-[max(env(safe-area-inset-top),1rem)] max-sm:pb-2 max-sm:shrink-0">
             <DialogTitle>Event Details</DialogTitle>
           </DialogHeader>
           {selectedEvent && (
-            <div className="space-y-4 overflow-x-hidden">
+            <div className="space-y-4 overflow-x-hidden max-sm:flex-1 max-sm:overflow-y-auto max-sm:px-6 max-sm:pb-[max(env(safe-area-inset-bottom),1rem)]">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={`text-white ${getEventTypeBadgeColor(selectedEvent.event_type)}`}>
                   {selectedEvent.event_type.charAt(0).toUpperCase() + selectedEvent.event_type.slice(1)}

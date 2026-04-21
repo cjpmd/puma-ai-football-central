@@ -986,8 +986,8 @@ const { data: teamData } = useQuery({
 return (
   <>
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden border-0 bg-transparent shadow-none p-0 max-w-none w-screen' : ''}`}>
-        <div className={`${isMobile ? 'h-[100dvh] max-h-[100dvh] ios-wallpaper-dawn text-white' : 'h-[88vh] bg-background rounded-xl'} flex flex-col min-h-0 w-full max-w-full overflow-hidden`}>
+      <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden border-0 bg-transparent shadow-none p-0 max-w-none w-screen top-0 left-0 translate-x-0 translate-y-0 h-[100dvh] max-h-[100dvh] rounded-none' : ''}`}>
+        <div className={`${isMobile ? 'h-full ios-wallpaper-dawn text-white pb-[env(safe-area-inset-bottom)]' : 'h-[88vh] bg-background rounded-xl'} flex flex-col min-h-0 w-full max-w-full overflow-hidden`}>
           {/* Simplified Header - Single action row */}
           <div className={`border-b ${isMobile ? 'border-white/10 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-white/[0.03]' : 'px-4 py-3'}`}>
             <div className="flex items-center gap-2">
