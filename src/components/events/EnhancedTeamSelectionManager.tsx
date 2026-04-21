@@ -22,7 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
-import { getFormationsByFormat } from '@/utils/formationUtils';
+import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
 import { AITeamBuilderDialog } from './AITeamBuilderDialog';
 import { useTeamPrivacy } from '@/hooks/useTeamPrivacy';
