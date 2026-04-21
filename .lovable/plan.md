@@ -1,54 +1,62 @@
 
 
-## Plan: Fix blank Squad tab in Team Selection
+## Plan: Opponent box → Team switcher; preserve players when changing formation
 
-### Root cause
+Two scoped fixes in `src/components/events/EnhancedTeamSelectionManager.tsx` (the Team Selection modal hero).
 
-`useAvailabilityBasedSquad` (the hook powering the Squad tab) decides whether to show "only invited players" or "all team players" using a fragile two-step probe:
+### 1. Make the right-hand "Opponent" box act as a team switcher
 
-1. Query `event_invitations` filtered to `invitee_type = 'player'`.
-2. If that returns 0 rows, query `event_invitations` again with no `invitee_type` filter to see whether **any** invitation exists.
-   - If any → assume "this event has selective invitations but no players" → show **0 players** (blank squad).
-   - If none → assume "everyone invited" → load all team players.
+Today the third hero box is a static card showing `Home/Away · vs · {opponent}` plus date. The Category and Formation boxes are interactive `Select` triggers. We mirror the same pattern for the opponent box:
 
-This breaks in two real scenarios:
+- When `teamSelections.length > 1`, render the opponent card inside a `<Select>` whose:
+  - `value` = `String(currentTeamIndex)`
+  - `onValueChange` = `(v) => setCurrentTeamIndex(parseInt(v, 10))`
+  - `SelectContent` lists every team as `Team {i+1}` plus its performance category name when set (e.g. "Team 1 · Messi", "Team 2 · Ronaldo"), so the user can tell them apart.
+- When `teamSelections.length <= 1`, keep the existing static card (no chevron, no menu) so single-team events look unchanged.
+- Visible content of the trigger stays exactly as today: the opponent + date stack (or date-only when no opponent). Nothing about the displayed text changes — only the box becomes tappable.
+- Style: match the existing `ios-card` / `[&>svg]:hidden` pattern used by the Category trigger so the chevron is hidden and the box looks identical to its static form.
+- Apply the same treatment in the Formation tab's restricted-user fallback (no change needed there since the hero is shared).
 
-- **RLS visibility gaps.** RLS on `event_invitations` only grants SELECT to `team_manager / team_assistant_manager / team_coach` (or the invitee themselves). Any other role with squad-edit access (e.g. `team_admin`, `club_admin`, `club_chair`, `global_admin`) sees zero player invitations but may still see a single staff invitation (because `user_id = auth.uid()` matches them). The hook then falls into "invitations exist but none for players" → **blank squad**.
-- **Newly added second team (Team 2).** After "+ Add Team", Team 2 has no `team_squads` rows. The hook should load all 9 invited players into "Available". If the invitations probe misfires (above), Team 2 also renders blank.
+No new state, no schema, no extra props. Switching the index already triggers re-render of Squad / Staff / Formation tabs via the existing `key={`team-${currentTeamIndex}`}` pattern.
 
-The DB confirms event `040b1f2a` has 9 player invitations + 1 staff invitation, matching this exact failure pattern for staff users without manager/coach role.
+### 2. Preserve player positions when changing formation from the hero
 
-### Fix
+The hero's Formation `Select` (line ~1010) currently does:
 
-In `src/hooks/useAvailabilityBasedSquad.ts`:
+```
+i === 0 ? { ...p, formation: value, positions: [] } : p
+```
 
-1. **Single query**, not two probes. Select `id, player_id, invitee_type` from `event_invitations` for the event in one round trip.
-2. Compute:
-   - `playerInvitations` = rows where `invitee_type = 'player'` AND `player_id` is not null
-   - `hasAnyInvitations` = total rows > 0
-3. Decide what to load:
-   - `playerInvitations.length > 0` → load only those player IDs (current behaviour, preserved).
-   - `playerInvitations.length === 0` → **load all active team players** for the event's team. (Safer default. The previous "invitations exist but none for players → show 0" behaviour was a footgun: RLS makes "0 visible" indistinguishable from "0 sent", and an event with only staff invitations should still let staff build a squad from the full roster.)
-4. Drop the second probe query entirely.
+Wiping `positions` is what loses every player. The Formation editor itself already has the right algorithm in `updatePeriodFormation` / `preservePlayerAssignments` (`GameDayStyleFormationEditor.tsx` lines 247–338): it builds new slots for the chosen formation, re-assigns players to slots with the same `positionName`, falls back to same `positionGroup` (GK / DEF / MID / FWD), and any orphaned players drop to the substitutes bench.
 
-This keeps the "everyone invited" UX, restores the squad list for `team_admin` / club / global-admin roles, and correctly populates Team 2 after "+ Add Team".
+Fix:
+
+- Extract the same preservation logic into a small local helper inside `EnhancedTeamSelectionManager.tsx` (so the hero doesn't depend on the editor mounting). Reuse `getPositionsForFormation` from `@/utils/formationUtils` (already imported via `getFormationsByFormat`) to build the new slots.
+- In the hero's `onValueChange`, replace the `positions: []` line with:
+  - Build `newSlots` from `getPositionsForFormation(value, event.game_format)`.
+  - Run `preservePlayerAssignments(p.positions, newSlots)` — exact same matching: same name → same group → else orphan.
+  - Compute orphaned player IDs and append them to `p.substitutes` (deduped), matching the editor's behaviour.
+  - Return `{ ...p, formation: value, positions: preserved, substitutes: updatedSubs }`.
+- Apply this to the **first period only** (which is what the hero edits today). Other periods are untouched, same as current behaviour.
+
+Net result: changing 1-2-3-1 → 1-3-2-1 keeps GK, both fullbacks, the centre defender, etc., wherever the names match. A defender that no longer fits goes to the bench instead of vanishing.
 
 ### Files modified
 
 | File | Change |
 |------|--------|
-| `src/hooks/useAvailabilityBasedSquad.ts` | Replace the two-step invitation probe (lines ~46–116) with a single query that returns player invitations and falls back to loading the full active team roster when there are no player-typed invitations. |
+| `src/components/events/EnhancedTeamSelectionManager.tsx` | (a) Wrap the opponent hero box in a `<Select>` team switcher when `teamSelections.length > 1`. (b) Replace the `positions: []` formation-change handler with a `preservePlayerAssignments` helper that keeps players in same/group-matched slots and benches orphans. |
 
 ### Out of scope
 
-- RLS policy changes on `event_invitations` (separate hardening task — would require auditing every consumer).
-- Visual/glass styling changes to `AvailabilityDrivenSquadManagement`.
-- `MobileTeamSelectionView` summary counts (separate code path).
+- Editing the per-period Formation `Select` inside `GameDayStyleFormationEditor` — already correct.
+- Persisting / saving — `handlePeriodsChange` → `updateCurrentTeam` already triggers the existing save flow.
+- Desktop layout — desktop already uses tabs/buttons for team switching; the hero is mobile-only.
+- Changes to opponent text, date format, or card styling.
 
-### Verification
+### Verification (390x844)
 
-- Open event "Arbroath" (`040b1f2a-…`) on mobile → Event Details → Open Team Manager → Squad tab.
-- Team 1 shows the 9 invited players (already in Selected Squad as recovered from `team_squads`).
-- Switch to Team 2 → Selected Squad empty, Available Players shows the same 9 invited players, each addable.
-- Repeat as a `team_coach` user (already worked) and as a non-manager staff user (was previously blank) — both now populated.
+- Open an event with 2 teams → hero opponent box now shows a chevron-less tappable card that, when pressed, lists "Team 1 · Messi" / "Team 2 · Ronaldo". Selecting Team 2 swaps Squad / Staff / Formation contents.
+- Open Formation tab on Team 1 → place 7 players in 1-2-3-1 → return to Squad → tap hero Formation, switch to 1-3-2-1 → reopen Formation: GK still in goal, defenders fill DL/DC/DR, the orphaned midfielder is on the bench.
+- Single-team event → opponent box behaves exactly as before (static, not tappable).
 
