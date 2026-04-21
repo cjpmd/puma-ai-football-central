@@ -1108,20 +1108,51 @@ return (
                 </div>
               )}
 
-              {/* Right: Opponent + Date */}
-              <div className="ios-card p-2 flex flex-col items-center justify-center text-center min-w-0 overflow-hidden">
-                <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5 truncate w-full">
-                  {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
-                </div>
-                <div className="text-sm font-semibold text-white leading-tight truncate w-full">
-                  {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
-                </div>
-                {event.opponent && event.date && (
-                  <div className="text-[9px] text-white/55 leading-tight mt-0.5 truncate w-full">
-                    {formatDate(parseISO(event.date), 'EEE d MMM')}
+              {/* Right: Opponent + Date — also acts as team switcher when multiple teams exist */}
+              {teamSelections.length > 1 ? (
+                <Select
+                  value={String(currentTeamIndex)}
+                  onValueChange={(v) => setCurrentTeamIndex(parseInt(v, 10))}
+                >
+                  <SelectTrigger className="ios-card h-auto p-2 flex flex-col items-center justify-center text-center border-0 bg-white/[0.04] [&>svg]:hidden gap-0 min-w-0 overflow-hidden">
+                    <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5 truncate w-full">
+                      {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
+                    </div>
+                    <div className="text-sm font-semibold text-white leading-tight truncate w-full">
+                      {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
+                    </div>
+                    {event.opponent && event.date && (
+                      <div className="text-[9px] text-white/55 leading-tight mt-0.5 truncate w-full">
+                        {formatDate(parseISO(event.date), 'EEE d MMM')}
+                      </div>
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamSelections.map((t, i) => {
+                      const cat = performanceCategories.find(c => c.id === t.performanceCategory);
+                      return (
+                        <SelectItem key={i} value={String(i)}>
+                          {`Team ${i + 1}${cat ? ` · ${cat.name}` : ''}`}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="ios-card p-2 flex flex-col items-center justify-center text-center min-w-0 overflow-hidden">
+                  <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5 truncate w-full">
+                    {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
                   </div>
-                )}
-              </div>
+                  <div className="text-sm font-semibold text-white leading-tight truncate w-full">
+                    {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
+                  </div>
+                  {event.opponent && event.date && (
+                    <div className="text-[9px] text-white/55 leading-tight mt-0.5 truncate w-full">
+                      {formatDate(parseISO(event.date), 'EEE d MMM')}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
