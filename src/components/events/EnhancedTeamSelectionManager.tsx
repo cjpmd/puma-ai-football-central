@@ -22,7 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
-import { getFormationsByFormat } from '@/utils/formationUtils';
+import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
 import { AITeamBuilderDialog } from './AITeamBuilderDialog';
 import { useTeamPrivacy } from '@/hooks/useTeamPrivacy';
@@ -42,6 +42,72 @@ const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): For
     substitutes: [],
     captainId: undefined
   };
+};
+
+// Mirror of GameDayStyleFormationEditor's position-group classifier
+const getPositionGroupFromName = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
+  const n = (positionName || '').toLowerCase();
+  if (n.includes('goalkeeper')) return 'goalkeeper';
+  if (n.includes('defender')) return 'defender';
+  if (n.includes('midfielder')) return 'midfielder';
+  if (n.includes('striker') || n.includes('attacking')) return 'forward';
+  return 'midfielder';
+};
+
+const getDefaultAbbrev = (positionName: string): string => {
+  const map: Record<string, string> = {
+    'Goalkeeper': 'GK',
+    'Defender Left': 'DL', 'Defender Right': 'DR', 'Defender Centre': 'DC',
+    'Defender Centre Left': 'DCL', 'Defender Centre Right': 'DCR',
+    'Midfielder Left': 'ML', 'Midfielder Right': 'MR', 'Midfielder Centre': 'MC',
+    'Midfielder Centre Left': 'MCL', 'Midfielder Centre Right': 'MCR',
+    'Defensive Midfielder Left': 'DML', 'Defensive Midfielder Right': 'DMR', 'Defensive Midfielder Centre': 'DMC',
+    'Attacking Midfielder Left': 'AML', 'Attacking Midfielder Right': 'AMR', 'Attacking Midfielder Centre': 'AMC',
+    'Attacking Midfielder Centre Left': 'AMCL', 'Attacking Midfielder Centre Right': 'AMCR',
+    'Striker Left': 'SL', 'Striker Right': 'SR', 'Striker Centre': 'SC',
+    'Striker Centre Left': 'SCL', 'Striker Centre Right': 'SCR',
+  };
+  return map[positionName] || positionName.split(' ').map(w => w[0]).join('').toUpperCase();
+};
+
+// Build new position slots for a formation, preserving prior player assignments by name then group.
+// Orphans (players whose old position has no match in the new formation) are returned for benching.
+const applyFormationChange = (
+  oldPositions: Array<any>,
+  oldSubstitutes: string[],
+  newFormationId: string,
+  gameFormat: string,
+): { positions: Array<any>; substitutes: string[] } => {
+  const slots = getPositionsForFormation(newFormationId, gameFormat as any);
+  const newPositions = slots.map((pos) => ({
+    id: `position-${Math.random().toString(36).substr(2, 9)}`,
+    positionName: pos.position,
+    abbreviation: getDefaultAbbrev(pos.position),
+    positionGroup: getPositionGroupFromName(pos.position),
+    x: pos.x,
+    y: pos.y,
+    playerId: undefined as string | undefined,
+  }));
+
+  (oldPositions || []).forEach((oldPos: any) => {
+    if (!oldPos?.playerId) return;
+    let idx = newPositions.findIndex(p => p.positionName === oldPos.positionName && !p.playerId);
+    if (idx === -1) {
+      const grp = getPositionGroupFromName(oldPos.positionName);
+      idx = newPositions.findIndex(p => getPositionGroupFromName(p.positionName) === grp && !p.playerId);
+    }
+    if (idx !== -1) newPositions[idx].playerId = oldPos.playerId;
+  });
+
+  const assigned = new Set(newPositions.filter(p => p.playerId).map(p => p.playerId));
+  const previous = (oldPositions || []).filter((p: any) => p?.playerId).map((p: any) => p.playerId as string);
+  const orphans = previous.filter(id => !assigned.has(id));
+  const substitutes = [
+    ...(oldSubstitutes || []).filter(id => !orphans.includes(id)),
+    ...orphans,
+  ];
+
+  return { positions: newPositions, substitutes };
 };
 
 interface TeamSelection {
@@ -1008,9 +1074,16 @@ return (
                 <Select
                   value={currentTeam.periods[0]?.formation || ''}
                   onValueChange={(value) => {
-                    const updatedPeriods = currentTeam.periods.map((p, i) =>
-                      i === 0 ? { ...p, formation: value, positions: [] } : p
-                    );
+                    const updatedPeriods = currentTeam.periods.map((p, i) => {
+                      if (i !== 0) return p;
+                      const { positions, substitutes } = applyFormationChange(
+                        p.positions || [],
+                        p.substitutes || [],
+                        value,
+                        event.game_format || '11-a-side',
+                      );
+                      return { ...p, formation: value, positions, substitutes };
+                    });
                     handlePeriodsChange(updatedPeriods);
                   }}
                 >
@@ -1035,20 +1108,51 @@ return (
                 </div>
               )}
 
-              {/* Right: Opponent + Date */}
-              <div className="ios-card p-2 flex flex-col items-center justify-center text-center min-w-0 overflow-hidden">
-                <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5 truncate w-full">
-                  {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
-                </div>
-                <div className="text-sm font-semibold text-white leading-tight truncate w-full">
-                  {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
-                </div>
-                {event.opponent && event.date && (
-                  <div className="text-[9px] text-white/55 leading-tight mt-0.5 truncate w-full">
-                    {formatDate(parseISO(event.date), 'EEE d MMM')}
+              {/* Right: Opponent + Date — also acts as team switcher when multiple teams exist */}
+              {teamSelections.length > 1 ? (
+                <Select
+                  value={String(currentTeamIndex)}
+                  onValueChange={(v) => setCurrentTeamIndex(parseInt(v, 10))}
+                >
+                  <SelectTrigger className="ios-card h-auto p-2 flex flex-col items-center justify-center text-center border-0 bg-white/[0.04] [&>svg]:hidden gap-0 min-w-0 overflow-hidden">
+                    <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5 truncate w-full">
+                      {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
+                    </div>
+                    <div className="text-sm font-semibold text-white leading-tight truncate w-full">
+                      {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
+                    </div>
+                    {event.opponent && event.date && (
+                      <div className="text-[9px] text-white/55 leading-tight mt-0.5 truncate w-full">
+                        {formatDate(parseISO(event.date), 'EEE d MMM')}
+                      </div>
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamSelections.map((t, i) => {
+                      const cat = performanceCategories.find(c => c.id === t.performanceCategory);
+                      return (
+                        <SelectItem key={i} value={String(i)}>
+                          {`Team ${i + 1}${cat ? ` · ${cat.name}` : ''}`}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="ios-card p-2 flex flex-col items-center justify-center text-center min-w-0 overflow-hidden">
+                  <div className="text-[9px] uppercase tracking-wider text-white/55 leading-tight mb-0.5 truncate w-full">
+                    {event.opponent ? (event.is_home ? 'Home · vs' : 'Away · vs') : 'Date'}
                   </div>
-                )}
-              </div>
+                  <div className="text-sm font-semibold text-white leading-tight truncate w-full">
+                    {event.opponent || (event.date ? formatDate(parseISO(event.date), 'EEE d MMM') : '—')}
+                  </div>
+                  {event.opponent && event.date && (
+                    <div className="text-[9px] text-white/55 leading-tight mt-0.5 truncate w-full">
+                      {formatDate(parseISO(event.date), 'EEE d MMM')}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
