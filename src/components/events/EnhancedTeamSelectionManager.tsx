@@ -1074,9 +1074,16 @@ return (
                 <Select
                   value={currentTeam.periods[0]?.formation || ''}
                   onValueChange={(value) => {
-                    const updatedPeriods = currentTeam.periods.map((p, i) =>
-                      i === 0 ? { ...p, formation: value, positions: [] } : p
-                    );
+                    const updatedPeriods = currentTeam.periods.map((p, i) => {
+                      if (i !== 0) return p;
+                      const { positions, substitutes } = applyFormationChange(
+                        p.positions || [],
+                        p.substitutes || [],
+                        value,
+                        event.game_format || '11-a-side',
+                      );
+                      return { ...p, formation: value, positions, substitutes };
+                    });
                     handlePeriodsChange(updatedPeriods);
                   }}
                 >
