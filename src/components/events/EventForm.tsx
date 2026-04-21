@@ -635,14 +635,14 @@ export const EventForm: React.FC<EventFormProps> = ({
   ];
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
+    <Card className="w-full max-w-2xl mx-auto border-0 shadow-none bg-transparent sm:border sm:shadow-sm sm:bg-card">
+      <CardHeader className="max-sm:hidden">
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           {actualIsEditing ? 'Edit Event' : 'Create New Event'}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0 sm:px-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -668,11 +668,12 @@ export const EventForm: React.FC<EventFormProps> = ({
               </Select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="date">Date *</Label>
               <Input
                 id="date"
                 type="date"
+                className="w-full min-w-0"
                 value={formData.date}
                 onChange={(e) => {
                   const newDate = e.target.value;
@@ -783,14 +784,14 @@ export const EventForm: React.FC<EventFormProps> = ({
 
           {/* Match/Fixture specific fields */}
           {(formData.event_type === 'fixture' || formData.event_type === 'friendly' || formData.event_type === 'tournament') && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+            <div className="space-y-4 p-3 sm:p-4 border border-border/40 rounded-lg bg-muted/30 min-w-0">
               <h3 className="font-medium flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
                 Match Details
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                <div className="min-w-0">
                   <Label htmlFor="game_format">Game Format</Label>
                   <Select 
                     value={formData.game_format} 
@@ -809,11 +810,12 @@ export const EventForm: React.FC<EventFormProps> = ({
                   </Select>
                 </div>
                 
-                <div>
+                <div className="min-w-0">
                   <Label htmlFor="game_duration">Game Duration (minutes)</Label>
                   <Input
                     id="game_duration"
                     type="number"
+                    className="w-full min-w-0"
                     value={formData.game_duration}
                     onChange={(e) => setFormData(prev => ({ ...prev, game_duration: parseInt(e.target.value) || 50 }))}
                     placeholder="50"
@@ -868,7 +870,7 @@ export const EventForm: React.FC<EventFormProps> = ({
           )}
 
           {/* Time Settings - Now available for all event types */}
-          <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+          <div className="space-y-4 p-3 sm:p-4 border border-border/40 rounded-lg bg-muted/30 min-w-0">
             <h3 className="font-medium flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Time Settings
@@ -877,12 +879,13 @@ export const EventForm: React.FC<EventFormProps> = ({
             {/* Start Time Settings */}
             {formData.num_teams > 1 ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                  <div className="min-w-0">
                     <Label htmlFor="start_time">Default Start Time</Label>
                     <Input
                       id="start_time"
                       type="time"
+                      className="w-full min-w-0"
                       value={formData.start_time}
                       onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
                     />
@@ -890,11 +893,12 @@ export const EventForm: React.FC<EventFormProps> = ({
                       Used as default for all teams
                     </p>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <Label htmlFor="end_time">End Time</Label>
                     <Input
                       id="end_time"
                       type="time"
+                      className="w-full min-w-0"
                       value={formData.end_time}
                       onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
                     />
@@ -902,7 +906,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                 </div>
                 
                 {/* Team-specific times */}
-                <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                <div className="space-y-3 p-3 sm:p-4 border border-border/40 rounded-lg bg-muted/30 min-w-0">
                   <h3 className="font-medium flex items-center gap-2">
                     <Clock className="h-4 w-4" />
                     Team-Specific Times
@@ -1157,14 +1161,17 @@ export const EventForm: React.FC<EventFormProps> = ({
                   onClick={() => setShowSquadPicker(false)}
                   className="flex-1"
                 >
-                  Back to Event Details
+                  <span className="sm:hidden">Back</span>
+                  <span className="hidden sm:inline">Back to Event Details</span>
                 </Button>
                 <Button
                   type="submit"
                   className="flex-1"
                   disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create Event'}
+                  {loading
+                    ? (actualIsEditing ? 'Updating...' : 'Creating...')
+                    : (actualIsEditing ? 'Update Squad' : 'Create Event')}
                 </Button>
               </div>
             </div>
@@ -1201,11 +1208,11 @@ export const EventForm: React.FC<EventFormProps> = ({
               className="flex-1" 
               disabled={loading}
             >
-              {loading ? 'Saving...' : (
-                showSquadPicker ? 'Create Event' : 
-                invitationType === 'pick_squad' ? 'Pick Squad' : 
-                actualIsEditing ? 'Update Event' : 'Create Event'
-              )}
+              {loading
+                ? (actualIsEditing ? 'Updating...' : 'Saving...')
+                : invitationType === 'pick_squad'
+                  ? (actualIsEditing ? 'Update Squad' : 'Pick Squad')
+                  : (actualIsEditing ? 'Update Event' : 'Create Event')}
             </Button>
               </div>
             </>

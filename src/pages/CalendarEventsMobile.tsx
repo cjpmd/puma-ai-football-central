@@ -1233,7 +1233,7 @@ export default function CalendarEventsMobile() {
       {/* Event Details Modal */}
       <Dialog open={showEventDetails} onOpenChange={setShowEventDetails}>
         <DialogContent
-          className="w-full max-w-full sm:max-w-[425px] sm:max-h-[90vh] sm:overflow-y-auto overflow-x-hidden max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-screen max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:flex max-sm:flex-col max-sm:p-0"
+          className="w-full max-w-full sm:max-w-[425px] sm:max-h-[90vh] sm:overflow-y-auto overflow-x-hidden max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-screen max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:flex max-sm:flex-col max-sm:p-0 max-sm:[&>button]:hidden"
         >
           <DialogHeader className="max-sm:px-6 max-sm:pt-[max(env(safe-area-inset-top),1rem)] max-sm:pb-2 max-sm:shrink-0">
             <DialogTitle>Event Details</DialogTitle>
@@ -1247,6 +1247,14 @@ export default function CalendarEventsMobile() {
                 {getAvailabilityStatus(selectedEvent.id) && (
                   <AvailabilityStatusBadge status={getAvailabilityStatus(selectedEvent.id)!} size="md" />
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => setShowEventDetails(false)}
+                >
+                  Save & Close
+                </Button>
               </div>
               
               <div>
@@ -1479,26 +1487,39 @@ export default function CalendarEventsMobile() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[425px] sm:max-h-[90vh] sm:overflow-y-auto max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-screen max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:flex max-sm:flex-col max-sm:p-0 max-sm:[&>button]:hidden">
+          <DialogHeader className="max-sm:px-4 max-sm:pt-[max(env(safe-area-inset-top),1rem)] max-sm:pb-2 max-sm:shrink-0 max-sm:flex-row max-sm:items-center max-sm:justify-between max-sm:space-y-0">
             <DialogTitle>
               {selectedEvent ? 'Edit Event' : 'Create Event'}
             </DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="max-sm:inline-flex hidden"
+              onClick={() => {
+                setShowEventForm(false);
+                if (selectedEvent) setShowEventDetails(true);
+              }}
+            >
+              Close
+            </Button>
           </DialogHeader>
-          <EventForm
-            event={convertToEventFormat(selectedEvent)}
-            teamId={teams?.[0]?.id || ''}
-            onSubmit={handleFormSubmit}
-            onEventCreated={(eventId) => {
-              setShowEventForm(false);
-              loadEvents();
-              setShowEventDetails(true);
-            }}
-            onCancel={() => {
-              setShowEventForm(false);
-              setShowEventDetails(true);
-            }}
-          />
+          <div className="max-sm:flex-1 max-sm:overflow-y-auto max-sm:px-4 max-sm:pb-[max(env(safe-area-inset-bottom),1rem)]">
+            <EventForm
+              event={convertToEventFormat(selectedEvent)}
+              teamId={teams?.[0]?.id || ''}
+              onSubmit={handleFormSubmit}
+              onEventCreated={(eventId) => {
+                setShowEventForm(false);
+                loadEvents();
+                setShowEventDetails(true);
+              }}
+              onCancel={() => {
+                setShowEventForm(false);
+                setShowEventDetails(true);
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
