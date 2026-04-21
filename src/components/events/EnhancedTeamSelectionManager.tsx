@@ -44,6 +44,72 @@ const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): For
   };
 };
 
+// Mirror of GameDayStyleFormationEditor's position-group classifier
+const getPositionGroupFromName = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
+  const n = (positionName || '').toLowerCase();
+  if (n.includes('goalkeeper')) return 'goalkeeper';
+  if (n.includes('defender')) return 'defender';
+  if (n.includes('midfielder')) return 'midfielder';
+  if (n.includes('striker') || n.includes('attacking')) return 'forward';
+  return 'midfielder';
+};
+
+const getDefaultAbbrev = (positionName: string): string => {
+  const map: Record<string, string> = {
+    'Goalkeeper': 'GK',
+    'Defender Left': 'DL', 'Defender Right': 'DR', 'Defender Centre': 'DC',
+    'Defender Centre Left': 'DCL', 'Defender Centre Right': 'DCR',
+    'Midfielder Left': 'ML', 'Midfielder Right': 'MR', 'Midfielder Centre': 'MC',
+    'Midfielder Centre Left': 'MCL', 'Midfielder Centre Right': 'MCR',
+    'Defensive Midfielder Left': 'DML', 'Defensive Midfielder Right': 'DMR', 'Defensive Midfielder Centre': 'DMC',
+    'Attacking Midfielder Left': 'AML', 'Attacking Midfielder Right': 'AMR', 'Attacking Midfielder Centre': 'AMC',
+    'Attacking Midfielder Centre Left': 'AMCL', 'Attacking Midfielder Centre Right': 'AMCR',
+    'Striker Left': 'SL', 'Striker Right': 'SR', 'Striker Centre': 'SC',
+    'Striker Centre Left': 'SCL', 'Striker Centre Right': 'SCR',
+  };
+  return map[positionName] || positionName.split(' ').map(w => w[0]).join('').toUpperCase();
+};
+
+// Build new position slots for a formation, preserving prior player assignments by name then group.
+// Orphans (players whose old position has no match in the new formation) are returned for benching.
+const applyFormationChange = (
+  oldPositions: Array<any>,
+  oldSubstitutes: string[],
+  newFormationId: string,
+  gameFormat: string,
+): { positions: Array<any>; substitutes: string[] } => {
+  const slots = getPositionsForFormation(newFormationId, gameFormat as any);
+  const newPositions = slots.map((pos) => ({
+    id: `position-${Math.random().toString(36).substr(2, 9)}`,
+    positionName: pos.position,
+    abbreviation: getDefaultAbbrev(pos.position),
+    positionGroup: getPositionGroupFromName(pos.position),
+    x: pos.x,
+    y: pos.y,
+    playerId: undefined as string | undefined,
+  }));
+
+  (oldPositions || []).forEach((oldPos: any) => {
+    if (!oldPos?.playerId) return;
+    let idx = newPositions.findIndex(p => p.positionName === oldPos.positionName && !p.playerId);
+    if (idx === -1) {
+      const grp = getPositionGroupFromName(oldPos.positionName);
+      idx = newPositions.findIndex(p => getPositionGroupFromName(p.positionName) === grp && !p.playerId);
+    }
+    if (idx !== -1) newPositions[idx].playerId = oldPos.playerId;
+  });
+
+  const assigned = new Set(newPositions.filter(p => p.playerId).map(p => p.playerId));
+  const previous = (oldPositions || []).filter((p: any) => p?.playerId).map((p: any) => p.playerId as string);
+  const orphans = previous.filter(id => !assigned.has(id));
+  const substitutes = [
+    ...(oldSubstitutes || []).filter(id => !orphans.includes(id)),
+    ...orphans,
+  ];
+
+  return { positions: newPositions, substitutes };
+};
+
 interface TeamSelection {
   teamNumber: number;
   squadPlayers: SquadPlayer[];
