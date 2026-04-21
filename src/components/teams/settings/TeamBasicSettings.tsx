@@ -171,13 +171,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const gameFormats = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
+    <div className="space-y-6 min-w-0 max-w-full">
+      <Card className="border-0 shadow-none bg-transparent sm:border sm:shadow-sm sm:bg-card">
+        <CardHeader className="px-0 sm:px-6">
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-4 px-0 sm:px-6 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0 max-w-full">
             <div>
               <Label htmlFor="name">Team Name</Label>
               <Input
@@ -290,12 +290,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-none bg-transparent sm:border sm:shadow-sm sm:bg-card">
+        <CardHeader className="px-0 sm:px-6">
           <CardTitle>Manager Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-4 px-0 sm:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0 max-w-full">
             <div>
               <Label htmlFor="managerName">Manager Name</Label>
               <Input

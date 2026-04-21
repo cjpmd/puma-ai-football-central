@@ -118,9 +118,9 @@ export const PlayerKitSizesOverview: React.FC<PlayerKitSizesOverviewProps> = ({ 
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="border-0 shadow-none bg-transparent sm:border sm:shadow-sm sm:bg-card">
+      <CardHeader className="px-0 sm:px-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Shirt className="h-5 w-5" />
@@ -130,13 +130,13 @@ export const PlayerKitSizesOverview: React.FC<PlayerKitSizesOverviewProps> = ({ 
               Overview of all player kit sizes for easy ordering
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
+          <Button variant="outline" size="sm" onClick={exportToCSV} className="self-start sm:self-auto">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-0 sm:px-6">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -150,14 +150,14 @@ export const PlayerKitSizesOverview: React.FC<PlayerKitSizesOverviewProps> = ({ 
 
         {/* Table */}
         {filteredPlayers.length > 0 ? (
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Player</TableHead>
                   {kitItems.map(item => (
-                    <TableHead key={item} className="text-center">{item}</TableHead>
+                    <TableHead key={item} className="text-center whitespace-normal max-w-[120px] align-top">{item}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>

@@ -620,14 +620,16 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
 
       {/* Player Kit Sizes Overview Dialog */}
       <Dialog open={isKitOverviewOpen} onOpenChange={setIsKitOverviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[85vh] overflow-hidden p-0 sm:p-6 flex flex-col">
+          <DialogHeader className="px-4 pt-4 sm:px-0 sm:pt-0">
             <DialogTitle>Player Kit Sizes - {team.name}</DialogTitle>
             <DialogDescription>
               View all player kit sizes for easy ordering
             </DialogDescription>
           </DialogHeader>
-          <PlayerKitSizesOverview teamId={team.id} teamName={team.name} />
+          <div className="flex-1 overflow-y-auto overflow-x-auto px-4 pb-4 sm:px-0 sm:pb-0">
+            <PlayerKitSizesOverview teamId={team.id} teamName={team.name} />
+          </div>
         </DialogContent>
       </Dialog>
 
