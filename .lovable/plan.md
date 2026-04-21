@@ -1,55 +1,62 @@
 
 
-## Plan: Fix mobile rendering issues across Team Settings, Kit Overview, and Team Selection
+## Plan: Make Event Details + Team Selection true full-screen on mobile / iOS standalone
 
-### Issue 1 — Team Settings → Basic Info: form fields look uncomfortable on mobile
-The Sheet renders fine, but the top input has its label scrolled away on first open (looks like an unlabeled field). Cause: the form's first field is wrapped in a `grid grid-cols-1 md:grid-cols-2` and the Sheet opens scrolled to the top of the inner Card, which on a 390px viewport hides the "Age Group" `Label` because the input sits flush against the SheetHeader border.
+Both screens look like floating cards because the underlying `DialogContent` is centered (`top-[50%] translate-y-[-50%]`) and capped at `max-h-[90/92vh]`. On a phone — especially Capacitor / standalone — the leftover ~5% top + ~5% bottom strips show through as wallpaper, and the Team Selection bench is clipped because the card never reaches the bottom of the screen.
 
-Fix in `src/components/teams/settings/TeamBasicSettings.tsx`:
-- Add `pt-2` to the first `CardContent` so the first label gets breathing room from the sheet border.
-- Wrap the inner Cards in `border-0 bg-transparent shadow-none` (or similar) on mobile so they don't render duplicate borders inside the Sheet — the Sheet itself already provides the visual container, eliminating the "double box" effect visible in IMG_2729.
-- Apply the `min-w-0 max-w-full` guard to the grid so long location strings don't push the card outside the sheet width.
+Fix is scoped to two `DialogContent` overrides; no changes to the shared `Dialog` primitive, no behaviour changes.
 
-### Issue 2 — Player Kit Sizes overview overflows the screen (IMG_2730)
-The dialog uses `max-w-4xl max-h-[80vh] overflow-y-auto` (`TeamKitManagementSettings.tsx` line 623). On a 390px viewport the underlying `DialogContent` enforces `w-full max-w-lg` with `p-6`, and the long table column headers ("Home Kit (Shirt, Shorts & Socks)") force the inner content wider than the dialog → the close X is pushed half off-screen and the title is clipped.
+### 1. Event Details modal — `src/pages/CalendarEventsMobile.tsx` (line 1234)
 
-Fix:
-- In `TeamKitManagementSettings.tsx`: change the overview Dialog's `DialogContent` className to `max-w-[95vw] sm:max-w-4xl max-h-[85vh] overflow-hidden p-0 sm:p-6 flex flex-col`.
-- Wrap the body in a `ScrollArea`/scrollable div with both `overflow-y-auto` and `overflow-x-auto`, and add `px-4 pt-4 pb-4` so content has padding without touching the dialog edge.
-- In `src/components/clubs/PlayerKitSizesOverview.tsx`:
-  - Wrap the `<Table>` in `<div className="overflow-x-auto -mx-2">` so wide tables scroll horizontally instead of pushing the card.
-  - Cap the kit-item column headers to two-line wrap with `whitespace-normal max-w-[120px]` to prevent the "Home Kit (Shirt, Shorts & Socks)" column from blowing the table to 3× viewport width.
-  - Make the outer `Card` use `border-0 bg-transparent shadow-none p-0` on mobile so it doesn't add another inner box inside the dialog.
-  - Header row: stack the title + Export button vertically on mobile (`flex-col gap-2 sm:flex-row sm:items-center`) so the Export button doesn't fight the title.
+Current:
+```
+<DialogContent className="w-full max-w-full sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+```
 
-### Issue 3 — Team Selection: PWA wastes the top half of screen (IMG_2732)
-The Team Selection modal is opened via a `Dialog` whose default `DialogContent` applies `p-6` and `border` even on mobile. The mobile override on line 989 only removes the close button, border and background — `p-6` still applies, so on iOS PWA standalone (no browser chrome) we get a 24px transparent strip plus the wallpaper showing through the ~88px taller available viewport, leaving the header card floating well below the status bar.
+Change on mobile (default state) to a true fullscreen sheet anchored top-left so Radix's centering transform is neutralised:
 
-Fix in `src/components/events/EnhancedTeamSelectionManager.tsx`:
-- Add `p-0` to the mobile `DialogContent` className (line 989): `${isMobile ? '[&>button]:hidden border-0 bg-transparent shadow-none p-0' : ''}`.
-- Change the inner wrapper height from `h-[calc(100dvh-56px)]` to `h-[100dvh] max-h-[100dvh]` and let the safe-area handle the top inset (it already does via `pt-[calc(env(safe-area-inset-top)+0.75rem)]` on the header bar). The `-56px` subtraction was compensating for `MobileLayout`'s header which is **not** rendered behind the modal — removing it lets the dialog use the full screen, eliminating the top band visible in the PWA screenshot.
-- Remove the `rounded-xl` on the inner wrapper for mobile so the dialog truly hits the screen edges (`${isMobile ? '' : 'rounded-xl'}`).
-- The 3-box hero row is already constrained — no change needed; with the extra vertical space recovered, the Formation pitch will use ~88px more height in the PWA, matching the mobile-browser experience.
+- Override the centering with `top-0 left-0 translate-x-0 translate-y-0` on mobile (revert to default at `sm:`).
+- Use `w-screen h-[100dvh] max-h-[100dvh] max-w-none rounded-none` on mobile so the dark card occupies the entire viewport (no purple wallpaper band top or bottom).
+- Drop `max-h-[90vh]` for mobile; keep `sm:max-h-[90vh] sm:max-w-[425px]` so desktop is unchanged.
+- Add `pt-[max(env(safe-area-inset-top),1rem)] pb-[env(safe-area-inset-bottom)]` so the title clears the Dynamic Island and content respects the home-bar inset.
+- Replace `overflow-y-auto` on `DialogContent` with a flex column (`flex flex-col`) and move the scroll onto the inner content wrapper so the close button stays pinned to the top of the screen.
 
-This is a CSS-only change; behaviour, save logic, and tab structure are untouched.
+The visible `Event Details` title, Friendly/Available chips, map and Team Selection sections stay identical — only the frame around them goes edge-to-edge.
+
+### 2. Team Selection modal — `src/components/events/EnhancedTeamSelectionManager.tsx` (line 989)
+
+The inner wrapper already uses `h-[100dvh]` and `ios-wallpaper-dawn`, but the host `DialogContent` is still centered and has `max-h-[92vh]`, so:
+- A purple wallpaper band shows above the header (visible in IMG_2738 between the status bar and the "Team Selection" title).
+- The bottom is clipped → the "Players & playing time" bar below the bench is cut off.
+
+Apply the same fullscreen overrides on mobile only:
+- `top-0 left-0 translate-x-0 translate-y-0 w-screen h-[100dvh] max-h-[100dvh] max-w-none rounded-none` (mobile).
+- Keep current `sm:max-w-6xl xl:max-w-7xl max-h-[92vh]` for desktop.
+- Inner wrapper: change `h-[100dvh]` → `h-full` so it fills the now-correct parent (and remove the redundant `max-h-[100dvh]`).
+- Header `pt-[calc(env(safe-area-inset-top)+0.75rem)]` already exists — keep as-is so the back chevron clears the Dynamic Island.
+- Add `pb-[env(safe-area-inset-bottom)]` to the outer wrapper so the substitute bench's bottom row is no longer hidden under the home indicator.
+
+This reclaims the ~88px top band + ~30px bottom band visible in the screenshot, which is exactly the space the cut-off bench bar needs.
+
+### 3. Sanity check on the Dialog overlay
+
+The shared `DialogOverlay` uses `bg-black/85` — perfect for fullscreen standalone (no purple wallpaper bleed). No changes needed.
 
 ### Files modified
 
 | File | Change |
 |------|--------|
-| `src/components/teams/settings/TeamBasicSettings.tsx` | Add top padding to first CardContent; flatten inner Card chrome on mobile so it doesn't double up against the Sheet. |
-| `src/components/teams/settings/TeamKitManagementSettings.tsx` | Make the Player Kit Sizes overview Dialog mobile-safe (`max-w-[95vw]`, `p-0` on mobile, scrollable inner area). |
-| `src/components/clubs/PlayerKitSizesOverview.tsx` | Wrap table in horizontal-scroll container; constrain column header width with `whitespace-normal max-w-[120px]`; flatten outer Card on mobile; stack header row on mobile. |
-| `src/components/events/EnhancedTeamSelectionManager.tsx` | Add `p-0` to mobile DialogContent; change inner wrapper to true `100dvh` and drop the unnecessary 56px subtraction so PWA uses the full screen. |
+| `src/pages/CalendarEventsMobile.tsx` | Make the Event Details `DialogContent` true fullscreen on mobile (anchor top-left, `w-screen h-[100dvh]`, safe-area paddings, scroll moved to inner div). Desktop unchanged. |
+| `src/components/events/EnhancedTeamSelectionManager.tsx` | Add the same fullscreen anchor overrides to Team Selection's `DialogContent`; switch inner wrapper to `h-full` and add bottom safe-area padding so the bench bar stops being clipped. |
 
 ### Out of scope
-- Other Team Settings sub-pages (Kit Designer, Performance Categories, etc.) — separate review pass if they show similar issues.
-- Native iOS Capacitor build — fix is purely CSS so it works in both PWA standalone and in-app webview.
-- Refactoring the Sheet component itself.
+- The shared `DialogContent` primitive (used by ~50 dialogs) — leaving as-is to avoid regressions on every other modal.
+- Native splash, status bar styling, or Capacitor config changes.
+- Inner layouts of either screen — only the outer frame goes fullscreen.
 
-### Verification (390x844)
-- Open Team Settings → Basic Info: first label "Team Name" visible without scrolling, no double border, location field doesn't push past the sheet.
-- Open Team Settings → Kit Sizes → "View Player Kit Sizes": dialog fits the screen, X close visible top-right, table scrolls horizontally without distorting the dialog.
-- Open an event → Team Selection from the iOS Home Screen PWA: the header (Save & Close + title) sits just below the iPhone notch with no large empty band above; the formation pitch fills the recovered ~88px.
-- Mobile browser still renders correctly (dialog respects browser chrome via `100dvh`).
+### Verification
+- iOS standalone (Xcode build): open Event Details → dark card fills the entire screen, title sits just below the Dynamic Island, no purple band above or below.
+- Open Team Selection → header clears the Dynamic Island, formation pitch grows, the "BENCH · drag to swap" bar and the playing-time row beneath it are fully visible above the home indicator.
+- Mobile Safari (browser chrome present): both modals still fill the available viewport via `100dvh`.
+- Desktop: both dialogs render exactly as today (sm: classes preserved).
 
