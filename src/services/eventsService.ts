@@ -445,6 +445,7 @@ export const eventsService = {
           .map(inv => ({
             event_id: eventId,
             user_id: inv.user_id,
+            player_id: inv.invitee_type === 'player' ? (inv.player_id ?? null) : null,
             role: inv.invitee_type, // 'player' or 'staff'
             status: 'pending' as const,
             notification_sent_at: new Date().toISOString()
@@ -607,6 +608,7 @@ export const eventsService = {
             .map(inv => ({
               event_id: eventData.id,
               user_id: inv.user_id,
+              player_id: inv.invitee_type === 'player' ? (inv.player_id ?? null) : null,
               role: inv.invitee_type, // 'player' or 'staff'
               status: 'pending' as const,
               notification_sent_at: new Date().toISOString()

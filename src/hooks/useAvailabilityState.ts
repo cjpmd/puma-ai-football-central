@@ -162,6 +162,7 @@ export const useAvailabilityState = (eventId?: string) => {
             .from('event_availability')
             .update({
               status,
+              player_id: playerId,
               last_updated_by: userId,
               responded_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
@@ -171,22 +172,47 @@ export const useAvailabilityState = (eventId?: string) => {
           if (error) throw error;
           logger.log('Updated existing player availability record');
         } else {
-          // Create new player-based record
-          const { error } = await supabase
+          // Fallback: record may exist without player_id (created before this fix)
+          const { data: existingByUser } = await supabase
             .from('event_availability')
-            .insert({
-              event_id: eventId,
-              user_id: userId,
-              player_id: playerId,
-              role: 'player',
-              status,
-              last_updated_by: userId,
-              responded_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
+            .select('id')
+            .eq('event_id', eventId)
+            .eq('user_id', userId)
+            .eq('role', 'player')
+            .maybeSingle();
 
-          if (error) throw error;
-          logger.log('Created new player availability record');
+          if (existingByUser) {
+            const { error } = await supabase
+              .from('event_availability')
+              .update({
+                status,
+                player_id: playerId,
+                last_updated_by: userId,
+                responded_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingByUser.id);
+
+            if (error) throw error;
+            logger.log('Updated existing player availability record (backfilled player_id)');
+          } else {
+            // Create new player-based record
+            const { error } = await supabase
+              .from('event_availability')
+              .insert({
+                event_id: eventId,
+                user_id: userId,
+                player_id: playerId,
+                role: 'player',
+                status,
+                last_updated_by: userId,
+                responded_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+
+            if (error) throw error;
+            logger.log('Created new player availability record');
+          }
         }
 
         // If marking as unavailable, remove from squad and formation

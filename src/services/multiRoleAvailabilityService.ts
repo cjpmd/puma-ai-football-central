@@ -202,6 +202,25 @@ export const multiRoleAvailabilityService = {
 
     if (existing) return; // Record already exists
 
+    // Fallback: record may exist without player_id (created before the fix)
+    const { data: existingByUser } = await supabase
+      .from('event_availability')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .eq('role', 'player')
+      .maybeSingle();
+
+    if (existingByUser) {
+      // Patch the missing player_id so future lookups work
+      const { error } = await supabase
+        .from('event_availability')
+        .update({ player_id: playerId })
+        .eq('id', existingByUser.id);
+      if (error) throw error;
+      return;
+    }
+
     // Create new pending record
     const { error } = await supabase
       .from('event_availability')
