@@ -9,6 +9,7 @@ import { availabilityService } from '@/services/availabilityService';
 import { toast } from 'sonner';
 import { DatabaseEvent } from '@/types/event';
 import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AvailabilityConfirmationProps {
   event: DatabaseEvent;
@@ -26,13 +27,18 @@ export const AvailabilityConfirmation: React.FC<AvailabilityConfirmationProps> =
   onStatusUpdate
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const { user } = useAuth();
 
   const handleStatusUpdate = async (status: 'available' | 'unavailable') => {
+    if (!user?.id) {
+      toast.error('Not authenticated');
+      return;
+    }
     try {
       setIsUpdating(true);
       await availabilityService.updateAvailabilityStatus(
         event.id,
-        availabilityRecord.id,
+        user.id,
         availabilityRecord.role,
         status
       );
