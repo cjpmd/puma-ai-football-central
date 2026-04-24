@@ -397,19 +397,31 @@ export default function CalendarEventsMobile() {
       const endDateStr = windowEnd.toISOString().split('T')[0];
 
       // Run all three queries in parallel — previously 3 sequential round-trips
+      console.time('[perf] CalendarEventsMobile.loadEvents');
       const [privacyResult, eventsResult, selectionsResult] = await Promise.all([
         supabase
           .from('team_privacy_settings')
           .select('team_id, show_scores_to_parents, show_scores_to_players')
           .in('team_id', teamIds),
+
+        // Explicit column list instead of SELECT * — trims large/unused fields
+        // (status, facility_id, facility_booking_id, player_of_match_id, etc.)
         supabase
           .from('events')
-          .select('*')
+          .select(
+            'id, team_id, title, date, start_time, end_time, event_type, opponent, ' +
+            'is_home, scores, location, latitude, longitude, description, notes, ' +
+            'coach_notes, staff_notes, training_notes, kit_selection, game_format, ' +
+            'game_duration, meeting_time, recurring_group_id, created_at, updated_at'
+          )
           .in('team_id', teamIds)
           .gte('date', startDateStr)
           .lte('date', endDateStr)
           .order('date', { ascending: false })
           .limit(300),
+
+        // Scoped to the same 9-month window via a join filter so we don't load
+        // all-time event_selections for the team on every mount.
         supabase
           .from('event_selections')
           .select(`
@@ -417,10 +429,14 @@ export default function CalendarEventsMobile() {
             team_number,
             team_id,
             performance_category_id,
-            performance_categories!inner(name)
+            performance_categories!inner(name),
+            events!inner(date)
           `)
-          .in('team_id', teamIds),
+          .in('team_id', teamIds)
+          .gte('events.date', startDateStr)
+          .lte('events.date', endDateStr),
       ]);
+      console.timeEnd('[perf] CalendarEventsMobile.loadEvents');
 
       if (eventsResult.error) throw eventsResult.error;
       if (selectionsResult.error) throw selectionsResult.error;

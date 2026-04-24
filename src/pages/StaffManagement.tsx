@@ -159,53 +159,39 @@ const StaffManagement = () => {
   const fetchClubStaff = async (clubId: string) => {
     try {
       logger.log('Fetching club staff for club:', clubId);
-      
-      const { data: userClubsData, error: userClubsError } = await supabase
+
+      // Single join query replaces the previous two-step sequential fetch
+      // (user_clubs → collect IDs → profiles).  fk_user_clubs_user_id links
+      // user_clubs.user_id → profiles.id so Supabase resolves the join in one
+      // round-trip instead of two.
+      console.time('[perf] StaffManagement.fetchClubStaff');
+      const { data: clubStaffData, error: clubStaffError } = await supabase
         .from('user_clubs')
-        .select('user_id, role')
+        .select('user_id, role, profiles!fk_user_clubs_user_id(id, name, email, phone)')
         .eq('club_id', clubId);
+      console.timeEnd('[perf] StaffManagement.fetchClubStaff');
 
-      if (userClubsError) {
-        logger.error('Error fetching user clubs:', userClubsError);
-        throw userClubsError;
-      }
-      
-      logger.log('User clubs data:', userClubsData);
-      
-      if (!userClubsData || userClubsData.length === 0) {
-        setClubStaff([]);
-        return;
-      }
-      
-      const userIds = userClubsData.map(uc => uc.user_id);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, email, phone')
-        .in('id', userIds);
-
-      if (profilesError) {
-        logger.error('Error fetching profiles:', profilesError);
-        throw profilesError;
+      if (clubStaffError) {
+        logger.error('Error fetching club staff:', clubStaffError);
+        throw clubStaffError;
       }
 
-      logger.log('Profiles data:', profilesData);
-      
-      const staffMembers: StaffMember[] = userClubsData
-        .map(clubUser => {
-          const profile = profilesData?.find(p => p.id === clubUser.user_id);
-          if (profile) {
-            return {
-              id: clubUser.user_id,
-              name: profile.name || 'Unknown',
-              email: profile.email || 'No email',
-              phone: profile.phone || '',
-              role: clubUser.role as UserRole
-            };
-          }
-          return null;
+      logger.log('Club staff data:', clubStaffData);
+
+      const staffMembers: StaffMember[] = (clubStaffData || [])
+        .map(row => {
+          const profile = row.profiles as any;
+          if (!profile) return null;
+          return {
+            id: row.user_id,
+            name: profile.name || 'Unknown',
+            email: profile.email || 'No email',
+            phone: profile.phone || '',
+            role: row.role as UserRole
+          };
         })
-        .filter(member => member !== null) as StaffMember[];
-      
+        .filter(Boolean) as StaffMember[];
+
       setClubStaff(staffMembers);
     } catch (error: any) {
       logger.error('Error in fetchClubStaff:', error);
