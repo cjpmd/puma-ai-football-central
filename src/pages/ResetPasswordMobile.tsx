@@ -153,7 +153,7 @@ export default function ResetPasswordMobile() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
+              src="/brand/stopwatch-mark.svg" 
               alt="Origin Sports" 
               className="w-16 h-16"
             />
