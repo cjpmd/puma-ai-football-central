@@ -3,7 +3,7 @@ import { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
   appId: 'app.lovable.5d10e51a846140f2a89960ebdbbef2fc',
-  appName: 'origin-sports',
+  appName: 'Origin Sports',
   webDir: 'dist',
   // Only use server.url for development with hot reload
   // Remove this for production native builds
