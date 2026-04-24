@@ -433,7 +433,7 @@ export default function DashboardMobile() {
       console.time('[perf] DashboardMobile batch-2');
       const [
         playerAvailabilityData,
-        staffAvailabilityResult,
+        userAvailabilityResult,
         eventSelectionsResult,
       ] = await Promise.all([
         getPlayerAvailabilityForEvents(linkedPlayerIds, upcomingEventIds),
@@ -441,11 +441,10 @@ export default function DashboardMobile() {
         upcomingEventIds.length > 0
           ? supabase
               .from('event_availability')
-              .select('event_id, status')
+              .select('event_id, status, role')
               .eq('user_id', user.id)
               .in('event_id', upcomingEventIds)
-              .eq('role', 'staff')
-          : Promise.resolve({ data: [] as Array<{ event_id: string; status: string }>, error: null }),
+          : Promise.resolve({ data: [] as Array<{ event_id: string; status: string; role: string }>, error: null }),
 
         recentEventIds.length > 0
           ? supabase
@@ -464,13 +463,13 @@ export default function DashboardMobile() {
       setTeamPrivacySettings(settingsMap);
 
       // ─── Upcoming events + availability map ───────────────────────────────
-      const staffAvailabilityData = staffAvailabilityResult.data || [];
+      const userAvailabilityData = userAvailabilityResult.data || [];
 
       const availabilityMap = new Map<string, string>();
       playerAvailabilityData.forEach(record => {
         availabilityMap.set(record.event_id, record.status);
       });
-      staffAvailabilityData.forEach(record => {
+      userAvailabilityData.forEach(record => {
         if (!availabilityMap.has(record.event_id)) {
           availabilityMap.set(record.event_id, record.status);
         }
@@ -551,57 +550,48 @@ export default function DashboardMobile() {
       const limitedRecentResults = recentResults.slice(0, 6);
 
       // ─── Pending availability (reuse batch-2 data, no extra round-trips) ──
-      const upcomingEventsForAvailability = upcomingEvents.filter(event => {
-        const eventDate = new Date(event.date);
-        const now = new Date();
-        return eventDate > now;
-      });
+      // Mirror the same logic as CalendarEventsMobile: query by user_id across
+      // all roles, group by event, show as pending only when ALL roles pending.
+      const now = new Date();
+      const upcomingEventsForAvailability = upcomingEvents.filter(event =>
+        new Date(event.date) > now
+      );
+      const futureEventIds = new Set(upcomingEventsForAvailability.map(e => e.id));
 
-      const eventIds = new Set(upcomingEventsForAvailability.map(event => event.id));
+      // Group user's availability records by event_id (all roles, future events only)
+      const availabilityByEvent = new Map<string, string[]>();
+      userAvailabilityData
+        .filter(a => futureEventIds.has(a.event_id))
+        .forEach(a => {
+          const list = availabilityByEvent.get(a.event_id) ?? [];
+          list.push(a.status);
+          availabilityByEvent.set(a.event_id, list);
+        });
 
-      const hasLinkedPlayers = linkedPlayerIds.length > 0;
-      const isTeamStaff = (staffCheckResult.data?.length ?? 0) > 0;
-
-      let pendingAvailabilityData: any[] = [];
-
-      if (hasLinkedPlayers || isTeamStaff) {
-        // Filter already-fetched availability data to the future-event subset
-        const pendingPlayerAvailability = playerAvailabilityData.filter(a => eventIds.has(a.event_id));
-        const pendingStaffAvailability  = staffAvailabilityData.filter(a => eventIds.has(a.event_id));
-
-        const pendingStatusMap = new Map<string, string>();
-
-        pendingPlayerAvailability.forEach(a => {
-          const current = pendingStatusMap.get(a.event_id);
-          if (!current || a.status !== 'pending') {
-            pendingStatusMap.set(a.event_id, a.status);
+      // Also merge player_id-based records (parent/multi-player scenario)
+      playerAvailabilityData
+        .filter(a => futureEventIds.has(a.event_id))
+        .forEach(a => {
+          if (!availabilityByEvent.has(a.event_id)) {
+            availabilityByEvent.set(a.event_id, [a.status]);
           }
         });
 
-        pendingStaffAvailability.forEach(a => {
-          const current = pendingStatusMap.get(a.event_id);
-          if (!current || (current === 'pending' && a.status !== 'pending')) {
-            pendingStatusMap.set(a.event_id, a.status);
-          }
-        });
-
-        const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
-          const status = pendingStatusMap.get(event.id);
-          return !status || status === 'pending';
-        });
-
-        pendingAvailabilityData = eventsNeedingAvailability.map(event => ({
+      // An event needs a response only if the user has been invited (has records)
+      // AND every record for that event is still 'pending'
+      const pendingAvailabilityData = upcomingEventsForAvailability
+        .filter(event => {
+          const statuses = availabilityByEvent.get(event.id);
+          return statuses && statuses.length > 0 && statuses.every(s => s === 'pending');
+        })
+        .map(event => ({
           id: `${event.id}_${user.id}`,
           event_id: event.id,
           user_id: user.id,
           role: 'player',
           status: 'pending',
-          events: {
-            ...event,
-            team_context: event.team_context
-          }
+          events: { ...event, team_context: event.team_context }
         }));
-      }
 
       setStats({
         playersCount: playersCountResult.count || 0,
