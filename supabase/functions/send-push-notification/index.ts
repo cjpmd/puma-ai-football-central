@@ -274,6 +274,82 @@ function buildEncryptedBody(
   return result;
 }
 
+// Import APNs .p8 EC private key (PKCS#8 PEM)
+async function importAPNsKey(pemKey: string): Promise<CryptoKey> {
+  const pem = pemKey
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\s+/g, '');
+  const binaryDer = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
+  return await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer.buffer,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+}
+
+// APNs JWT valid for 1 hour (Apple max is 1 hour)
+async function createAPNsJwt(teamId: string, keyId: string, privateKey: CryptoKey): Promise<string> {
+  const header = base64UrlEncode(stringToUint8Array(JSON.stringify({ alg: 'ES256', kid: keyId })));
+  const payload = base64UrlEncode(stringToUint8Array(JSON.stringify({ iss: teamId, iat: Math.floor(Date.now() / 1000) })));
+  const unsigned = `${header}.${payload}`;
+  const signatureBytes = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    stringToUint8Array(unsigned)
+  );
+  return `${unsigned}.${base64UrlEncode(new Uint8Array(signatureBytes))}`;
+}
+
+// Send APNs notification directly via HTTP/2 (no FCM relay)
+async function sendAPNsNotification(
+  deviceToken: string,
+  title: string,
+  body: string,
+  eventId: string | undefined,
+  apnsKeyId: string,
+  apnsTeamId: string,
+  apnsAuthKey: string,
+  apnsBundleId: string,
+  sandbox: boolean
+): Promise<{ success: boolean; error?: string; statusCode?: number }> {
+  try {
+    const privateKey = await importAPNsKey(apnsAuthKey);
+    const jwt = await createAPNsJwt(apnsTeamId, apnsKeyId, privateKey);
+    const host = sandbox ? 'api.sandbox.push.apple.com' : 'api.push.apple.com';
+    const url = `https://${host}/3/device/${deviceToken}`;
+    const apnsPayload = JSON.stringify({
+      aps: { alert: { title, body }, sound: 'default', badge: 1 },
+      eventId: eventId || ''
+    });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `bearer ${jwt}`,
+        'apns-topic': apnsBundleId,
+        'apns-push-type': 'alert',
+        'apns-priority': '10',
+        'Content-Type': 'application/json'
+      },
+      body: apnsPayload
+    });
+    const statusCode = response.status;
+    if (statusCode === 200) {
+      console.log('[APNs] Sent successfully to token:', deviceToken.substring(0, 10) + '...');
+      return { success: true, statusCode };
+    } else {
+      const errorText = await response.text();
+      console.error('[APNs] Error:', statusCode, errorText);
+      return { success: false, error: `APNs ${statusCode}: ${errorText}`, statusCode };
+    }
+  } catch (error) {
+    console.error('[APNs] Exception:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // Send FCM notification
 async function sendFCMNotification(
   pushToken: string, 
@@ -482,7 +558,21 @@ serve(async (req) => {
 
     console.log('[Push] Target user IDs:', targetUserIds);
 
-    // Get push tokens for target users
+    // Get environment variables
+    const fcmServerKey = Deno.env.get('FCM_SERVER_KEY')
+    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
+    const apnsKeyId = Deno.env.get('APNS_KEY_ID')
+    const apnsTeamId = Deno.env.get('APNS_TEAM_ID')
+    const apnsAuthKey = Deno.env.get('APNS_AUTH_KEY')
+    const apnsBundleId = Deno.env.get('APNS_BUNDLE_ID')
+    const apnsSandbox = Deno.env.get('APNS_SANDBOX') === 'true'
+
+    console.log('[Push] VAPID keys configured:', !!vapidPublicKey && !!vapidPrivateKey);
+    console.log('[Push] FCM key configured:', !!fcmServerKey);
+    console.log('[Push] APNs configured:', !!(apnsKeyId && apnsTeamId && apnsAuthKey && apnsBundleId));
+
+    // Fetch web push subscriptions from profiles (legacy native tokens also kept here for fallback)
     const { data: profiles, error: profilesError } = await supabaseClient
       .from('profiles')
       .select('id, push_token, name')
@@ -493,7 +583,51 @@ serve(async (req) => {
       console.error('[Push] Error fetching profiles:', profilesError);
     }
 
-    if (!profiles || profiles.length === 0) {
+    // Fetch native device tokens from device_tokens table (multi-device, primary for iOS/Android)
+    const { data: deviceTokenRows, error: deviceTokensError } = await supabaseClient
+      .from('device_tokens')
+      .select('user_id, token, platform')
+      .in('user_id', targetUserIds)
+
+    if (deviceTokensError) {
+      console.error('[Push] Error fetching device tokens:', deviceTokensError);
+    }
+
+    console.log('[Push] Profiles with push_token:', profiles?.length ?? 0);
+    console.log('[Push] Native device tokens:', deviceTokenRows?.length ?? 0);
+
+    // Build unified work list: native device tokens first, then web push from profiles
+    type NotificationJob =
+      | { source: 'device_tokens'; userId: string; token: string; platform: 'ios' | 'android' }
+      | { source: 'profiles'; userId: string; pushToken: string };
+
+    const jobs: NotificationJob[] = [];
+
+    // Track which user+platform combos are covered by device_tokens so we don't double-send
+    const coveredNative = new Set<string>();
+
+    for (const row of deviceTokenRows ?? []) {
+      jobs.push({ source: 'device_tokens', userId: row.user_id, token: row.token, platform: row.platform });
+      coveredNative.add(`${row.user_id}:${row.platform}`);
+    }
+
+    for (const profile of profiles ?? []) {
+      const pt = profile.push_token as string;
+      if (pt.startsWith('webpush:')) {
+        // Always include web push subscriptions
+        jobs.push({ source: 'profiles', userId: profile.id, pushToken: pt });
+      } else if (pt.startsWith('native_ios:') && !coveredNative.has(`${profile.id}:ios`)) {
+        // Legacy native iOS token in profiles (no entry in device_tokens yet)
+        jobs.push({ source: 'profiles', userId: profile.id, pushToken: pt });
+      } else if (pt.startsWith('native_android:') && !coveredNative.has(`${profile.id}:android`)) {
+        jobs.push({ source: 'profiles', userId: profile.id, pushToken: pt });
+      } else if (!pt.startsWith('native_') && !pt.startsWith('webpush:')) {
+        // Legacy raw FCM token
+        jobs.push({ source: 'profiles', userId: profile.id, pushToken: pt });
+      }
+    }
+
+    if (jobs.length === 0) {
       console.log('[Push] No push tokens found for users');
       return new Response(
         JSON.stringify({ success: true, message: 'No push tokens found' }),
@@ -501,92 +635,98 @@ serve(async (req) => {
       )
     }
 
-    console.log('[Push] Found profiles with push tokens:', profiles.length);
+    console.log('[Push] Total notification jobs:', jobs.length);
 
-    // Get environment variables
-    const fcmServerKey = Deno.env.get('FCM_SERVER_KEY')
-    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
-    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
-
-    console.log('[Push] VAPID keys configured:', !!vapidPublicKey && !!vapidPrivateKey);
-    console.log('[Push] FCM key configured:', !!fcmServerKey);
-
-    const notifications = profiles.map(async (profile) => {
+    const notifications = jobs.map(async (job) => {
       let success = false;
       let method = 'unknown';
       let errorMessage: string | undefined;
       let statusCode: number | undefined;
+      let userId: string;
 
-      const pushToken = profile.push_token;
-      console.log(`[Push] Processing token for user ${profile.id}:`, pushToken?.substring(0, 30) + '...');
-
-      // Check token type and send appropriate notification
-      if (pushToken?.startsWith('webpush:')) {
-        // Web Push subscription
-        method = 'web_push';
-        
-        if (vapidPublicKey && vapidPrivateKey) {
-          try {
-            const subscriptionJson = pushToken.substring(8); // Remove "webpush:" prefix
-            const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
-            console.log('[Push] Sending Web Push to user:', profile.id);
-            
-            const result = await sendWebPushNotification(
-              subscription,
-              title,
-              body,
-              eventId,
-              vapidPrivateKey,
-              vapidPublicKey
-            );
+      if (job.source === 'device_tokens') {
+        userId = job.userId;
+        if (job.platform === 'ios') {
+          method = 'apns';
+          console.log('[Push] APNs → user:', userId);
+          if (apnsKeyId && apnsTeamId && apnsAuthKey && apnsBundleId) {
+            const result = await sendAPNsNotification(job.token, title, body, eventId, apnsKeyId, apnsTeamId, apnsAuthKey, apnsBundleId, apnsSandbox);
             success = result.success;
             errorMessage = result.error;
             statusCode = result.statusCode;
-          } catch (e) {
-            console.error('[Push] Failed to parse Web Push subscription:', e);
-            errorMessage = `Parse error: ${e}`;
+          } else {
+            errorMessage = 'APNs credentials not configured (need APNS_KEY_ID, APNS_TEAM_ID, APNS_AUTH_KEY, APNS_BUNDLE_ID)';
           }
         } else {
-          console.log('[Push] VAPID keys not configured for Web Push');
-          errorMessage = 'VAPID keys not configured';
+          method = 'fcm_android';
+          console.log('[Push] FCM Android → user:', userId);
+          if (fcmServerKey) {
+            const result = await sendFCMNotification(job.token, title, body, eventId, fcmServerKey);
+            success = result.success;
+            errorMessage = result.error;
+          } else {
+            errorMessage = 'FCM_SERVER_KEY not configured';
+          }
         }
-      } else if (pushToken?.startsWith('native_ios:')) {
-        // Native iOS token (APNs via FCM)
-        method = 'fcm_ios';
-        const deviceToken = pushToken.substring(11); // Remove "native_ios:" prefix
-        console.log('[Push] Sending FCM to iOS device for user:', profile.id);
-        
-        if (fcmServerKey) {
-          const result = await sendFCMNotification(deviceToken, title, body, eventId, fcmServerKey);
-          success = result.success;
-          errorMessage = result.error;
-        } else {
-          errorMessage = 'FCM key not configured for iOS native';
-        }
-      } else if (pushToken?.startsWith('native_android:')) {
-        // Native Android token (FCM)
-        method = 'fcm_android';
-        const deviceToken = pushToken.substring(15); // Remove "native_android:" prefix
-        console.log('[Push] Sending FCM to Android device for user:', profile.id);
-        
-        if (fcmServerKey) {
-          const result = await sendFCMNotification(deviceToken, title, body, eventId, fcmServerKey);
-          success = result.success;
-          errorMessage = result.error;
-        } else {
-          errorMessage = 'FCM key not configured for Android native';
-        }
-      } else if (pushToken && fcmServerKey) {
-        // Legacy: raw FCM token (Capacitor/native without prefix)
-        method = 'fcm_legacy';
-        console.log('[Push] Sending FCM (legacy format) to user:', profile.id);
-        const result = await sendFCMNotification(pushToken, title, body, eventId, fcmServerKey);
-        success = result.success;
-        errorMessage = result.error;
-      } else if (!fcmServerKey && pushToken) {
-        errorMessage = 'FCM key not configured';
       } else {
-        errorMessage = 'Unknown token format';
+        // profiles source — web push or legacy native tokens
+        userId = job.userId;
+        const pushToken = job.pushToken;
+        console.log(`[Push] Profiles token for user ${userId}:`, pushToken.substring(0, 30) + '...');
+
+        if (pushToken.startsWith('webpush:')) {
+          method = 'web_push';
+          if (vapidPublicKey && vapidPrivateKey) {
+            try {
+              const subscriptionJson = pushToken.substring(8);
+              const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
+              const result = await sendWebPushNotification(subscription, title, body, eventId, vapidPrivateKey, vapidPublicKey);
+              success = result.success;
+              errorMessage = result.error;
+              statusCode = result.statusCode;
+            } catch (e) {
+              console.error('[Push] Failed to parse Web Push subscription:', e);
+              errorMessage = `Parse error: ${e}`;
+            }
+          } else {
+            errorMessage = 'VAPID keys not configured';
+          }
+        } else if (pushToken.startsWith('native_ios:')) {
+          // Legacy iOS token in profiles — use APNs if available, fall back to FCM
+          const deviceToken = pushToken.substring(11);
+          if (apnsKeyId && apnsTeamId && apnsAuthKey && apnsBundleId) {
+            method = 'apns';
+            const result = await sendAPNsNotification(deviceToken, title, body, eventId, apnsKeyId, apnsTeamId, apnsAuthKey, apnsBundleId, apnsSandbox);
+            success = result.success;
+            errorMessage = result.error;
+            statusCode = result.statusCode;
+          } else if (fcmServerKey) {
+            method = 'fcm_ios_legacy';
+            const result = await sendFCMNotification(deviceToken, title, body, eventId, fcmServerKey);
+            success = result.success;
+            errorMessage = result.error;
+          } else {
+            method = 'apns';
+            errorMessage = 'APNs credentials not configured';
+          }
+        } else if (pushToken.startsWith('native_android:')) {
+          method = 'fcm_android';
+          const deviceToken = pushToken.substring(15);
+          if (fcmServerKey) {
+            const result = await sendFCMNotification(deviceToken, title, body, eventId, fcmServerKey);
+            success = result.success;
+            errorMessage = result.error;
+          } else {
+            errorMessage = 'FCM_SERVER_KEY not configured';
+          }
+        } else if (fcmServerKey) {
+          method = 'fcm_legacy';
+          const result = await sendFCMNotification(pushToken, title, body, eventId, fcmServerKey);
+          success = result.success;
+          errorMessage = result.error;
+        } else {
+          errorMessage = 'Unknown token format';
+        }
       }
 
       // Log notification attempt
@@ -594,7 +734,7 @@ serve(async (req) => {
         await supabaseClient
           .from('notification_logs')
           .insert({
-            user_id: profile.id,
+            user_id: userId,
             event_id: eventId || null,
             title: title,
             body: body,
@@ -608,21 +748,21 @@ serve(async (req) => {
         console.error('[Push] Failed to log notification:', logError);
       }
 
-      return { userId: profile.id, success, method, error: errorMessage, statusCode };
+      return { userId, success, method, error: errorMessage, statusCode };
     })
 
     const results = await Promise.allSettled(notifications)
     const fulfilled = results.filter(r => r.status === 'fulfilled') as PromiseFulfilledResult<any>[];
     const successCount = fulfilled.filter(r => r.value.success).length;
 
-    console.log(`[Push] Push notifications sent: ${successCount}/${profiles.length}`);
+    console.log(`[Push] Push notifications sent: ${successCount}/${jobs.length}`);
     console.log('[Push] Results:', fulfilled.map(r => r.value));
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         sent: successCount,
-        total: profiles.length,
+        total: jobs.length,
         results: fulfilled.map(r => r.value)
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

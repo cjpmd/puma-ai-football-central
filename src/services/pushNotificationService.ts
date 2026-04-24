@@ -61,15 +61,12 @@ export const pushNotificationService = {
       logger.log('[Native Push] Token length:', token.value?.length);
       logger.log('[Native Push] Token preview:', token.value?.substring(0, 20) + '...');
       
-      // Store the native token (NOT prefixed with webpush:)
-      // Native tokens are hex strings from APNs (iOS) or FCM registration tokens (Android)
+      // Store the native device token in device_tokens table (multi-device support)
       const { data: user } = await supabase.auth.getUser();
       if (user.user) {
-        // Mark as native token with platform prefix for clarity
-        const platform = Capacitor.getPlatform();
-        const tokenWithPrefix = `native_${platform}:${token.value}`;
-        logger.log('[Native Push] Storing token for user:', user.user.id);
-        await this.updateUserPushToken(user.user.id, tokenWithPrefix);
+        const platform = Capacitor.getPlatform() as 'ios' | 'android';
+        logger.log('[Native Push] Storing token for user:', user.user.id, 'platform:', platform);
+        await this.upsertDeviceToken(user.user.id, token.value, platform);
       } else {
         logger.warn('[Native Push] No user logged in, cannot store token');
       }
@@ -101,26 +98,22 @@ export const pushNotificationService = {
     logger.log('[Native Push] Listeners registered successfully');
   },
 
-  async updateUserPushToken(userId: string, token: string): Promise<void> {
+  async upsertDeviceToken(userId: string, token: string, platform: 'ios' | 'android'): Promise<void> {
     try {
-      logger.log('[Native Push] Updating push token for user:', userId);
-      logger.log('[Native Push] Token:', token.substring(0, 30) + '...');
-      
+      logger.log('[Native Push] Upserting device token for user:', userId, 'platform:', platform);
       const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          push_token: token,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
+        .from('device_tokens')
+        .upsert(
+          { user_id: userId, token, platform, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,token' }
+        );
       if (error) {
-        logger.error('[Native Push] Error updating push token:', error);
+        logger.error('[Native Push] Error upserting device token:', error);
       } else {
-        logger.log('[Native Push] Push token updated successfully');
+        logger.log('[Native Push] Device token upserted successfully');
       }
     } catch (error) {
-      logger.error('[Native Push] Error in updateUserPushToken:', error);
+      logger.error('[Native Push] Error in upsertDeviceToken:', error);
     }
   },
 
@@ -155,16 +148,16 @@ export const pushNotificationService = {
         return { registered: false };
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('push_token')
-        .eq('id', user.user.id)
-        .single();
+      const { data: deviceToken } = await supabase
+        .from('device_tokens')
+        .select('token, platform')
+        .eq('user_id', user.user.id)
+        .limit(1)
+        .maybeSingle();
 
-      const hasNativeToken = profile?.push_token?.startsWith('native_');
       return {
-        registered: hasNativeToken,
-        token: profile?.push_token
+        registered: !!deviceToken,
+        token: deviceToken ? `native_${deviceToken.platform}:${deviceToken.token}` : undefined
       };
     } catch (error) {
       logger.error('[Native Push] Error checking registration:', error);

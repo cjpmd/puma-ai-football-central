@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Bell, BellOff, Settings, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +20,7 @@ interface NotificationPreferences {
 
 export const NotificationPermissionManager: React.FC = () => {
   const { user } = useAuth();
-  const { isInitialized, permissionGranted, requestPermissions } = usePushNotifications();
+  const { isInitialized, permissionGranted, requestPermissions, sendTestNotification } = usePushNotifications();
   const [isRequesting, setIsRequesting] = useState(false);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     availability_requests: true,
@@ -255,9 +254,9 @@ export const NotificationPermissionManager: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              variant="outline" 
-              onClick={sendTestNotification}
+            <Button
+              variant="outline"
+              onClick={() => sendTestNotification()}
               disabled={isRequesting}
             >
               <Bell className="h-4 w-4 mr-2" />
@@ -280,20 +279,3 @@ const getPreferenceDescription = (key: string): string => {
   return descriptions[key] || '';
 };
 
-const sendTestNotification = async () => {
-  try {
-    const { error } = await supabase.functions.invoke('send-push-notification', {
-      body: {
-        title: 'Test Notification',
-        body: 'This is a test notification from your football team app!',
-        userIds: null // Will send to current user
-      }
-    });
-
-    if (error) throw error;
-    toast.success('Test notification sent!');
-  } catch (error) {
-    logger.error('Error sending test notification:', error);
-    toast.error('Failed to send test notification');
-  }
-};

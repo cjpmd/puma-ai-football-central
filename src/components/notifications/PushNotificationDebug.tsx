@@ -98,32 +98,38 @@ export const PushNotificationDebug: React.FC = () => {
       addLog(`Push subscription error: ${e}`, 'error');
     }
 
-    // Check token in database
+    // Check token in database — native tokens in device_tokens, web push in profiles.push_token
     if (user) {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('push_token')
-          .eq('id', user.id)
-          .single();
-        
-        if (error) throw error;
-        
-        if (data?.push_token) {
+        // Check native device tokens first
+        const { data: deviceTokens } = await supabase
+          .from('device_tokens')
+          .select('platform, token')
+          .eq('user_id', user.id)
+          .limit(5);
+
+        if (deviceTokens && deviceTokens.length > 0) {
           setStatus(s => ({ ...s, tokenInDb: 'found' }));
-          addLog('Push token found in database', 'success');
-          // Check if it's a web push subscription
-          try {
-            const parsed = JSON.parse(data.push_token);
-            if (parsed.endpoint) {
-              addLog('Token type: Web Push subscription');
-            }
-          } catch {
-            addLog('Token type: FCM token');
-          }
+          deviceTokens.forEach(dt => {
+            addLog(`Native token found: ${dt.platform} — ${dt.token.substring(0, 12)}...`, 'success');
+          });
         } else {
-          setStatus(s => ({ ...s, tokenInDb: 'not-found' }));
-          addLog('No push token in database', 'error');
+          // Fall back to checking web push token in profiles
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('push_token')
+            .eq('id', user.id)
+            .single();
+
+          if (error) throw error;
+
+          if (profile?.push_token) {
+            setStatus(s => ({ ...s, tokenInDb: 'found' }));
+            addLog('Web push token found in database', 'success');
+          } else {
+            setStatus(s => ({ ...s, tokenInDb: 'not-found' }));
+            addLog('No push token in database', 'error');
+          }
         }
       } catch (e) {
         setStatus(s => ({ ...s, tokenInDb: 'error' }));
@@ -253,10 +259,10 @@ export const PushNotificationDebug: React.FC = () => {
               Request Permission
             </Button>
           )}
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             onClick={testNotification}
-            disabled={isTesting || status.pushSubscription !== 'subscribed'}
+            disabled={isTesting || (status.pushSubscription !== 'subscribed' && status.tokenInDb !== 'found')}
           >
             <Send className="h-4 w-4 mr-2" />
             {isTesting ? 'Sending...' : 'Send Test'}
