@@ -1275,8 +1275,8 @@ export default function CalendarEventsMobile() {
               
               <div>
                 <h3 className="font-semibold text-lg break-words">
-                  {isMatchType(selectedEvent.event_type) && selectedEvent.opponent 
-                    ? `${teams?.[0]?.name} vs ${selectedEvent.opponent}`
+                  {isMatchType(selectedEvent.event_type) && selectedEvent.opponent
+                    ? `${(allTeams || authTeams || teams || []).find(t => t.id === selectedEvent.team_id)?.name ?? selectedEvent.title} vs ${selectedEvent.opponent}`
                     : selectedEvent.title
                   }
                 </h3>
