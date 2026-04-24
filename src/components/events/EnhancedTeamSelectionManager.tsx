@@ -146,6 +146,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
   const [showMatchDayPack, setShowMatchDayPack] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -217,6 +218,7 @@ const { data: teamData } = useQuery({
     if (!isOpen) return;
 
     const initializeData = async () => {
+      setIsInitializing(true);
       logger.log('Initializing team selection data...');
       
       // Determine number of teams from event data
@@ -383,6 +385,8 @@ const { data: teamData } = useQuery({
         logger.error('Error loading existing selections:', error);
         toast.error('Failed to load existing team selections');
         setTeamSelections(initialTeamSelections);
+      } finally {
+        setIsInitializing(false);
       }
     };
 
@@ -1130,9 +1134,10 @@ return (
                   <SelectContent>
                     {teamSelections.map((t, i) => {
                       const cat = performanceCategories.find(c => c.id === t.performanceCategory);
+                      const label = cat ? cat.name : `Team ${i + 1}`;
                       return (
                         <SelectItem key={i} value={String(i)}>
-                          {`Team ${i + 1}${cat ? ` · ${cat.name}` : ''}`}
+                          {label}
                         </SelectItem>
                       );
                     })}
@@ -1189,7 +1194,11 @@ return (
 
             <div className={`flex-1 min-h-0 px-2 pb-2 w-full max-w-full ${activeTab === 'formation' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
               <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
-                {currentTeam && (
+                {isInitializing ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+                  </div>
+                ) : currentTeam ? (
                   <AvailabilityDrivenSquadManagement
                     key={`team-${currentTeamIndex}`}
                     teamId={teamId}
@@ -1205,11 +1214,15 @@ return (
                     eventType={event.event_type}
                     nameDisplayOption={nameDisplayOption as any}
                   />
-                )}
+                ) : null}
               </TabsContent>
 
               <TabsContent value="staff" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
-                {currentTeam && (
+                {isInitializing ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+                  </div>
+                ) : currentTeam ? (
                   <EventStaffAssignmentSection
                     eventId={event.id}
                     teamId={teamId}
@@ -1217,7 +1230,7 @@ return (
                     onStaffChange={handleStaffChange}
                     refreshToken={staffLinksRefresh}
                   />
-                )}
+                ) : null}
               </TabsContent>
 
               {isTrainingEvent ? (

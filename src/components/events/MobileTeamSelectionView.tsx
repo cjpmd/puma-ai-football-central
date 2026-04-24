@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Gamepad2, ChevronLeft, Timer, Trash2 } from 'lucide-react';
+import { Users, Gamepad2, ChevronLeft, Timer, Trash2, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -39,6 +39,13 @@ interface TeamSelection {
   performanceCategory?: string;
   periods: any[];
   squadPlayers: number;
+  formation?: string;
+}
+
+interface AvailabilitySummary {
+  available: number;
+  pending: number;
+  unavailable: number;
 }
 
 interface TrainingDrill {
@@ -65,22 +72,24 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   const [trainingDrills, setTrainingDrills] = useState<TrainingDrill[]>([]);
   const [captainNames, setCaptainNames] = useState<Record<string, string>>({});
   const [isDeleting, setIsDeleting] = useState(false);
+  const [availabilitySummary, setAvailabilitySummary] = useState<AvailabilitySummary>({ available: 0, pending: 0, unavailable: 0 });
 
-  // Helper to get display name for a team
-  const getTeamDisplayName = (team: TeamSelection, index: number): string => {
+  // Helper to get display name for a team.
+  // Priority: team name (single-team only) > performance category > "Team N"
+  const getTeamDisplayName = (team: TeamSelection, _index: number): string => {
     const isTraining = event.event_type === 'training';
-    
-    // If performance category is set, use it
-    if (team.performanceCategory && team.performanceCategory !== 'No category') {
-      return team.performanceCategory;
-    }
-    
-    // If only one team and we have a team name, use the full team name
+
+    // For a single team always show the real team name so we never replace
+    // it with an arbitrary performance category label (e.g. "Messi").
     if (teamSelections.length === 1 && teamName) {
       return teamName;
     }
-    
-    // Fallback to Team X or Group X
+
+    // For multi-team events use the category label to distinguish squads.
+    if (team.performanceCategory && team.performanceCategory !== 'No category') {
+      return team.performanceCategory;
+    }
+
     return isTraining ? `Group ${team.teamNumber}` : `Team ${team.teamNumber}`;
   };
 
@@ -147,69 +156,89 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   useEffect(() => {
     const loadTeamSelections = async () => {
       try {
-        const { data: selections, error } = await supabase
-          .from('event_selections')
-          .select(`
-            *,
-            performance_categories(name)
-          `)
-          .eq('event_id', event.id)
-          .eq('team_id', teamId)
-          .order('team_number', { ascending: true })
-          .order('period_number', { ascending: true });
+        // Run all independent queries in parallel
+        const [selectionsResult, squadResult, availabilityResult] = await Promise.all([
+          supabase
+            .from('event_selections')
+            .select('*, performance_categories(name)')
+            .eq('event_id', event.id)
+            .eq('team_id', teamId)
+            .order('team_number', { ascending: true })
+            .order('period_number', { ascending: true }),
+          // team_squads gives the authoritative squad count even before formation is set
+          supabase
+            .from('team_squads')
+            .select('player_id, team_number')
+            .eq('event_id', event.id)
+            .eq('team_id', teamId),
+          // availability summary for the inline card
+          supabase
+            .from('event_availability')
+            .select('status')
+            .eq('event_id', event.id)
+            .eq('role', 'player'),
+        ]);
 
-        if (error) throw error;
+        if (selectionsResult.error) throw selectionsResult.error;
+        const selections = selectionsResult.data || [];
 
-        // Group by team number
-        const groupedSelections = selections?.reduce((acc, selection) => {
+        // Build squad-count map from team_squads (accurate even if formation not yet set)
+        const squadByTeamNum: Record<number, number> = {};
+        (squadResult.data || []).forEach(row => {
+          const n = row.team_number || 1;
+          squadByTeamNum[n] = (squadByTeamNum[n] || 0) + 1;
+        });
+
+        // Availability summary across all player roles for this event
+        const avail = availabilityResult.data || [];
+        setAvailabilitySummary({
+          available: avail.filter(a => a.status === 'available').length,
+          pending: avail.filter(a => a.status === 'pending').length,
+          unavailable: avail.filter(a => a.status === 'unavailable').length,
+        });
+
+        // Group event_selections by team number
+        const groupedSelections = selections.reduce((acc, selection) => {
           const teamNum = selection.team_number || 1;
           if (!acc[teamNum]) {
             acc[teamNum] = {
               teamNumber: teamNum,
               performanceCategory: selection.performance_categories?.name || 'No category',
               periods: [],
-              squadPlayers: 0
+              squadPlayers: 0,
+              formation: undefined as string | undefined,
             };
           }
           acc[teamNum].periods.push(selection);
+          // Use the first period's formation as the team's formation label
+          if (!acc[teamNum].formation && selection.period_number === 1) {
+            acc[teamNum].formation = selection.formation || undefined;
+          }
           return acc;
-        }, {} as Record<number, TeamSelection>) || {};
+        }, {} as Record<number, TeamSelection>);
 
-        // Count unique squad players per team
+        // Count unique squad players per team — prefer team_squads count, fall back to
+        // player_positions/substitute_players in event_selections
         Object.values(groupedSelections).forEach(team => {
-          const allPlayerIds = new Set();
-          team.periods.forEach(period => {
-            // For training events, players are stored in player_positions
-            if (event.event_type === 'training') {
-              if (period.player_positions && Array.isArray(period.player_positions)) {
-                period.player_positions.forEach((pos: any) => {
-                  if (pos.playerId) {
-                    allPlayerIds.add(pos.playerId);
-                  }
-                });
-              }
-              if (period.substitute_players && Array.isArray(period.substitute_players)) {
-                period.substitute_players.forEach((playerId: string) => {
-                  if (playerId) {
-                    allPlayerIds.add(playerId);
-                  }
-                });
-              }
-            } else {
-              // For match events, check player_positions and substitute_players
+          const squadCount = squadByTeamNum[team.teamNumber];
+          if (squadCount !== undefined) {
+            team.squadPlayers = squadCount;
+          } else {
+            const allPlayerIds = new Set<string>();
+            team.periods.forEach(period => {
               if (period.player_positions && Array.isArray(period.player_positions)) {
                 period.player_positions.forEach((pos: any) => {
                   if (pos.playerId) allPlayerIds.add(pos.playerId);
                 });
               }
               if (period.substitute_players && Array.isArray(period.substitute_players)) {
-                period.substitute_players.forEach((playerId: string) => {
-                  allPlayerIds.add(playerId);
+                period.substitute_players.forEach((id: string) => {
+                  if (id) allPlayerIds.add(id);
                 });
               }
-            }
-          });
-          team.squadPlayers = allPlayerIds.size;
+            });
+            team.squadPlayers = allPlayerIds.size;
+          }
         });
 
         const teamsArray = Object.values(groupedSelections);
@@ -219,18 +248,16 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         const captainIds = teamsArray
           .map(team => team.periods[0]?.captain_id)
           .filter(Boolean) as string[];
-        
+
         if (captainIds.length > 0) {
           const { data: players } = await supabase
             .from('players')
             .select('id, name')
             .in('id', captainIds);
-          
+
           if (players) {
             const namesMap: Record<string, string> = {};
-            players.forEach(p => {
-              namesMap[p.id] = p.name;
-            });
+            players.forEach(p => { namesMap[p.id] = p.name; });
             setCaptainNames(namesMap);
           }
         }
@@ -375,13 +402,13 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                   <Button variant="outline" size="sm" onClick={onOpenFullManager} className="text-xs px-2 py-1">
                     Edit
                   </Button>
-                  
+
                   {canEdit && teamSelections.length > 1 && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="text-xs px-2 py-1 text-destructive hover:text-destructive"
                           disabled={isDeleting}
                         >
@@ -392,13 +419,13 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Team?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete "{getTeamDisplayName(currentTeam, currentTeamIndex)}"? 
+                            Are you sure you want to delete "{getTeamDisplayName(currentTeam, currentTeamIndex)}"?
                             This will remove all player selections and cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
+                          <AlertDialogAction
                             onClick={() => handleDeleteTeam(currentTeam.teamNumber)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
@@ -411,18 +438,49 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 </div>
               )}
             </div>
-            <div className="flex gap-1 flex-wrap">
+
+            {/* Squad summary row */}
+            <div className="flex gap-1 flex-wrap mt-1">
               <Badge variant="outline" className="text-xs">
                 <Users className="h-3 w-3 mr-1" />
                 {currentTeam.squadPlayers} players
               </Badge>
-              {event.event_type !== 'training' && (
+              {event.event_type !== 'training' && currentTeam.formation && (
                 <Badge variant="outline" className="text-xs">
                   <Gamepad2 className="h-3 w-3 mr-1" />
-                  {currentTeam.periods.length} period{currentTeam.periods.length !== 1 ? 's' : ''}
+                  {currentTeam.formation}
+                </Badge>
+              )}
+              {event.event_type !== 'training' && currentTeam.periods.length > 1 && (
+                <Badge variant="outline" className="text-xs">
+                  {currentTeam.periods.length} periods
                 </Badge>
               )}
             </div>
+
+            {/* Availability breakdown */}
+            {(availabilitySummary.available + availabilitySummary.pending + availabilitySummary.unavailable) > 0 && (
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                {availabilitySummary.available > 0 && (
+                  <span className="flex items-center gap-1 text-emerald-600">
+                    <CheckCircle className="h-3 w-3" />
+                    {availabilitySummary.available}
+                  </span>
+                )}
+                {availabilitySummary.pending > 0 && (
+                  <span className="flex items-center gap-1 text-amber-600">
+                    <Clock className="h-3 w-3" />
+                    {availabilitySummary.pending}
+                  </span>
+                )}
+                {availabilitySummary.unavailable > 0 && (
+                  <span className="flex items-center gap-1 text-red-500">
+                    <XCircle className="h-3 w-3" />
+                    {availabilitySummary.unavailable}
+                  </span>
+                )}
+              </div>
+            )}
           </CardHeader>
 
           <CardContent className="space-y-3 px-3 pb-3">
@@ -460,10 +518,11 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               </>
             )}
 
-            <Button 
-              onClick={onOpenFullManager} 
+            {/* Secondary action — visually smaller than the card content */}
+            <Button
+              onClick={onOpenFullManager}
               className="w-full"
-              variant="outline"
+              variant="ghost"
               size="sm"
             >
               <Gamepad2 className="h-4 w-4 mr-2" />
