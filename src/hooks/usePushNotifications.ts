@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { pushNotificationService } from '@/services/pushNotificationService';
 import { webPushService } from '@/services/webPushService';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export type NotificationPlatform = 'capacitor' | 'web-push' | 'ios-safari' | 'none';
 
@@ -88,7 +89,21 @@ export const usePushNotifications = () => {
     return granted;
   };
 
-  const sendTestNotification = async () => {
+  const sendTestNotification = async (): Promise<boolean> => {
+    if (platform === 'capacitor' && user) {
+      const { error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          title: 'Test Notification',
+          body: 'Push notifications are working on your device!',
+          userIds: [user.id]
+        }
+      });
+      if (error) {
+        logger.error('[Push] Test notification failed:', error);
+        return false;
+      }
+      return true;
+    }
     return webPushService.sendTestNotification();
   };
 

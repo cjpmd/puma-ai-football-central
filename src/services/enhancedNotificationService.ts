@@ -50,7 +50,8 @@ export const enhancedNotificationService = {
         // Listen for registration success
         PushNotifications.addListener('registration', async (token) => {
           logger.log('Enhanced push registration success, token: ' + token.value);
-          await this.updateUserPushToken(token.value);
+          const platform = Capacitor.getPlatform() as 'ios' | 'android';
+          await this.upsertDeviceToken(token.value, platform);
         });
 
         // Listen for registration error
@@ -172,26 +173,24 @@ export const enhancedNotificationService = {
     }
   },
 
-  async updateUserPushToken(token: string): Promise<void> {
+  async upsertDeviceToken(token: string, platform: 'ios' | 'android'): Promise<void> {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (user.user) {
         const { error } = await supabase
-          .from('profiles')
-          .update({ 
-            push_token: token,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.user.id);
-
+          .from('device_tokens')
+          .upsert(
+            { user_id: user.user.id, token, platform, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id,token' }
+          );
         if (error) {
-          logger.error('Error updating enhanced push token:', error);
+          logger.error('Error upserting enhanced device token:', error);
         } else {
-          logger.log('Enhanced push token updated successfully');
+          logger.log('Enhanced device token upserted successfully');
         }
       }
     } catch (error) {
-      logger.error('Error in updateUserPushToken:', error);
+      logger.error('Error in upsertDeviceToken:', error);
     }
   },
 
