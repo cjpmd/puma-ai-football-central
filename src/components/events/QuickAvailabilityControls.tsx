@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStaffAvailability } from '@/hooks/useStaffAvailability';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { useAvailabilityState } from '@/hooks/useAvailabilityState';
+import type { UserRole } from '@/services/multiRoleAvailabilityService';
 
 interface UserProfile {
   id: string;
@@ -68,6 +69,26 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   useEffect(() => {
     loadInvitedRoles();
   }, [eventId, user?.id, userRoles]);
+
+  // Sync cachedPlayerId and player name from userRoles (event-specific, from get_user_event_roles RPC).
+  // This is more reliable than the loadUserProfile query which can fail for users linked to multiple teams.
+  useEffect(() => {
+    const playerRole = userRoles.find(r => r.role === 'player');
+    if (playerRole?.playerName) {
+      setCachedPlayerId(playerRole.sourceId);
+      setUserProfile(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          linkedPlayer: {
+            id: playerRole.sourceId,
+            name: playerRole.playerName!,
+            photo_url: prev.linkedPlayer?.photo_url
+          }
+        };
+      });
+    }
+  }, [userRoles]);
 
   const loadUserProfile = async () => {
     if (!user?.id) return;
@@ -179,10 +200,15 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
     setIsUpdating(true);
     try {
-      // Use the appropriate availability update based on user setup
-      if (user?.id) {
-        await updatePersistentAvailability(eventId, user.id, role, status);
-      }
+      // Pass cachedPlayerId so the hook doesn't need to re-query user_players
+      // (avoids .maybeSingle() failures for users with multiple team links)
+      await updatePersistentAvailability(
+        eventId,
+        user.id,
+        role,
+        status,
+        role === 'player' ? (cachedPlayerId || undefined) : undefined
+      );
       onStatusChange?.(status);
       toast.success(`${role} availability set to ${status}`);
     } catch (error) {
@@ -193,29 +219,23 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     }
   };
 
-  const renderRoleAvailability = (role: 'player' | 'staff', roleLabel: string) => {
+  const renderRoleAvailability = (role: 'player' | 'staff', roleLabel: string, roleEntry?: UserRole) => {
     const playerId = role === 'player' ? cachedPlayerId || undefined : undefined;
     const status = getAvailabilityStatusSync(eventId, role, playerId) || getStaffRoleStatus(role) || null;
-    const buttonSize = size === 'sm' ? 'h-6 w-12 px-2' : 'h-7 w-16 px-3';
-    const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
     const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
-    
-    // For player role, show linked player name and photo if available
-    // For staff role, show user profile name with initials only
+
+    // Prefer names from roleEntry (resolved by get_user_event_roles RPC, event-team-specific)
+    // over userProfile (which may fail for multi-team users)
     let displayName = 'User';
     let photoUrl: string | undefined = undefined;
-    
-    if (userProfile) {
-      if (role === 'player' && userProfile.linkedPlayer) {
-        displayName = formatPlayerName(userProfile.linkedPlayer.name, 'firstName');
-        photoUrl = userProfile.linkedPlayer.photo_url || undefined;
-      } else if (role === 'staff') {
-        displayName = formatPlayerName(userProfile.name, 'firstName');
-        // No photo for staff role - use initials only
-        photoUrl = undefined;
-      } else {
-        displayName = formatPlayerName(userProfile.name, 'firstName');
-      }
+
+    if (role === 'player') {
+      const name = roleEntry?.playerName || userProfile?.linkedPlayer?.name;
+      displayName = name ? formatPlayerName(name, 'firstName') : (userProfile ? formatPlayerName(userProfile.name, 'firstName') : 'Player');
+      photoUrl = userProfile?.linkedPlayer?.photo_url || undefined;
+    } else if (role === 'staff') {
+      const name = roleEntry?.staffName || userProfile?.name;
+      displayName = name ? formatPlayerName(name, 'firstName') : 'Coach';
     }
 
     // Unified toggle button layout for all statuses
@@ -274,11 +294,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     if (filteredRoles.length === 0) return null;
     return (
       <div className="space-y-2">
-        {filteredRoles.map((role) => {
-          const roleLabel = role.role === 'staff' ? 'Coach' : 'Player';
+        {filteredRoles.map((roleEntry) => {
+          const roleLabel = roleEntry.role === 'staff' ? 'Coach' : 'Player';
           return (
-            <div key={`${role.role}-${role.sourceId}`}>
-              {renderRoleAvailability(role.role, roleLabel)}
+            <div key={`${roleEntry.role}-${roleEntry.sourceId}`}>
+              {renderRoleAvailability(roleEntry.role, roleLabel, roleEntry)}
             </div>
           );
         })}
@@ -293,28 +313,21 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   const singleRole = singleRoleEntry.role;
   const singlePlayerId = singleRole === 'player' ? cachedPlayerId || undefined : undefined;
   const status = getAvailabilityStatusSync(eventId, singleRole, singlePlayerId) || getStaffRoleStatus(singleRole) || currentStatus;
-  const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
-  const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
-  
-  // For player role, show linked player name and photo if available
-  // For staff role, show user profile name with initials only
+
+  // Prefer names from singleRoleEntry (event-team-specific) over userProfile
   let displayName = 'User';
   let photoUrl: string | undefined = undefined;
-  
-  if (userProfile) {
-    if (singleRole === 'player' && userProfile.linkedPlayer) {
-      displayName = formatPlayerName(userProfile.linkedPlayer.name, 'firstName');
-      photoUrl = userProfile.linkedPlayer.photo_url || undefined;
-    } else if (singleRole === 'staff') {
-      displayName = formatPlayerName(userProfile.name, 'firstName');
-      // No photo for staff role - use initials only
-      photoUrl = undefined;
-    } else {
-      displayName = formatPlayerName(userProfile.name, 'firstName');
-    }
+
+  if (singleRole === 'player') {
+    const name = singleRoleEntry.playerName || userProfile?.linkedPlayer?.name;
+    displayName = name ? formatPlayerName(name, 'firstName') : (userProfile ? formatPlayerName(userProfile.name, 'firstName') : 'Player');
+    photoUrl = userProfile?.linkedPlayer?.photo_url || undefined;
+  } else if (singleRole === 'staff') {
+    const name = singleRoleEntry.staffName || userProfile?.name;
+    displayName = name ? formatPlayerName(name, 'firstName') : 'Coach';
   }
-  
+
   const roleLabel = singleRole === 'staff' ? 'Coach' : 'Player';
 
   // Unified toggle button layout for single role
