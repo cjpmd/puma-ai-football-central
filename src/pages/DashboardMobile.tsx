@@ -87,11 +87,14 @@ export default function DashboardMobile() {
   const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
     setStats(prevStats => ({
       ...prevStats,
-      pendingAvailability: prevStats.pendingAvailability.filter(availability => 
+      upcomingEvents: prevStats.upcomingEvents.map(event =>
+        event.id === eventId ? { ...event, user_availability: status } : event
+      ),
+      pendingAvailability: prevStats.pendingAvailability.filter(availability =>
         availability.event_id !== eventId
       )
     }));
-    
+
     toast({
       title: "Availability updated",
       description: `Marked as ${status} for this event`,

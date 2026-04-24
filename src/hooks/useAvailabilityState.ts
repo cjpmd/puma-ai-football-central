@@ -41,8 +41,8 @@ export const useAvailabilityState = (eventId?: string) => {
       .from('user_players')
       .select('player_id')
       .eq('user_id', userId)
-      .maybeSingle();
-    return data?.player_id || null;
+      .limit(1);
+    return data?.[0]?.player_id || null;
   }, []);
 
   const getAvailabilityKey = (eventId: string, role: 'player' | 'staff', playerId?: string) => {
@@ -121,15 +121,17 @@ export const useAvailabilityState = (eventId?: string) => {
     eventId: string,
     userId: string,
     role: 'player' | 'staff',
-    status: 'available' | 'unavailable'
+    status: 'available' | 'unavailable',
+    knownPlayerId?: string
   ) => {
     try {
       logger.log('=== UPDATING AVAILABILITY ===');
       logger.log('Event:', eventId, 'User:', userId, 'Role:', role, 'Status:', status);
 
       if (role === 'player') {
-        // Get the linked player ID
-        const playerId = await getLinkedPlayerId(userId);
+        // Use the pre-resolved player ID when available to avoid .maybeSingle() issues
+        // for users linked to multiple players across different teams
+        const playerId = knownPlayerId || await getLinkedPlayerId(userId);
         
         if (!playerId) {
           throw new Error('No linked player found for user');
