@@ -1005,8 +1005,8 @@ export default function DashboardMobile() {
                         </p>
                         
                         {/* Inline availability controls */}
-                        <div className="mt-2">
-                          <QuickAvailabilityControls 
+                        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                          <QuickAvailabilityControls
                             eventId={event.id}
                             currentStatus="pending"
                             size="sm"

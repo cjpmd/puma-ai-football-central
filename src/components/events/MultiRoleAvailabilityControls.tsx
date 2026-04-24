@@ -72,26 +72,31 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
     setLoading(true);
     try {
-      // First get the user's linked player ID (if any)
-      const { data: userPlayerLink } = await supabase
+      // Get ALL player IDs linked to this user — avoids .maybeSingle() failures
+      // for users linked to players on multiple teams
+      const { data: userPlayerLinks } = await supabase
         .from('user_players')
         .select('player_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .eq('user_id', user.id);
 
-      const linkedPlayerId = userPlayerLink?.player_id || null;
+      const userPlayerIds = (userPlayerLinks || []).map(l => l.player_id);
 
-      // Check for player invitations by player_id (shared across linked accounts)
+      // Find which of the user's players is explicitly invited to this event
+      let linkedPlayerId: string | null = null;
       let hasPlayerInvitation = false;
-      if (linkedPlayerId) {
+
+      if (userPlayerIds.length > 0) {
         const { data: playerInvitations } = await supabase
           .from('event_invitations')
-          .select('id')
+          .select('player_id')
           .eq('event_id', eventId)
-          .eq('player_id', linkedPlayerId)
+          .in('player_id', userPlayerIds)
           .limit(1);
-        
-        hasPlayerInvitation = (playerInvitations && playerInvitations.length > 0);
+
+        if (playerInvitations && playerInvitations.length > 0) {
+          linkedPlayerId = playerInvitations[0].player_id;
+          hasPlayerInvitation = true;
+        }
       }
 
       // Check for staff invitations by user_id
@@ -113,7 +118,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
           .eq('event_id', eventId)
           .limit(1);
 
-        // If invitations exist for this event but user wasn't invited, exit
+        // Invitations exist but user wasn't invited — nothing to show
         if (anyInvitations && anyInvitations.length > 0) {
           logger.log('User not invited to this event');
           setAvailabilities([]);
@@ -121,8 +126,9 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
           return;
         }
 
-        // "Everyone" event - check what roles this user has
-        if (linkedPlayerId) {
+        // "Everyone" event — use first linked player
+        if (userPlayerIds.length > 0) {
+          linkedPlayerId = userPlayerIds[0];
           hasPlayerInvitation = true;
         }
 
@@ -259,11 +265,12 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
       if (status === 'unavailable' && role === 'player') {
         try {
           // Find linked player for this user
-          const { data: playerLink } = await supabase
+          const { data: playerLinks } = await supabase
             .from('user_players')
             .select('player_id')
             .eq('user_id', user.id)
-            .single();
+            .limit(1);
+          const playerLink = playerLinks?.[0] ?? null;
           
           if (playerLink?.player_id) {
             const { data: result, error: rpcError } = await supabase.rpc('remove_unavailable_player_from_event', {
