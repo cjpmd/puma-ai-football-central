@@ -349,85 +349,134 @@ export default function DashboardMobile() {
     if (!user) return;
 
     try {
-      const teamsToUse = viewMode === 'all' 
+      const teamsToUse = viewMode === 'all'
         ? (teams?.length ? teams : allTeams || [])
         : (currentTeam ? [currentTeam] : []);
-      
+
       if (!teamsToUse.length) {
         return;
       }
-      
-      const teamIds = teamsToUse.map(team => team.id);
 
-      // Load privacy settings for all teams
-      const { data: privacyData } = await supabase
-        .from('team_privacy_settings')
-        .select('team_id, show_scores_to_parents, show_scores_to_players')
-        .in('team_id', teamIds);
-      
+      const teamIds = teamsToUse.map(team => team.id);
+      const today = new Date().toISOString().split('T')[0];
+
+      // ─── Batch 1: all independent queries fire in parallel ────────────────
+      console.time('[perf] DashboardMobile batch-1');
+      const [
+        privacyResult,
+        playersCountResult,
+        eventsCountResult,
+        upcomingEventsResult,
+        recentResultsResult,
+        staffCheckResult,
+        linkedPlayerIds,
+      ] = await Promise.all([
+        supabase
+          .from('team_privacy_settings')
+          .select('team_id, show_scores_to_parents, show_scores_to_players')
+          .in('team_id', teamIds),
+
+        supabase
+          .from('players')
+          .select('id', { count: 'exact', head: true })
+          .in('team_id', teamIds),
+
+        supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .in('team_id', teamIds)
+          .gte('date', today),
+
+        supabase
+          .from('events')
+          .select(`
+            id, title, date, start_time, event_type, opponent, is_home, team_id, scores,
+            teams!inner(
+              id, name, logo_url, kit_designs, club_id,
+              clubs!teams_club_id_fkey(name, logo_url)
+            )
+          `)
+          .in('team_id', teamIds)
+          .gte('date', today)
+          .order('date', { ascending: true })
+          .limit(5),
+
+        supabase
+          .from('events')
+          .select(`
+            id, title, date, start_time, event_type, opponent, team_id, scores,
+            teams!inner(
+              id, name, logo_url, kit_designs, club_id,
+              clubs!teams_club_id_fkey(name, logo_url)
+            )
+          `)
+          .in('team_id', teamIds)
+          .lt('date', today)
+          .not('scores', 'is', null)
+          .order('date', { ascending: false })
+          .limit(10),
+
+        supabase
+          .from('team_staff')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1),
+
+        getLinkedPlayerIds(user.id),
+      ]);
+      console.timeEnd('[perf] DashboardMobile batch-1');
+
+      const upcomingEventIds = upcomingEventsResult.data?.map(e => e.id) || [];
+      const recentEventIds   = recentResultsResult.data?.map(e => e.id) || [];
+
+      // ─── Batch 2: queries that depend on batch-1 IDs, also parallel ───────
+      console.time('[perf] DashboardMobile batch-2');
+      const [
+        playerAvailabilityData,
+        staffAvailabilityResult,
+        eventSelectionsResult,
+      ] = await Promise.all([
+        getPlayerAvailabilityForEvents(linkedPlayerIds, upcomingEventIds),
+
+        upcomingEventIds.length > 0
+          ? supabase
+              .from('event_availability')
+              .select('event_id, status')
+              .eq('user_id', user.id)
+              .in('event_id', upcomingEventIds)
+              .eq('role', 'staff')
+          : Promise.resolve({ data: [] as Array<{ event_id: string; status: string }>, error: null }),
+
+        recentEventIds.length > 0
+          ? supabase
+              .from('event_selections')
+              .select('event_id, team_number, performance_category_id, performance_categories(name)')
+              .in('event_id', recentEventIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
+      console.timeEnd('[perf] DashboardMobile batch-2');
+
+      // ─── Privacy settings map ─────────────────────────────────────────────
       const settingsMap = new Map<string, any>();
-      privacyData?.forEach(setting => {
+      privacyResult.data?.forEach(setting => {
         settingsMap.set(setting.team_id, setting);
       });
       setTeamPrivacySettings(settingsMap);
-      const { count: playersCount } = await supabase
-        .from('players')
-        .select('*', { count: 'exact', head: true })
-        .in('team_id', teamIds);
 
-      const { count: eventsCount } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .in('team_id', teamIds)
-        .gte('date', new Date().toISOString().split('T')[0]);
+      // ─── Upcoming events + availability map ───────────────────────────────
+      const staffAvailabilityData = staffAvailabilityResult.data || [];
 
-      const { data: upcomingEventsData } = await supabase
-        .from('events')
-        .select(`
-          *,
-          teams!inner(
-            id, name, logo_url, kit_designs, club_id,
-            clubs!teams_club_id_fkey(name, logo_url)
-          )
-        `)
-        .in('team_id', teamIds)
-        .gte('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: true })
-        .limit(5);
-
-      // Fetch user availability for all upcoming events using player-based approach
-      const upcomingEventIds = upcomingEventsData?.map(e => e.id) || [];
-      
-      // Get linked player IDs for this user
-      const linkedPlayerIds = await getLinkedPlayerIds(user.id);
-      
-      // Fetch player availability by player_id (shared across linked users)
-      const playerAvailabilityData = await getPlayerAvailabilityForEvents(linkedPlayerIds, upcomingEventIds);
-      
-      // Also fetch staff availability by user_id (staff don't share)
-      const { data: staffAvailabilityData } = await supabase
-        .from('event_availability')
-        .select('event_id, status, user_id')
-        .eq('user_id', user.id)
-        .in('event_id', upcomingEventIds)
-        .eq('role', 'staff');
-
-      // Build availability map - player availability takes priority
       const availabilityMap = new Map<string, string>();
-      
-      // First add player availability (by player_id - shared)
       playerAvailabilityData.forEach(record => {
         availabilityMap.set(record.event_id, record.status);
       });
-      
-      // Then add staff availability if no player availability exists
-      staffAvailabilityData?.forEach(record => {
+      staffAvailabilityData.forEach(record => {
         if (!availabilityMap.has(record.event_id)) {
           availabilityMap.set(record.event_id, record.status);
         }
       });
 
-      const upcomingEvents = upcomingEventsData?.map(event => ({
+      const upcomingEvents = upcomingEventsResult.data?.map(event => ({
         ...event,
         team_context: {
           name: event.teams.name,
@@ -438,34 +487,10 @@ export default function DashboardMobile() {
         user_availability: availabilityMap.get(event.id) || null
       })) || [];
 
-      const { data: recentResultsData } = await supabase
-        .from('events')
-        .select(`
-          *,
-          teams!inner(
-            id, name, logo_url, kit_designs, club_id,
-            clubs!teams_club_id_fkey(name, logo_url)
-          )
-        `)
-        .in('team_id', teamIds)
-        .lt('date', new Date().toISOString().split('T')[0])
-        .not('scores', 'is', null)
-        .order('date', { ascending: false })
-        .limit(10);
-
-      const eventIdsForCategories = recentResultsData?.map(e => e.id) || [];
-      const { data: eventSelectionsData } = await supabase
-        .from('event_selections')
-        .select(`
-          event_id,
-          team_number,
-          performance_category_id,
-          performance_categories(name)
-        `)
-        .in('event_id', eventIdsForCategories);
-
+      // ─── Recent results ───────────────────────────────────────────────────
+      const eventSelectionsData = eventSelectionsResult.data || [];
       const categoryMap: Record<string, Record<number, string>> = {};
-      eventSelectionsData?.forEach(selection => {
+      eventSelectionsData.forEach(selection => {
         if (!categoryMap[selection.event_id]) {
           categoryMap[selection.event_id] = {};
         }
@@ -476,7 +501,7 @@ export default function DashboardMobile() {
       });
 
       const recentResults: any[] = [];
-      recentResultsData?.forEach(event => {
+      recentResultsResult.data?.forEach(event => {
         const scores = event.scores as any;
         const eventCategories = categoryMap[event.id] || {};
         const teamContext = {
@@ -493,7 +518,7 @@ export default function DashboardMobile() {
           const ourScore = scores[`team_${teamNumber}`];
           const opponentScore = scores[`opponent_${teamNumber}`];
           const categoryName = eventCategories[teamNumber];
-          
+
           recentResults.push({
             id: `${event.id}_team_${teamNumber}`,
             ...event,
@@ -502,13 +527,13 @@ export default function DashboardMobile() {
             our_score: ourScore,
             opponent_score: opponentScore,
             team_context: teamContext,
-            display_name: categoryName 
+            display_name: categoryName
               ? `${teamContext.name} - ${categoryName}`
               : teamContext.name
           });
           teamNumber++;
         }
-        
+
         if (!hasMultiTeam && scores) {
           recentResults.push({
             id: event.id,
@@ -525,53 +550,35 @@ export default function DashboardMobile() {
       recentResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const limitedRecentResults = recentResults.slice(0, 6);
 
+      // ─── Pending availability (reuse batch-2 data, no extra round-trips) ──
       const upcomingEventsForAvailability = upcomingEvents.filter(event => {
         const eventDate = new Date(event.date);
         const now = new Date();
         return eventDate > now;
       });
 
-      const eventIds = upcomingEventsForAvailability.map(event => event.id);
-      
-      // Check if user has linked players or is team staff
+      const eventIds = new Set(upcomingEventsForAvailability.map(event => event.id));
+
       const hasLinkedPlayers = linkedPlayerIds.length > 0;
-      
-      // Check if user is team staff
-      const { data: staffCheck } = await supabase
-        .from('team_staff')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1);
-      const isTeamStaff = staffCheck && staffCheck.length > 0;
+      const isTeamStaff = (staffCheckResult.data?.length ?? 0) > 0;
 
-      // Only show availability requests if user has linked players OR is team staff
       let pendingAvailabilityData: any[] = [];
-      
-      if (hasLinkedPlayers || isTeamStaff) {
-        // Check existing player availability by player_id
-        const pendingPlayerAvailability = await getPlayerAvailabilityForEvents(linkedPlayerIds, eventIds);
-        
-        // Check existing staff availability by user_id
-        const { data: pendingStaffAvailability } = await supabase
-          .from('event_availability')
-          .select('event_id, status')
-          .eq('user_id', user.id)
-          .in('event_id', eventIds)
-          .eq('role', 'staff');
 
-        // Build a map of event -> best status
+      if (hasLinkedPlayers || isTeamStaff) {
+        // Filter already-fetched availability data to the future-event subset
+        const pendingPlayerAvailability = playerAvailabilityData.filter(a => eventIds.has(a.event_id));
+        const pendingStaffAvailability  = staffAvailabilityData.filter(a => eventIds.has(a.event_id));
+
         const pendingStatusMap = new Map<string, string>();
-        
-        // Add player availability
+
         pendingPlayerAvailability.forEach(a => {
           const current = pendingStatusMap.get(a.event_id);
           if (!current || a.status !== 'pending') {
             pendingStatusMap.set(a.event_id, a.status);
           }
         });
-        
-        // Add staff availability if no player status or player is pending
-        pendingStaffAvailability?.forEach(a => {
+
+        pendingStaffAvailability.forEach(a => {
           const current = pendingStatusMap.get(a.event_id);
           if (!current || (current === 'pending' && a.status !== 'pending')) {
             pendingStatusMap.set(a.event_id, a.status);
@@ -580,7 +587,6 @@ export default function DashboardMobile() {
 
         const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
           const status = pendingStatusMap.get(event.id);
-          // Show pending if no record exists or status is 'pending'
           return !status || status === 'pending';
         });
 
@@ -598,8 +604,8 @@ export default function DashboardMobile() {
       }
 
       setStats({
-        playersCount: playersCount || 0,
-        eventsCount: eventsCount || 0,
+        playersCount: playersCountResult.count || 0,
+        eventsCount: eventsCountResult.count || 0,
         upcomingEvents: upcomingEvents || [],
         recentResults: limitedRecentResults || [],
         pendingAvailability: pendingAvailabilityData
