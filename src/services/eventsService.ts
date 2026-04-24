@@ -463,9 +463,14 @@ export const eventsService = {
             logger.log(`Created ${availabilityRecords.length} availability records for event ${eventId}`);
           }
 
-          // Send push notifications to users with linked accounts
+          // Send invite push notifications immediately
           const userIds = availabilityRecords.map(r => r.user_id);
           await this.sendEventNotifications(eventId, userIds);
+
+          // Schedule day-of reminders (morning + 3-hour) for this event
+          supabase.functions.invoke('enhanced-notification-scheduler', {
+            body: { action: 'schedule_event_reminders', data: { eventId } }
+          }).catch(err => logger.error('Failed to schedule event reminders:', err));
         }
       }
     } catch (error) {
@@ -626,6 +631,12 @@ export const eventsService = {
           }
         }
       }
+
+      // Re-schedule day-of reminders whenever event is updated (date/time may have changed)
+      supabase.functions.invoke('enhanced-notification-scheduler', {
+        body: { action: 'schedule_event_reminders', data: { eventId: eventData.id } }
+      }).catch(err => logger.error('Failed to re-schedule event reminders:', err));
+
       return data;
     } catch (error) {
       logger.error('Error updating event:', error);

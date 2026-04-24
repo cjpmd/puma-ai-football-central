@@ -10,12 +10,6 @@ interface NotificationPayload {
   title: string;
   body: string;
   data?: Record<string, any>;
-  category?: string;
-  actions?: Array<{
-    id: string;
-    title: string;
-    action: string;
-  }>;
 }
 
 interface ScheduledNotification {
@@ -44,13 +38,12 @@ serve(async (req) => {
     switch (action) {
       case 'process_scheduled_notifications':
         return await processScheduledNotifications(supabaseClient);
-      
       case 'send_manual_reminder':
         return await sendManualReminder(supabaseClient, data);
-      
+      case 'schedule_event_reminders':
+        return await scheduleEventReminders(supabaseClient, data);
       case 'schedule_weekly_nudges':
         return await scheduleWeeklyNudges(supabaseClient);
-      
       default:
         throw new Error(`Unknown action: ${action}`);
     }
@@ -64,25 +57,44 @@ serve(async (req) => {
   }
 });
 
+// Delegate to send-push-notification which handles APNs, FCM, and web push
+async function callSendPushNotification(
+  userIds: string[],
+  title: string,
+  body: string,
+  eventId?: string
+): Promise<{ sent: number; total: number }> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title, body, userIds, eventId }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`send-push-notification failed (${response.status}): ${text}`);
+  }
+
+  return await response.json();
+}
+
 async function processScheduledNotifications(supabaseClient: any) {
   console.log('Processing scheduled notifications...');
-  
-  // Get notifications ready to be sent
+
   const { data: notifications, error } = await supabaseClient
     .from('scheduled_notifications')
-    .select(`
-      *,
-      events (
-        id, title, event_type, date, start_time, location, team_id
-      )
-    `)
+    .select('*, events(id, title, event_type, date, start_time, location, team_id)')
     .eq('status', 'pending')
     .lte('scheduled_time', new Date().toISOString())
     .order('scheduled_time', { ascending: true });
 
-  if (error) {
-    throw new Error(`Failed to fetch scheduled notifications: ${error.message}`);
-  }
+  if (error) throw new Error(`Failed to fetch scheduled notifications: ${error.message}`);
 
   let processed = 0;
   let failed = 0;
@@ -90,247 +102,193 @@ async function processScheduledNotifications(supabaseClient: any) {
   for (const notification of notifications) {
     try {
       await sendScheduledNotification(supabaseClient, notification);
-      
-      // Mark as sent
+
       await supabaseClient
         .from('scheduled_notifications')
-        .update({ 
-          status: 'sent', 
-          sent_at: new Date().toISOString() 
-        })
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
         .eq('id', notification.id);
-      
+
       processed++;
     } catch (error) {
       console.error(`Failed to send notification ${notification.id}:`, error);
-      
-      // Mark as failed
+
       await supabaseClient
         .from('scheduled_notifications')
         .update({ status: 'failed' })
         .eq('id', notification.id);
-      
+
       failed++;
     }
   }
 
   return new Response(
-    JSON.stringify({ 
-      success: true, 
-      processed, 
-      failed,
-      message: `Processed ${processed} notifications, ${failed} failed`
-    }),
+    JSON.stringify({ success: true, processed, failed }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
 
 async function sendScheduledNotification(supabaseClient: any, notification: ScheduledNotification) {
-  // Get event data - removed the invalid property access
   const eventData = notification.notification_data;
-  
-  // Generate secure deep link token
-  const token = await generateSecureToken(supabaseClient, notification.event_id);
-  
-  // Get user push tokens
+
+  // Fetch preferences to filter users who have opted out of this notification type
   const { data: users, error: usersError } = await supabaseClient
     .from('profiles')
-    .select('id, push_token, notification_preferences')
-    .in('id', notification.target_users)
-    .not('push_token', 'is', null);
+    .select('id, notification_preferences')
+    .in('id', notification.target_users);
 
-  if (usersError) {
-    throw new Error(`Failed to fetch user tokens: ${usersError.message}`);
+  if (usersError) throw new Error(`Failed to fetch user preferences: ${usersError.message}`);
+
+  const filteredUserIds: string[] = (users ?? [])
+    .filter((u: any) => shouldSendNotification(notification.notification_type, u.notification_preferences ?? {}))
+    .map((u: any) => u.id);
+
+  if (filteredUserIds.length === 0) {
+    console.log(`All users opted out for notification ${notification.id}`);
+    return;
   }
 
-  // Filter users based on notification preferences
-  const targetUsers = users.filter((user: any) => {
-    const prefs = user.notification_preferences || {};
-    return shouldSendNotification(notification.notification_type, prefs);
-  });
+  console.log(`Sending ${notification.notification_type} to ${filteredUserIds.length} users for event ${notification.event_id}`);
 
-  // Prepare notification payload with deep linking and actions
-  const payload = {
-    title: eventData.title,
-    body: eventData.body,
-    data: {
-      eventId: notification.event_id,
-      type: notification.notification_type,
-      deepLink: `puma://event/${notification.event_id}?token=${token}`,
-      ...eventData.data
-    },
-    android: {
-      channelId: getAndroidChannel(notification.notification_type),
-      actions: getQuickActions(notification.notification_type, token)
-    },
-    apns: {
-      payload: {
-        aps: {
-          category: getIOSCategory(notification.notification_type),
-          'thread-id': `event-${notification.event_id}`
-        }
-      }
-    }
-  };
-
-  // Send notifications via FCM
-  for (const user of targetUsers) {
-    try {
-      await sendPushNotification(user.push_token, payload);
-      
-      // Log notification
-      await supabaseClient
-        .from('notification_logs')
-        .insert({
-          user_id: user.id,
-          title: payload.title,
-          body: payload.body,
-          type: notification.notification_type,
-          status: 'sent',
-          metadata: {
-            event_id: notification.event_id,
-            scheduled_notification_id: notification.id
-          },
-          deep_link_token: token,
-          notification_category: getNotificationCategory(notification.notification_type),
-          quick_actions: payload.android.actions
-        });
-        
-    } catch (error: unknown) {
-      console.error(`Failed to send to user ${user.id}:`, error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      // Log failed notification
-      await supabaseClient
-        .from('notification_logs')
-        .insert({
-          user_id: user.id,
-          title: payload.title,
-          body: payload.body,
-          type: notification.notification_type,
-          status: 'failed',
-          metadata: {
-            event_id: notification.event_id,
-            error: errorMessage
-          }
-        });
-    }
-  }
+  // Delegate delivery to send-push-notification (handles APNs + FCM + web push)
+  await callSendPushNotification(filteredUserIds, eventData.title, eventData.body, notification.event_id);
 }
 
 async function sendManualReminder(supabaseClient: any, data: any) {
   const { eventId, selectedUserIds, message, title } = data;
-  
-  // Get event details
+
   const { data: event, error: eventError } = await supabaseClient
     .from('events')
-    .select('*')
+    .select('title, event_type')
     .eq('id', eventId)
     .single();
 
-  if (eventError) {
-    throw new Error(`Event not found: ${eventError.message}`);
+  if (eventError) throw new Error(`Event not found: ${eventError.message}`);
+
+  const notifTitle = title || `Reminder: ${event.title}`;
+
+  console.log(`Sending manual reminder to ${selectedUserIds.length} users for event ${eventId}`);
+
+  const result = await callSendPushNotification(selectedUserIds, notifTitle, message, eventId);
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      sent: result.sent,
+      failed: result.total - result.sent,
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// Schedule 3-hour and morning reminders when an event is created/updated
+async function scheduleEventReminders(supabaseClient: any, data: any) {
+  const { eventId } = data;
+
+  const { data: event, error: eventError } = await supabaseClient
+    .from('events')
+    .select('id, title, date, start_time, event_type')
+    .eq('id', eventId)
+    .single();
+
+  if (eventError) throw new Error(`Event not found: ${eventError.message}`);
+
+  // Get all invited users (pending or accepted)
+  const { data: availability, error: availError } = await supabaseClient
+    .from('event_availability')
+    .select('user_id')
+    .eq('event_id', eventId)
+    .not('user_id', 'is', null);
+
+  if (availError) throw new Error(`Failed to fetch availability: ${availError.message}`);
+
+  const targetUsers = [...new Set((availability ?? []).map((a: any) => a.user_id as string))];
+
+  if (targetUsers.length === 0) return new Response(
+    JSON.stringify({ success: true, scheduled: 0 }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+
+  const eventDate = new Date(`${event.date}T${event.start_time ?? '09:00'}:00`);
+  const reminders = [];
+
+  // Morning reminder at 9 AM on event day (if event is later that day)
+  const morningReminder = new Date(eventDate);
+  morningReminder.setHours(9, 0, 0, 0);
+  if (morningReminder > new Date() && morningReminder < eventDate) {
+    reminders.push({
+      event_id: eventId,
+      notification_type: 'morning_reminder',
+      scheduled_time: morningReminder.toISOString(),
+      target_users: targetUsers,
+      status: 'pending',
+      notification_data: {
+        title: event.event_type === 'match' ? 'Match Day!' : 'Training Today',
+        body: `${event.title} is today. Don't forget to confirm your attendance!`,
+      },
+    });
   }
 
-  // Generate secure token
-  const token = await generateSecureToken(supabaseClient, eventId);
-  
-  // Get user push tokens
-  const { data: users, error: usersError } = await supabaseClient
-    .from('profiles')
-    .select('id, push_token')
-    .in('id', selectedUserIds)
-    .not('push_token', 'is', null);
-
-  if (usersError) {
-    throw new Error(`Failed to fetch user tokens: ${usersError.message}`);
+  // 3-hour reminder
+  const threeHourReminder = new Date(eventDate.getTime() - 3 * 60 * 60 * 1000);
+  if (threeHourReminder > new Date()) {
+    reminders.push({
+      event_id: eventId,
+      notification_type: '3_hour_reminder',
+      scheduled_time: threeHourReminder.toISOString(),
+      target_users: targetUsers,
+      status: 'pending',
+      notification_data: {
+        title: event.event_type === 'match' ? 'Match in 3 Hours' : 'Training in 3 Hours',
+        body: `${event.title} starts in 3 hours.`,
+      },
+    });
   }
 
-  const payload = {
-    title: title || `Manual Reminder: ${event.title}`,
-    body: message,
-    data: {
-      eventId,
-      type: 'manual_reminder',
-      deepLink: `puma://event/${eventId}?token=${token}`
-    },
-    android: {
-      channelId: getAndroidChannel(event.event_type)
-    },
-    apns: {
-      payload: {
-        aps: {
-          category: 'MANUAL_REMINDER',
-          'thread-id': `event-${eventId}`
-        }
-      }
-    }
-  };
+  if (reminders.length > 0) {
+    // Remove any existing pending reminders for this event to avoid duplicates
+    await supabaseClient
+      .from('scheduled_notifications')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('status', 'pending')
+      .in('notification_type', ['morning_reminder', '3_hour_reminder']);
 
-  let sent = 0;
-  let failed = 0;
+    const { error: insertError } = await supabaseClient
+      .from('scheduled_notifications')
+      .insert(reminders);
 
-  for (const user of users) {
-    try {
-      await sendPushNotification(user.push_token, payload);
-      sent++;
-      
-      // Log notification
-      await supabaseClient
-        .from('notification_logs')
-        .insert({
-          user_id: user.id,
-          title: payload.title,
-          body: payload.body,
-          type: 'manual_reminder',
-          status: 'sent',
-          metadata: { event_id: eventId },
-          deep_link_token: token
-        });
-        
-    } catch (error) {
-      console.error(`Failed to send manual reminder to user ${user.id}:`, error);
-      failed++;
-    }
+    if (insertError) throw new Error(`Failed to schedule reminders: ${insertError.message}`);
   }
 
   return new Response(
-    JSON.stringify({ 
-      success: true, 
-      sent, 
-      failed,
-      message: `Manual reminder sent to ${sent} users, ${failed} failed`
-    }),
+    JSON.stringify({ success: true, scheduled: reminders.length }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
 
 async function scheduleWeeklyNudges(supabaseClient: any) {
   console.log('Scheduling weekly nudges...');
-  
+
   const now = new Date();
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  
-  // Get events in the next 7 days that need RSVP nudges
+
   const { data: events, error } = await supabaseClient
     .from('events')
-    .select('*')
+    .select('id, title, date, event_type')
     .gte('date', now.toISOString().split('T')[0])
     .lte('date', nextWeek.toISOString().split('T')[0]);
 
-  if (error) {
-    throw new Error(`Failed to fetch upcoming events: ${error.message}`);
-  }
+  if (error) throw new Error(`Failed to fetch upcoming events: ${error.message}`);
 
   let scheduled = 0;
 
   for (const event of events) {
-    // Get users who haven't RSVPed
     const { data: pendingUsers, error: pendingError } = await supabaseClient
       .from('event_availability')
       .select('user_id')
       .eq('event_id', event.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .not('user_id', 'is', null);
 
     if (pendingError) {
       console.error(`Failed to fetch pending RSVPs for event ${event.id}:`, pendingError);
@@ -338,88 +296,41 @@ async function scheduleWeeklyNudges(supabaseClient: any) {
     }
 
     if (pendingUsers.length > 0) {
-      const nudgeTime = getNextNudgeTime(); // Sunday, Wednesday, or Friday evening
-      
-      await supabaseClient
+      const nudgeTime = getNextNudgeTime();
+
+      const { error: insertError } = await supabaseClient
         .from('scheduled_notifications')
         .insert({
           event_id: event.id,
           notification_type: 'weekly_nudge',
           scheduled_time: nudgeTime,
           target_users: pendingUsers.map((u: any) => u.user_id),
+          status: 'pending',
           notification_data: {
             title: 'RSVP Reminder',
-            body: `Please confirm your attendance for ${event.title} on ${event.date}`,
-            event_type: event.event_type
-          }
+            body: `Please confirm your attendance for ${event.title} on ${new Date(event.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}`,
+          },
         });
-      
-      scheduled++;
+
+      if (!insertError) scheduled++;
     }
   }
 
   return new Response(
-    JSON.stringify({ 
-      success: true, 
-      scheduled,
-      message: `Scheduled ${scheduled} weekly nudge notifications`
-    }),
+    JSON.stringify({ success: true, scheduled }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
 
-async function generateSecureToken(supabaseClient: any, eventId: string): Promise<string> {
-  const { data, error } = await supabaseClient
-    .rpc('generate_secure_notification_token');
-
-  if (error) {
-    throw new Error(`Failed to generate token: ${error.message}`);
-  }
-
-  return data;
-}
-
-async function sendPushNotification(token: string, payload: any) {
-  const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
-  if (!fcmServerKey) {
-    throw new Error('FCM_SERVER_KEY not configured');
-  }
-
-  const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': `key=${fcmServerKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      to: token,
-      notification: {
-        title: payload.title,
-        body: payload.body,
-      },
-      data: payload.data,
-      android: payload.android,
-      apns: payload.apns
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`FCM request failed: ${response.statusText}`);
-  }
-
-  return await response.json();
-}
-
 function shouldSendNotification(type: string, preferences: any): boolean {
-  const defaultPrefs = {
+  const prefs = {
     event_reminders: true,
     availability_requests: true,
     manual_reminders: true,
-    weekly_nudges: true
+    weekly_nudges: true,
+    ...preferences,
   };
-  
-  const prefs = { ...defaultPrefs, ...preferences };
-  
+
   switch (type) {
     case '3_hour_reminder':
     case 'morning_reminder':
@@ -433,83 +344,20 @@ function shouldSendNotification(type: string, preferences: any): boolean {
   }
 }
 
-function getAndroidChannel(eventType: string): string {
-  switch (eventType) {
-    case 'match':
-      return 'matchday';
-    case 'training':
-      return 'training';
-    default:
-      return 'general';
-  }
-}
-
-function getIOSCategory(notificationType: string): string {
-  switch (notificationType) {
-    case '3_hour_reminder':
-    case 'morning_reminder':
-      return 'EVENT_REMINDER';
-    case 'weekly_nudge':
-      return 'RSVP_REQUEST';
-    case 'manual_reminder':
-      return 'MANUAL_REMINDER';
-    default:
-      return 'GENERAL';
-  }
-}
-
-function getNotificationCategory(type: string): string {
-  switch (type) {
-    case '3_hour_reminder':
-    case 'morning_reminder':
-      return 'event_reminder';
-    case 'weekly_nudge':
-      return 'rsvp_nudge';
-    case 'manual_reminder':
-      return 'manual_reminder';
-    default:
-      return 'general';
-  }
-}
-
-function getQuickActions(notificationType: string, token: string) {
-  if (notificationType === 'weekly_nudge' || notificationType === 'morning_reminder') {
-    return [
-      {
-        id: 'accept',
-        title: 'Accept',
-        action: `puma://rsvp/yes?token=${token}`
-      },
-      {
-        id: 'decline', 
-        title: 'Decline',
-        action: `puma://rsvp/no?token=${token}`
-      }
-    ];
-  }
-  return [];
-}
-
 function getNextNudgeTime(): string {
   const now = new Date();
-  const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  
-  let targetDay: number;
-  
-  // Determine next nudge day (Sunday = 0, Wednesday = 3, Friday = 5)
+  const currentDay = now.getDay();
+
+  let daysUntilTarget: number;
   if (currentDay < 3) {
-    targetDay = 3; // Next Wednesday
+    daysUntilTarget = 3 - currentDay;       // next Wednesday
   } else if (currentDay < 5) {
-    targetDay = 5; // Next Friday  
+    daysUntilTarget = 5 - currentDay;       // next Friday
   } else {
-    targetDay = 0; // Next Sunday
+    daysUntilTarget = 7 - currentDay;       // next Sunday
   }
-  
-  const daysUntilTarget = targetDay === 0 ? (7 - currentDay) : (targetDay - currentDay);
+
   const nudgeDate = new Date(now.getTime() + daysUntilTarget * 24 * 60 * 60 * 1000);
-  
-  // Set to 7 PM
   nudgeDate.setHours(19, 0, 0, 0);
-  
   return nudgeDate.toISOString();
 }
