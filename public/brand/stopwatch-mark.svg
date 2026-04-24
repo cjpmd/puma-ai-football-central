@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="sw-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D9C2F6"/>
+      <stop offset="100%" stop-color="#8B5BD1"/>
+    </linearGradient>
+  </defs>
+  <!-- Crown / button -->
+  <rect x="70" y="14" width="20" height="10" rx="3" fill="url(#sw-grad)"/>
+  <rect x="74" y="6" width="12" height="10" rx="2" fill="url(#sw-grad)"/>
+  <!-- Body ring -->
+  <circle cx="80" cy="92" r="56" stroke="url(#sw-grad)" stroke-width="10" fill="none"/>
+  <!-- Tick at 12 -->
+  <rect x="78" y="40" width="4" height="10" rx="1.5" fill="url(#sw-grad)"/>
+  <!-- Hand -->
+  <line x1="80" y1="92" x2="116" y2="62" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="80" cy="92" r="6" fill="#FFFFFF"/>
+</svg>

@@ -120,7 +120,7 @@ export default function AuthMobile() {
         <div className="pt-safe px-6 py-8 text-center">
           <div className="flex justify-center mb-3">
             <img 
-              src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
+              src="/brand/stopwatch-mark.svg" 
               alt="Origin Sports" 
               className="w-20 h-20"
             />
@@ -249,7 +249,7 @@ export default function AuthMobile() {
         <div className="text-center space-y-2">
           <div className="flex justify-center">
             <img 
-              src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
+              src="/brand/stopwatch-mark.svg" 
               alt="Origin Sports" 
               className="w-16 h-16"
             />

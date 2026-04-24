@@ -448,7 +448,7 @@ export default function CalendarEventsMobile() {
       setTeamPrivacySettings(settingsMap);
 
       logger.log('Loaded events:', eventsResult.data?.length, 'View mode:', viewMode);
-      setEvents((eventsResult.data || []) as DatabaseEvent[]);
+      setEvents(((eventsResult.data || []) as unknown) as DatabaseEvent[]);
 
       // Group selections by event_id for easy lookup
       const selectionsByEvent: {[key: string]: any[]} = {};
