@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 import { MobileImageEditor } from '@/components/players/MobileImageEditor';
 import { StaffKitSection } from '@/components/staff/StaffKitSection';
+import { pickPhoto } from '@/utils/cameraUtils';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -100,9 +101,23 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       setSelectedImageUrl(url);
       setShowImageEditor(true);
     }
-    // Reset input so same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleCameraButtonClick = async () => {
+    try {
+      const file = await pickPhoto('prompt');
+      if (file) {
+        // Native path: Capacitor Camera returned a File — open editor directly
+        const url = URL.createObjectURL(file);
+        setSelectedImageUrl(url);
+        setShowImageEditor(true);
+      } else {
+        // Web fallback: trigger the hidden file input
+        fileInputRef.current?.click();
+      }
+    } catch (err) {
+      // User cancelled the picker — ignore
     }
   };
 
@@ -241,7 +256,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     </Avatar>
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={handleCameraButtonClick}
                       className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors"
                     >
                       <Camera className="w-4 h-4" />
@@ -252,7 +267,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={handleImageSelect}
                     className="hidden"
                   />
