@@ -270,6 +270,20 @@ const { data: teamData } = useQuery({
         logger.log('Loaded existing selections:', existingSelections);
 
         if (existingSelections && existingSelections.length > 0) {
+          // Expand team slots if DB has more teams than event.teams indicated
+          const maxTeamNum = Math.max(...existingSelections.map(s => s.team_number || 1));
+          while (initialTeamSelections.length < maxTeamNum) {
+            const nextNum = initialTeamSelections.length + 1;
+            initialTeamSelections.push({
+              teamNumber: nextNum,
+              squadPlayers: [],
+              periods: [],
+              globalCaptainId: undefined,
+              performanceCategory: 'none',
+              selectedStaff: []
+            });
+          }
+
           // Group selections by team number
           const groupedSelections = existingSelections.reduce((acc, selection) => {
             const teamNum = selection.team_number || 1;
@@ -384,6 +398,11 @@ const { data: teamData } = useQuery({
       } catch (error) {
         logger.error('Error loading existing selections:', error);
         toast.error('Failed to load existing team selections');
+        for (let i = 0; i < initialTeamSelections.length; i++) {
+          if (initialTeamSelections[i].periods.length === 0) {
+            initialTeamSelections[i].periods = [createDefaultPeriod(event.game_format || '7-a-side', event.game_duration || 50)];
+          }
+        }
         setTeamSelections(initialTeamSelections);
       } finally {
         setIsInitializing(false);
