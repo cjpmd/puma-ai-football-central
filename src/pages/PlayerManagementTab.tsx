@@ -31,7 +31,7 @@ import { DirectCopyRebuilder } from '@/components/debug/DirectCopyRebuilder';
 import { ProtectedComponent } from '@/components/auth/ProtectedComponent';
 
 const PlayerManagementTab = () => {
-  const { teams } = useAuth();
+  const { teams, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
@@ -320,6 +320,44 @@ const PlayerManagementTab = () => {
       description: `Leave team dialog for: ${player.name}`,
     });
     handleModalOpen('leave', player);
+  };
+
+  const executeTransfer = async (data: {
+    toTeamId: string;
+    dataTransferOptions: { full: boolean; attributes: boolean; comments: boolean; objectives: boolean; events: boolean };
+  }) => {
+    if (!selectedPlayer) return;
+    if (!window.confirm(`Confirm transfer of ${selectedPlayer.name} to the selected team? This cannot be undone.`)) return;
+
+    try {
+      const updateData: Record<string, any> = { team_id: data.toTeamId };
+      if (!data.dataTransferOptions.attributes) updateData.attributes = null;
+      if (!data.dataTransferOptions.objectives) updateData.objectives = null;
+      if (!data.dataTransferOptions.comments) updateData.comments = null;
+      if (!data.dataTransferOptions.events) updateData.match_stats = null;
+
+      const { error: updateError } = await supabase
+        .from('players')
+        .update(updateData)
+        .eq('id', selectedPlayer.id);
+      if (updateError) throw updateError;
+
+      await supabase.from('player_transfers').insert({
+        player_id: selectedPlayer.id,
+        from_team_id: selectedPlayer.teamId || (selectedPlayer as any).team_id,
+        to_team_id: data.toTeamId,
+        data_transfer_options: data.dataTransferOptions,
+        status: 'completed',
+        transfer_date: new Date().toISOString(),
+        requested_by: user?.id ?? null,
+      });
+
+      handleModalClose();
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+      toast({ title: 'Transfer Complete', description: `${selectedPlayer.name} has been transferred successfully.` });
+    } catch (error: any) {
+      toast({ title: 'Transfer Failed', description: error.message || 'Failed to complete transfer', variant: 'destructive' });
+    }
   };
 
   const renderPerformanceIcon = (playerId: string) => {
@@ -663,11 +701,7 @@ const PlayerManagementTab = () => {
                   <PlayerTransferForm
                     player={selectedPlayer}
                     currentTeamId={selectedTeamId}
-                    onSubmit={() => {
-                      handleModalClose();
-                      // Refresh data after transfer
-                      queryClient.invalidateQueries({ queryKey: ['active-players'] });
-                    }}
+                    onSubmit={executeTransfer}
                     onCancel={handleModalClose}
                   />
                 </div>

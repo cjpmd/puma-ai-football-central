@@ -29,6 +29,7 @@ import { PlayerCommentsModal } from '@/components/players/mobile/PlayerCommentsM
 import { PlayerHistoryModal } from '@/components/players/mobile/PlayerHistoryModal';
 import { PlayerParentsModal } from '@/components/players/mobile/PlayerParentsModal';
 import { PlayerTrainingPlansModal } from '@/components/players/PlayerTrainingPlansModal';
+import { PlayerTransferForm } from '@/components/players/PlayerTransferForm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 // Use the actual database player type
@@ -94,7 +95,9 @@ export default function PlayerManagementMobile() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [parentsModalOpen, setParentsModalOpen] = useState(false);
   const [trainingPlansModalOpen, setTrainingPlansModalOpen] = useState(false);
-  
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+
   // New modal states for team management
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showCodeManagement, setShowCodeManagement] = useState(false);
@@ -504,11 +507,51 @@ export default function PlayerManagementMobile() {
   };
 
   const handleTransferPlayer = (player: Player) => {
+    setSelectedPlayer(player);
     setActionSheetOpen(false);
-    toast({ 
-      title: 'Transfer Player', 
-      description: `Transfer functionality for ${player.name} - Feature coming soon`,
-    });
+    setTransferModalOpen(true);
+  };
+
+  const executeTransfer = async (data: {
+    toTeamId: string;
+    dataTransferOptions: { full: boolean; attributes: boolean; comments: boolean; objectives: boolean; events: boolean };
+  }) => {
+    if (!selectedPlayer) return;
+    if (!confirm(`Confirm transfer of ${selectedPlayer.name} to the selected team? This cannot be undone.`)) return;
+
+    setTransferring(true);
+    try {
+      const updateData: Record<string, any> = { team_id: data.toTeamId };
+      if (!data.dataTransferOptions.attributes) updateData.attributes = null;
+      if (!data.dataTransferOptions.objectives) updateData.objectives = null;
+      if (!data.dataTransferOptions.comments) updateData.comments = null;
+      if (!data.dataTransferOptions.events) updateData.match_stats = null;
+
+      const { error: updateError } = await supabase
+        .from('players')
+        .update(updateData)
+        .eq('id', selectedPlayer.id);
+      if (updateError) throw updateError;
+
+      await supabase.from('player_transfers').insert({
+        player_id: selectedPlayer.id,
+        from_team_id: selectedPlayer.teamId || selectedPlayer.team_id,
+        to_team_id: data.toTeamId,
+        data_transfer_options: data.dataTransferOptions,
+        status: 'completed',
+        transfer_date: new Date().toISOString(),
+        requested_by: user?.id ?? null,
+      });
+
+      toast({ title: 'Transfer Complete', description: `${selectedPlayer.name} has been transferred successfully.` });
+      setTransferModalOpen(false);
+      setSelectedPlayer(null);
+      loadPlayers();
+    } catch (error: any) {
+      toast({ title: 'Transfer Failed', description: error.message || 'Failed to complete transfer', variant: 'destructive' });
+    } finally {
+      setTransferring(false);
+    }
   };
 
   const handleLeaveTeam = async (player: Player) => {
@@ -805,6 +848,23 @@ export default function PlayerManagementMobile() {
           />
         </>
       )}
+
+      {/* Transfer Player Modal */}
+      <Dialog open={transferModalOpen} onOpenChange={(open) => { if (!transferring) { setTransferModalOpen(open); if (!open) setSelectedPlayer(null); } }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Transfer Player</DialogTitle>
+          </DialogHeader>
+          {selectedPlayer && currentTeam && (
+            <PlayerTransferForm
+              player={selectedPlayer}
+              currentTeamId={currentTeam.id}
+              onSubmit={executeTransfer}
+              onCancel={() => { setTransferModalOpen(false); setSelectedPlayer(null); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Add Player Modal */}
       <Dialog open={showAddPlayer} onOpenChange={setShowAddPlayer}>
