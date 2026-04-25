@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Gamepad2, ChevronLeft, Timer, Trash2, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Users, Gamepad2, ChevronLeft, Timer, Trash2, CheckCircle, Clock, XCircle, UserCheck } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -40,6 +40,7 @@ interface TeamSelection {
   periods: any[];
   squadPlayers: number;
   formation?: string;
+  staffIds: string[];
 }
 
 interface AvailabilitySummary {
@@ -71,6 +72,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [trainingDrills, setTrainingDrills] = useState<TrainingDrill[]>([]);
   const [captainNames, setCaptainNames] = useState<Record<string, string>>({});
+  const [staffNames, setStaffNames] = useState<Record<string, string>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [availabilitySummary, setAvailabilitySummary] = useState<AvailabilitySummary>({ available: 0, pending: 0, unavailable: 0 });
 
@@ -201,12 +203,18 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         const groupedSelections = selections.reduce((acc, selection) => {
           const teamNum = selection.team_number || 1;
           if (!acc[teamNum]) {
+            // Extract staff IDs from the staff_selection JSONB column
+            const rawStaff = selection.staff_selection;
+            const staffIds: string[] = Array.isArray(rawStaff)
+              ? rawStaff.map((s: any) => s.staffId || s.id).filter(Boolean)
+              : [];
             acc[teamNum] = {
               teamNumber: teamNum,
               performanceCategory: selection.performance_categories?.name || 'No category',
               periods: [],
               squadPlayers: 0,
               formation: undefined as string | undefined,
+              staffIds,
             };
           }
           acc[teamNum].periods.push(selection);
@@ -261,6 +269,21 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
             setCaptainNames(namesMap);
           }
         }
+
+        // Fetch staff names for all teams
+        const allStaffIds = [...new Set(teamsArray.flatMap(t => t.staffIds))];
+        if (allStaffIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .in('id', allStaffIds);
+
+          if (profiles) {
+            const namesMap: Record<string, string> = {};
+            profiles.forEach(p => { if (p.name) namesMap[p.id] = p.name; });
+            setStaffNames(namesMap);
+          }
+        }
       } catch (error) {
         logger.error('Error loading team selections:', error);
       }
@@ -296,21 +319,23 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         .select(`
           id,
           duration_minutes,
-          drills!inner(
+          custom_drill_name,
+          sequence_order,
+          drills(
             id,
             name
           )
         `)
         .eq('training_session_id', session.id)
-        .order('created_at');
+        .order('sequence_order', { ascending: true });
 
       if (error) throw error;
 
-      const formattedDrills = drills?.map((drill, index) => ({
+      const formattedDrills = drills?.map((drill: any) => ({
         id: drill.id,
-        name: drill.drills?.name || 'Unnamed Drill',
+        name: (drill.drills as any)?.name || drill.custom_drill_name || 'Custom Drill',
         duration_minutes: drill.duration_minutes || 0,
-        order_index: index + 1
+        order_index: drill.sequence_order || 0
       })) || [];
 
       setTrainingDrills(formattedDrills);
@@ -457,6 +482,18 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 </Badge>
               )}
             </div>
+
+            {/* Staff / coaches */}
+            {currentTeam.staffIds.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                <UserCheck className="h-3 w-3 text-muted-foreground shrink-0" />
+                {currentTeam.staffIds.map(id => (
+                  <span key={id} className="text-xs text-muted-foreground">
+                    {staffNames[id] || '…'}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Availability breakdown */}
             {(availabilitySummary.available + availabilitySummary.pending + availabilitySummary.unavailable) > 0 && (

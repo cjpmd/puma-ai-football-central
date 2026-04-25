@@ -190,8 +190,14 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
           .maybeSingle();
 
         if (session) {
-          setSessionDrills(session.training_session_drills?.map((drill: any) => ({
+          const sortedDrills = (session.training_session_drills || [])
+            .slice()
+            .sort((a: any, b: any) => (a.sequence_order || 0) - (b.sequence_order || 0));
+
+          setSessionDrills(sortedDrills.map((drill: any) => ({
             ...drill,
+            // Supabase returns the joined drills table as 'drills'; map to 'drill'
+            drill: drill.drills || undefined,
             subgroups: drill.drill_subgroups?.map((subgroup: any) => ({
               ...subgroup,
               players: subgroup.drill_subgroup_players?.map((p: any) => p.player_id) || []
