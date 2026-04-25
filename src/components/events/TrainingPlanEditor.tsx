@@ -832,6 +832,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
           </CardContent>
         </Card>
       )}
+      </div>{/* end Drill Sequence wrapper */}
 
       {/* Equipment */}
       <Card>
