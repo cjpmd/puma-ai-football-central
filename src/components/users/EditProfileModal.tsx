@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 import { MobileImageEditor } from '@/components/players/MobileImageEditor';
 import { StaffKitSection } from '@/components/staff/StaffKitSection';
-import { pickPhoto } from '@/utils/cameraUtils';
+import { pickPhoto, isNativePlatform } from '@/utils/cameraUtils';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -263,13 +263,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     </button>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">Tap to change photo</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
+                  {/* Web fallback — not rendered on native; Capacitor Camera handles native */}
+                  {!isNativePlatform() && (
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                  )}
                 </div>
 
                 <div>
