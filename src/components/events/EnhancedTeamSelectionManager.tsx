@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard, Sparkles, ChevronLeft } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard, Sparkles, ChevronLeft, UserCheck } from 'lucide-react';
 import { format as formatDate, parseISO } from 'date-fns';
 import { GameDayStyleFormationEditor } from './GameDayStyleFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
@@ -198,6 +198,28 @@ const { data: teamData } = useQuery({
     },
     enabled: !!teamId,
   });
+
+  // Load staff for coach display next to team groups
+  const { data: teamStaffList = [] } = useQuery({
+    queryKey: ['team-staff-lookup', teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('get_consolidated_team_staff', { p_team_id: teamId });
+      if (error) return [];
+      return (data || []).map((s: any) => ({
+        id: s.linked_user_id || s.id,
+        name: s.name || 'Unknown',
+        role: s.role || '',
+      })).filter((s: any) => s.id);
+    },
+    enabled: !!teamId,
+  });
+
+  const getStaffNamesForTeam = (staffIds: string[]): string[] => {
+    return staffIds
+      .map(id => teamStaffList.find((s: any) => s.id === id)?.name)
+      .filter((n): n is string => !!n);
+  };
 
   // Get the appropriate kit design based on event kit selection
   const getEventKitDesign = () => {
@@ -1154,9 +1176,15 @@ return (
                     {teamSelections.map((t, i) => {
                       const cat = performanceCategories.find(c => c.id === t.performanceCategory);
                       const label = cat ? cat.name : `Team ${i + 1}`;
+                      const coaches = getStaffNamesForTeam(t.selectedStaff || []);
                       return (
                         <SelectItem key={i} value={String(i)}>
-                          {label}
+                          <div className="flex flex-col">
+                            <span>{label}</span>
+                            {coaches.length > 0 && (
+                              <span className="text-xs text-muted-foreground">{coaches.join(', ')}</span>
+                            )}
+                          </div>
                         </SelectItem>
                       );
                     })}
@@ -1180,6 +1208,23 @@ return (
             </div>
           </div>
         )}
+
+        {/* Coaches assigned to this team group */}
+        {isMobile && currentTeam && (currentTeam.selectedStaff || []).length > 0 && (() => {
+          const coachNames = getStaffNamesForTeam(currentTeam.selectedStaff || []);
+          if (coachNames.length === 0) return null;
+          return (
+            <div className="px-3 pb-1 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <UserCheck className="w-3 h-3 text-white/50 shrink-0" />
+                <span className="text-[10px] text-white/50 uppercase tracking-wider">Coaches:</span>
+                {coachNames.map((name, i) => (
+                  <span key={i} className="text-[11px] font-medium text-white/75">{name}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex-1 min-h-0 overflow-hidden w-full max-w-full">
           {/* Determine if Formation tab should be shown based on privacy settings */}

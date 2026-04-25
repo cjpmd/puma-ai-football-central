@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { DrillMediaManager } from './DrillMediaManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
+import { X, Link } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -20,12 +20,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const AGE_GROUPS = [
+  'All Ages', 'U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12',
+  'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'U21', 'Senior',
+];
+
 interface Drill {
   id: string;
   name: string;
   description: string | null;
   duration_minutes: number | null;
   difficulty_level: string | null;
+  age_group?: string | null;
+  external_url?: string | null;
   is_public: boolean;
   drill_tags?: Array<{ id: string; name: string; color: string }>;
   drill_media?: Array<{ id: string; file_name: string; file_type: string; file_size: number | null; file_url: string }>;
@@ -43,6 +50,8 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
     description: drill.description || '',
     duration_minutes: drill.duration_minutes?.toString() || '',
     difficulty_level: drill.difficulty_level || '',
+    age_group: drill.age_group || '',
+    external_url: drill.external_url || '',
     is_public: drill.is_public,
   });
   const [selectedTags, setSelectedTags] = useState<string[]>(
@@ -52,67 +61,57 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
 
   const queryClient = useQueryClient();
 
-  // Reset form when drill changes
   useEffect(() => {
     setFormData({
       name: drill.name,
       description: drill.description || '',
       duration_minutes: drill.duration_minutes?.toString() || '',
       difficulty_level: drill.difficulty_level || '',
+      age_group: drill.age_group || '',
+      external_url: drill.external_url || '',
       is_public: drill.is_public,
     });
     setSelectedTags(drill.drill_tags?.map(tag => tag.id) || []);
   }, [drill]);
 
-  // Fetch available tags
   const { data: tags = [] } = useQuery({
     queryKey: ['drill-tags'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drill_tags')
-        .select('*')
-        .order('name');
-      
+      const { data, error } = await supabase.from('drill_tags').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
   });
 
-  // Update drill mutation
   const updateDrillMutation = useMutation({
     mutationFn: async (updateData: typeof formData & { selectedTags: string[] }) => {
       const { selectedTags: tagIds, ...drillData } = updateData;
-      
-      // Update the drill
+
       const { error: drillError } = await supabase
         .from('drills')
         .update({
-          ...drillData,
+          name: drillData.name,
+          description: drillData.description || null,
           duration_minutes: drillData.duration_minutes ? parseInt(drillData.duration_minutes) : null,
+          difficulty_level: drillData.difficulty_level || null,
+          age_group: drillData.age_group || null,
+          external_url: drillData.external_url.trim() || null,
+          is_public: drillData.is_public,
         })
         .eq('id', drill.id);
 
       if (drillError) throw drillError;
 
-      // Delete existing tag assignments
       const { error: deleteTagsError } = await supabase
         .from('drill_tag_assignments')
         .delete()
         .eq('drill_id', drill.id);
-
       if (deleteTagsError) throw deleteTagsError;
 
-      // Create new tag assignments
       if (tagIds.length > 0) {
-        const tagAssignments = tagIds.map(tagId => ({
-          drill_id: drill.id,
-          tag_id: tagId,
-        }));
-
         const { error: tagError } = await supabase
           .from('drill_tag_assignments')
-          .insert(tagAssignments);
-
+          .insert(tagIds.map(tagId => ({ drill_id: drill.id, tag_id: tagId })));
         if (tagError) throw tagError;
       }
     },
@@ -130,26 +129,13 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) { toast.error('Drill name is required'); return; }
     setIsSubmitting(true);
-
-    if (!formData.name.trim()) {
-      toast.error('Drill name is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    updateDrillMutation.mutate({
-      ...formData,
-      selectedTags,
-    });
+    updateDrillMutation.mutate({ ...formData, selectedTags });
   };
 
   const handleTagToggle = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
+    setSelectedTags(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
   };
 
   const selectedTagsData = tags.filter(tag => selectedTags.includes(tag.id));
@@ -199,9 +185,9 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="difficulty">Difficulty Level</Label>
-              <Select 
-                value={formData.difficulty_level} 
+              <Label htmlFor="difficulty">Difficulty</Label>
+              <Select
+                value={formData.difficulty_level}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty_level: value }))}
               >
                 <SelectTrigger>
@@ -217,10 +203,42 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="age_group">Age Group Suitability</Label>
+            <Select
+              value={formData.age_group}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, age_group: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select age group" />
+              </SelectTrigger>
+              <SelectContent>
+                {AGE_GROUPS.map(ag => (
+                  <SelectItem key={ag} value={ag}>{ag}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="external_url">External URL</Label>
+            <div className="relative">
+              <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="external_url"
+                type="url"
+                value={formData.external_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, external_url: e.target.value }))}
+                placeholder="https://youtube.com/... or Google Doc link"
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label>Tags</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {selectedTagsData.map((tag) => (
-                <Badge 
+                <Badge
                   key={tag.id}
                   variant="secondary"
                   className="cursor-pointer"
@@ -237,19 +255,14 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
                 <SelectValue placeholder="Add tags" />
               </SelectTrigger>
               <SelectContent>
-                {tags
-                  .filter(tag => !selectedTags.includes(tag.id))
-                  .map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        {tag.name}
-                      </div>
-                    </SelectItem>
-                  ))}
+                {tags.filter(tag => !selectedTags.includes(tag.id)).map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                      {tag.name}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -266,16 +279,11 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
               checked={formData.is_public}
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_public: checked }))}
             />
-            <Label htmlFor="public">Make this drill public (visible to other coaches)</Label>
+            <Label htmlFor="public">Make this drill public (visible to all coaches)</Label>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>

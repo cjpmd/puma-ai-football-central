@@ -18,6 +18,7 @@ interface DrillSubgroup {
   id: string;
   subgroup_name: string;
   players: string[];
+  coach_id?: string;
 }
 
 interface Equipment {
@@ -128,7 +129,8 @@ export const useTrainingSession = () => {
           if (drill.subgroups && drill.subgroups.length > 0) {
             const subgroupsToInsert = drill.subgroups.map(subgroup => ({
               training_session_drill_id: savedDrill.id,
-              subgroup_name: subgroup.subgroup_name
+              subgroup_name: subgroup.subgroup_name,
+              coach_id: subgroup.coach_id || null
             }));
 
             const { data: savedSubgroups, error: subgroupsError } = await supabase

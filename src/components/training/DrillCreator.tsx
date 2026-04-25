@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { DrillMediaManager } from './DrillMediaManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Link } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -20,15 +20,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const AGE_GROUPS = [
+  'All Ages', 'U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12',
+  'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'U21', 'Senior',
+];
+
 interface DrillCreatorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface DrillTag {
-  id: string;
-  name: string;
-  color: string;
 }
 
 interface DrillMedia {
@@ -45,6 +44,8 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
     description: '',
     duration_minutes: '',
     difficulty_level: '',
+    age_group: '',
+    external_url: '',
     is_public: false,
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -53,119 +54,77 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
 
   const queryClient = useQueryClient();
 
-  // Fetch available tags
   const { data: tags = [] } = useQuery({
     queryKey: ['drill-tags'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drill_tags')
-        .select('*')
-        .order('name');
-      
+      const { data, error } = await supabase.from('drill_tags').select('*').order('name');
       if (error) throw error;
       return data || [];
     },
   });
 
-  // Create drill mutation
   const createDrillMutation = useMutation({
     mutationFn: async (drillData: typeof formData & { selectedTags: string[]; mediaFiles: DrillMedia[] }) => {
-      logger.log('Creating drill with data:', drillData);
       const { selectedTags: tagIds, mediaFiles: media, ...drill } = drillData;
-      
-      logger.log('Getting current user...');
+
       const userResult = await supabase.auth.getUser();
-      logger.log('Current user:', userResult.data.user?.id);
-      
-      // Create the drill
+
       const drillToInsert = {
-        ...drill,
+        name: drill.name,
+        description: drill.description || null,
         duration_minutes: drill.duration_minutes ? parseInt(drill.duration_minutes) : null,
+        difficulty_level: drill.difficulty_level || null,
+        age_group: drill.age_group || null,
+        external_url: drill.external_url.trim() || null,
+        is_public: drill.is_public,
         created_by: userResult.data.user?.id,
       };
-      
-      logger.log('Inserting drill:', drillToInsert);
-      
+
       const { data: newDrill, error: drillError } = await supabase
         .from('drills')
         .insert(drillToInsert)
         .select()
         .single();
 
-      logger.log('Drill creation result:', { newDrill, drillError });
+      if (drillError) throw drillError;
 
-      if (drillError) {
-        logger.error('Drill creation failed:', drillError);
-        throw drillError;
-      }
-
-      logger.log('Successfully created drill:', newDrill);
-
-      // Create tag assignments
       if (tagIds.length > 0) {
-        logger.log('Creating tag assignments for tags:', tagIds);
-        const tagAssignments = tagIds.map(tagId => ({
-          drill_id: newDrill.id,
-          tag_id: tagId,
-        }));
-
         const { error: tagError } = await supabase
           .from('drill_tag_assignments')
-          .insert(tagAssignments);
-
-        if (tagError) {
-          logger.error('Tag assignment failed:', tagError);
-          throw tagError;
-        }
-        logger.log('Tag assignments created successfully');
+          .insert(tagIds.map(tagId => ({ drill_id: newDrill.id, tag_id: tagId })));
+        if (tagError) throw tagError;
       }
 
-      // Create media records
       if (media.length > 0) {
-        logger.log('Creating media records:', media);
-        const mediaRecords = media.map(mediaItem => ({
-          drill_id: newDrill.id,
-          file_name: mediaItem.file_name,
-          file_type: mediaItem.file_type,
-          file_size: mediaItem.file_size,
-          file_url: mediaItem.file_url
-        }));
-
         const { error: mediaError } = await supabase
           .from('drill_media')
-          .insert(mediaRecords);
-
-        if (mediaError) {
-          logger.error('Media creation failed:', mediaError);
-          throw mediaError;
-        }
-        logger.log('Media records created successfully');
+          .insert(media.map(m => ({
+            drill_id: newDrill.id,
+            file_name: m.file_name,
+            file_type: m.file_type,
+            file_size: m.file_size,
+            file_url: m.file_url,
+          })));
+        if (mediaError) throw mediaError;
       }
 
       return newDrill;
     },
-    onSuccess: (newDrill) => {
-      logger.log('Drill creation mutation succeeded:', newDrill);
+    onSuccess: () => {
       toast.success('Drill created successfully');
       queryClient.invalidateQueries({ queryKey: ['drills'] });
       onOpenChange(false);
       resetForm();
     },
     onError: (error) => {
-      logger.error('Drill creation mutation failed:', error);
+      logger.error('Drill creation failed:', error);
       toast.error('Failed to create drill: ' + (error.message || 'Unknown error'));
       setIsSubmitting(false);
     },
   });
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      duration_minutes: '',
-      difficulty_level: '',
-      is_public: false,
-    });
+    setFormData({ name: '', description: '', duration_minutes: '', difficulty_level: '', age_group: '', external_url: '', is_public: false });
     setSelectedTags([]);
     setMediaFiles([]);
     setIsSubmitting(false);
@@ -173,35 +132,13 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) { toast.error('Drill name is required'); return; }
     setIsSubmitting(true);
-
-    logger.log('Starting drill creation with data:', formData);
-
-    if (!formData.name.trim()) {
-      toast.error('Drill name is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    logger.log('Calling createDrillMutation with:', {
-      ...formData,
-      selectedTags,
-      mediaFiles,
-    });
-
-    createDrillMutation.mutate({
-      ...formData,
-      selectedTags,
-      mediaFiles,
-    });
+    createDrillMutation.mutate({ ...formData, selectedTags, mediaFiles });
   };
 
   const handleTagToggle = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
+    setSelectedTags(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
   };
 
   const selectedTagsData = tags.filter(tag => selectedTags.includes(tag.id));
@@ -251,9 +188,9 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="difficulty">Difficulty Level</Label>
-              <Select 
-                value={formData.difficulty_level} 
+              <Label htmlFor="difficulty">Difficulty</Label>
+              <Select
+                value={formData.difficulty_level}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty_level: value }))}
               >
                 <SelectTrigger>
@@ -269,10 +206,42 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="age_group">Age Group Suitability</Label>
+            <Select
+              value={formData.age_group}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, age_group: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select age group" />
+              </SelectTrigger>
+              <SelectContent>
+                {AGE_GROUPS.map(ag => (
+                  <SelectItem key={ag} value={ag}>{ag}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="external_url">External URL</Label>
+            <div className="relative">
+              <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="external_url"
+                type="url"
+                value={formData.external_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, external_url: e.target.value }))}
+                placeholder="https://youtube.com/... or Google Doc link"
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label>Tags</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {selectedTagsData.map((tag) => (
-                <Badge 
+                <Badge
                   key={tag.id}
                   variant="secondary"
                   className="cursor-pointer"
@@ -289,19 +258,14 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
                 <SelectValue placeholder="Add tags" />
               </SelectTrigger>
               <SelectContent>
-                {tags
-                  .filter(tag => !selectedTags.includes(tag.id))
-                  .map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        {tag.name}
-                      </div>
-                    </SelectItem>
-                  ))}
+                {tags.filter(tag => !selectedTags.includes(tag.id)).map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                      {tag.name}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -318,16 +282,11 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
               checked={formData.is_public}
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_public: checked }))}
             />
-            <Label htmlFor="public">Make this drill public (visible to other coaches)</Label>
+            <Label htmlFor="public">Make this drill public (visible to all coaches)</Label>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>

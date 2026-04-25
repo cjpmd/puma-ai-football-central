@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target, Sparkles, ChevronDown } from 'lucide-react';
+import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target, Sparkles, ChevronDown, UserCheck } from 'lucide-react';
 import { RecommendedDrillsPanel } from '@/components/training/RecommendedDrillsPanel';
 import { AITrainingBuilderDialog } from '@/components/training/AITrainingBuilderDialog';
+import { DrillLibraryManager } from '@/components/training/DrillLibraryManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
@@ -52,6 +53,13 @@ interface DrillSubgroup {
   id: string;
   subgroup_name: string;
   players: string[];
+  coach_id?: string;
+}
+
+interface EventStaffMember {
+  id: string;
+  name: string;
+  role: string;
 }
 
 interface Equipment {
@@ -102,6 +110,21 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
       
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Load event staff (coaches) for subgroup assignment
+  const { data: eventStaff = [] } = useQuery<EventStaffMember[]>({
+    queryKey: ['event-staff', eventId, teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('get_consolidated_team_staff', { p_team_id: teamId });
+      if (error) return [];
+      return (data || []).map((s: any) => ({
+        id: s.linked_user_id || s.id,
+        name: s.name || 'Unknown',
+        role: s.role || '',
+      })).filter((s: EventStaffMember) => s.id);
     },
   });
 
@@ -453,81 +476,11 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
                 Drill Library
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Drill Library</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                {/* Search and filters */}
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search drills..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  <Select value={selectedTags.length > 0 ? selectedTags.join(',') : 'all'} onValueChange={(value) => setSelectedTags(value === 'all' ? [] : value.split(','))}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by tags" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All tags</SelectItem>
-                      {drillTags.map((tag) => (
-                        <SelectItem key={tag.id} value={tag.id}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                            {tag.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Drill library list */}
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-2">
-                    {drillLibrary.map((drill) => (
-                      <Card key={drill.id} className="cursor-pointer hover:bg-muted/50" onClick={() => addDrillFromLibrary(drill)}>
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h4 className="font-medium">{drill.name}</h4>
-                              {drill.description && (
-                                <p className="text-sm text-muted-foreground mt-1">{drill.description}</p>
-                              )}
-                              <div className="flex items-center gap-2 mt-2">
-                                {drill.duration_minutes && (
-                                  <Badge variant="outline" className="text-xs">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {drill.duration_minutes}min
-                                  </Badge>
-                                )}
-                                {drill.difficulty_level && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {drill.difficulty_level}
-                                  </Badge>
-                                )}
-                                {drill.tags?.map((tag) => (
-                                  <Badge key={tag.id} variant="secondary" className="text-xs">
-                                    <div className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag.color }} />
-                                    {tag.name}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                            <Button size="sm" variant="ghost">
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
+              <DrillLibraryManager onAddToPlan={(drill) => addDrillFromLibrary(drill as any)} />
             </DialogContent>
           </Dialog>
 
@@ -633,13 +586,25 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
                     </p>
                   )}
                   
-                  {/* Player Count */}
+                  {/* Groups summary */}
                   {drill.subgroups && drill.subgroups.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      <span className="text-xs text-muted-foreground">
-                        {drill.subgroups.length} groups
-                      </span>
+                    <div className="space-y-0.5">
+                      {drill.subgroups.map(sg => {
+                        const coach = eventStaff.find(s => s.id === sg.coach_id);
+                        return (
+                          <div key={sg.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Users className="w-3 h-3 shrink-0" />
+                            <span>{sg.subgroup_name}</span>
+                            {coach && (
+                              <>
+                                <span className="text-muted-foreground/50">·</span>
+                                <UserCheck className="w-3 h-3 shrink-0" />
+                                <span>{coach.name}</span>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -766,41 +731,76 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
                     
                     {drill.subgroups && drill.subgroups.length > 0 ? (
                       <div className="space-y-2">
-                        {drill.subgroups.map((subgroup) => (
-                          <div key={subgroup.id} className="border rounded-lg p-2">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Input
-                                value={subgroup.subgroup_name}
-                                onChange={(e) => updateSubgroup(drill.id, subgroup.id, { subgroup_name: e.target.value })}
-                                className="flex-1 h-6 text-xs"
-                                placeholder="Group name"
-                              />
-                              <Badge variant="outline" className="text-xs">
-                                {subgroup.players?.length || 0} players
-                              </Badge>
-                            </div>
-                            
-                            {/* Player selection */}
-                            <div className="flex flex-wrap gap-1">
-                              {effectiveSquadPlayers.map((player) => (
-                                <Badge
-                                  key={player.id}
-                                  variant={subgroup.players?.includes(player.id) ? "default" : "outline"}
-                                  className="cursor-pointer text-xs"
-                                  onClick={() => {
-                                    const isSelected = subgroup.players?.includes(player.id);
-                                    const newPlayers = isSelected
-                                      ? subgroup.players?.filter(id => id !== player.id) || []
-                                      : [...(subgroup.players || []), player.id];
-                                    updateSubgroup(drill.id, subgroup.id, { players: newPlayers });
-                                  }}
-                                >
-                                  {player.name}
+                        {drill.subgroups.map((subgroup) => {
+                          const assignedCoach = eventStaff.find(s => s.id === subgroup.coach_id);
+                          return (
+                            <div key={subgroup.id} className="border rounded-lg p-2 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={subgroup.subgroup_name}
+                                  onChange={(e) => updateSubgroup(drill.id, subgroup.id, { subgroup_name: e.target.value })}
+                                  className="flex-1 h-6 text-xs"
+                                  placeholder="Group name"
+                                />
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  {subgroup.players?.length || 0} players
                                 </Badge>
-                              ))}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-red-400 hover:text-red-600 shrink-0"
+                                  onClick={() => updateSubgroup(drill.id, subgroup.id, { players: [] })}
+                                  title="Clear players"
+                                >
+                                  ×
+                                </Button>
+                              </div>
+
+                              {/* Coach assignment */}
+                              {eventStaff.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <UserCheck className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  <Select
+                                    value={subgroup.coach_id || 'none'}
+                                    onValueChange={(v) => updateSubgroup(drill.id, subgroup.id, { coach_id: v === 'none' ? undefined : v })}
+                                  >
+                                    <SelectTrigger className="h-6 text-xs flex-1">
+                                      <SelectValue placeholder="Assign coach" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">No coach assigned</SelectItem>
+                                      {eventStaff.map(staff => (
+                                        <SelectItem key={staff.id} value={staff.id}>
+                                          {staff.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              {/* Player selection */}
+                              <div className="flex flex-wrap gap-1">
+                                {effectiveSquadPlayers.map((player) => (
+                                  <Badge
+                                    key={player.id}
+                                    variant={subgroup.players?.includes(player.id) ? "default" : "outline"}
+                                    className="cursor-pointer text-xs"
+                                    onClick={() => {
+                                      const isSelected = subgroup.players?.includes(player.id);
+                                      const newPlayers = isSelected
+                                        ? subgroup.players?.filter(id => id !== player.id) || []
+                                        : [...(subgroup.players || []), player.id];
+                                      updateSubgroup(drill.id, subgroup.id, { players: newPlayers });
+                                    }}
+                                  >
+                                    {player.name}
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">No groups created. All squad players will participate together.</p>
