@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -78,14 +78,18 @@ interface TrainingPlanEditorProps {
   onSave?: () => Promise<void>;
 }
 
-export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
+export interface TrainingPlanEditorHandle {
+  save: () => Promise<void>;
+}
+
+export const TrainingPlanEditor = forwardRef<TrainingPlanEditorHandle, TrainingPlanEditorProps>(function TrainingPlanEditor({
   teamId,
   eventId,
   squadPlayers,
   teamNumber,
   performanceCategoryId,
   onSave
-}) => {
+}, ref) {
   const isMobile = useMobileDetection();
   const { saveTrainingSession, saving } = useTrainingSession();
   const [sessionDrills, setSessionDrills] = useState<TrainingSessionDrill[]>([]);
@@ -388,28 +392,29 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
     return tags.length > 0 ? tags[0].color : '#94a3b8'; // Default gray
   };
 
-  const handleSave = async () => {
-    logger.log('🚀 Training Plan Save Button Clicked!', { 
-      eventId, 
-      teamId, 
-      drillsCount: sessionDrills.length, 
+  const handleSave = useCallback(async () => {
+    logger.log('🚀 Training Plan Save!', {
+      eventId,
+      teamId,
+      drillsCount: sessionDrills.length,
       equipmentCount: equipment.length,
-      drills: sessionDrills,
-      equipment: equipment 
     });
-    
+
     if (!eventId || !teamId) {
       logger.error('❌ Missing required IDs for save:', { eventId, teamId });
       toast.error('Cannot save: Missing event or team information');
       return;
     }
-    
+
     const success = await saveTrainingSession(eventId, teamId, sessionDrills, equipment, sessionInstructions);
     logger.log('💾 Save result:', success);
     if (success && onSave) {
       await onSave();
     }
-  };
+  }, [eventId, teamId, sessionDrills, equipment, sessionInstructions, saveTrainingSession, onSave]);
+
+  // Expose save() so parent (EnhancedTeamSelectionManager) can call it from Save & Close
+  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
   const handleAISessionApply = (aiSession: any) => {
     // Convert AI-generated drills to training session drills
@@ -456,30 +461,22 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
             {effectiveSquadPlayers.length} players • {sessionDrills.length} drills • {getTotalDuration()} mins total
           </p>
         </div>
-        {/* Action buttons — wrap on mobile so nothing is clipped */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            size="sm"
-            className="flex items-center gap-1 text-xs"
-          >
-            {saving ? 'Saving…' : 'Save Plan'}
-          </Button>
+        {/* Action buttons — single row, equal width */}
+        <div className="flex gap-2">
           <Button
             onClick={() => setShowAIBuilder(true)}
             variant="outline"
             size="sm"
-            className="flex items-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10"
+            className="flex-1 flex items-center justify-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10 min-w-0"
           >
-            <Sparkles className="w-3 h-3" />
-            AI Builder
+            <Sparkles className="w-3 h-3 shrink-0" />
+            <span className="truncate">AI Builder</span>
           </Button>
           <Dialog open={showDrillLibrary} onOpenChange={setShowDrillLibrary}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10">
-                <Search className="w-3 h-3" />
-                Drill Library
+              <Button variant="outline" size="sm" className="flex-1 flex items-center justify-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10 min-w-0">
+                <Search className="w-3 h-3 shrink-0" />
+                <span className="truncate">Drill Library</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -489,10 +486,9 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
               <DrillLibraryManager onAddToPlan={(drill) => addDrillFromLibrary(drill as any)} />
             </DialogContent>
           </Dialog>
-
-          <Button onClick={addCustomDrill} variant="outline" size="sm" className="flex items-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10">
-            <Plus className="w-3 h-3" />
-            Custom Drill
+          <Button onClick={addCustomDrill} variant="outline" size="sm" className="flex-1 flex items-center justify-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10 min-w-0">
+            <Plus className="w-3 h-3 shrink-0" />
+            <span className="truncate">+ Custom</span>
           </Button>
         </div>
       </div>
@@ -901,4 +897,4 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
       />
     </div>
   );
-};
+});

@@ -1255,11 +1255,11 @@ export default function CalendarEventsMobile() {
         <DialogContent
           className="w-full max-w-full sm:max-w-[425px] sm:max-h-[90vh] sm:overflow-y-auto overflow-x-hidden max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-screen max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:flex max-sm:flex-col max-sm:p-0 max-sm:[&>button]:hidden"
         >
-          <DialogHeader className="max-sm:px-6 max-sm:pt-[max(env(safe-area-inset-top),1rem)] max-sm:pb-2 max-sm:shrink-0">
+          <DialogHeader className="max-sm:px-4 max-sm:pt-[max(env(safe-area-inset-top),0.75rem)] max-sm:pb-1 max-sm:shrink-0">
             <DialogTitle>Event Details</DialogTitle>
           </DialogHeader>
           {selectedEvent && (
-            <div className="space-y-4 overflow-x-hidden max-sm:flex-1 max-sm:overflow-y-auto max-sm:px-6 max-sm:pb-[max(env(safe-area-inset-bottom),1rem)]">
+            <div className="space-y-3 overflow-x-hidden max-sm:flex-1 max-sm:overflow-y-auto max-sm:px-4 max-sm:pb-[max(env(safe-area-inset-bottom),0.75rem)]">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={`text-white ${getEventTypeBadgeColor(selectedEvent.event_type)}`}>
                   {selectedEvent.event_type.charAt(0).toUpperCase() + selectedEvent.event_type.slice(1)}
@@ -1278,15 +1278,15 @@ export default function CalendarEventsMobile() {
               </div>
               
               <div>
-                <h3 className="font-semibold text-lg break-words">
+                <h3 className="font-semibold text-base break-words leading-tight">
                   {isMatchType(selectedEvent.event_type) && selectedEvent.opponent
                     ? `${(allTeams || authTeams || teams || []).find(t => t.id === selectedEvent.team_id)?.name ?? selectedEvent.title} vs ${selectedEvent.opponent}`
                     : selectedEvent.title
                   }
                 </h3>
               </div>
-              
-              <div className="space-y-2">
+
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-sm text-white/60">
                   <Calendar className="h-4 w-4" />
                   <span>{format(new Date(selectedEvent.date), 'EEE d MMM')}</span>
@@ -1372,14 +1372,14 @@ export default function CalendarEventsMobile() {
 
               {/* Your Availability Section */}
               {shouldShowAvailabilityControls(selectedEvent) && (
-                <div className="border rounded-lg p-3 bg-muted/30">
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <UserCheck className="h-4 w-4" />
+                <div className="border rounded-lg p-2 bg-muted/30">
+                  <h4 className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                    <UserCheck className="h-3.5 w-3.5" />
                     Your Availability
                   </h4>
                   <MultiRoleAvailabilityControls
                     eventId={selectedEvent.id}
-                    size="md"
+                    size="sm"
                     onStatusChange={() => loadEvents()}
                   />
                 </div>
@@ -1387,9 +1387,9 @@ export default function CalendarEventsMobile() {
 
               {/* Team Selection Section */}
               <div>
-                <div className="flex items-center justify-between mb-2 pr-1">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Users className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-1.5 pr-1">
+                  <h4 className="text-sm font-medium flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
                     Team Selection
                   </h4>
                   {canEditEvents() && (

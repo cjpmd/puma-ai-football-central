@@ -270,17 +270,16 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
           }
         }
 
-        // Fetch staff names for all teams
-        const allStaffIds = [...new Set(teamsArray.flatMap(t => t.staffIds))];
-        if (allStaffIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, name')
-            .in('id', allStaffIds);
-
-          if (profiles) {
+        // Fetch staff names via team staff RPC — avoids profile RLS issues
+        if (teamsArray.some(t => t.staffIds.length > 0)) {
+          const { data: staffData } = await supabase
+            .rpc('get_consolidated_team_staff', { p_team_id: teamId });
+          if (staffData) {
             const namesMap: Record<string, string> = {};
-            profiles.forEach(p => { if (p.name) namesMap[p.id] = p.name; });
+            (staffData as any[]).forEach(s => {
+              const id = s.linked_user_id || s.id;
+              if (id && s.name) namesMap[id] = s.name;
+            });
             setStaffNames(namesMap);
           }
         }
@@ -417,9 +416,9 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
 
       {currentTeam && (
         <Card className="w-full">
-          <CardHeader className="pb-2 px-3 pt-3">
+          <CardHeader className="pb-1.5 px-3 pt-2.5">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
+              <CardTitle className="text-sm font-semibold">
                 {getTeamDisplayName(currentTeam, currentTeamIndex)}
               </CardTitle>
               {!isExpanded && (
@@ -464,75 +463,58 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               )}
             </div>
 
-            {/* Squad summary row */}
-            <div className="flex gap-1 flex-wrap mt-1">
-              <Badge variant="outline" className="text-xs">
-                <Users className="h-3 w-3 mr-1" />
-                {currentTeam.squadPlayers} players
-              </Badge>
+            {/* Condensed summary row: players · formation · staff · availability */}
+            <div className="flex items-center gap-2 mt-1 flex-wrap text-xs text-muted-foreground">
+              <span className="flex items-center gap-0.5">
+                <Users className="h-3 w-3 shrink-0" />
+                {currentTeam.squadPlayers}p
+              </span>
               {event.event_type !== 'training' && currentTeam.formation && (
-                <Badge variant="outline" className="text-xs">
-                  <Gamepad2 className="h-3 w-3 mr-1" />
+                <span className="flex items-center gap-0.5">
+                  <Gamepad2 className="h-3 w-3 shrink-0" />
                   {currentTeam.formation}
-                </Badge>
+                </span>
               )}
-              {event.event_type !== 'training' && currentTeam.periods.length > 1 && (
-                <Badge variant="outline" className="text-xs">
-                  {currentTeam.periods.length} periods
-                </Badge>
+              {currentTeam.staffIds.length > 0 && (
+                <span className="flex items-center gap-0.5 truncate max-w-[140px]">
+                  <UserCheck className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {staffNames[currentTeam.staffIds[0]] || '…'}
+                    {currentTeam.staffIds.length > 1 && ` +${currentTeam.staffIds.length - 1}`}
+                  </span>
+                </span>
+              )}
+              {availabilitySummary.available > 0 && (
+                <span className="flex items-center gap-0.5 text-emerald-600">
+                  <CheckCircle className="h-3 w-3" />{availabilitySummary.available}
+                </span>
+              )}
+              {availabilitySummary.pending > 0 && (
+                <span className="flex items-center gap-0.5 text-amber-600">
+                  <Clock className="h-3 w-3" />{availabilitySummary.pending}
+                </span>
+              )}
+              {availabilitySummary.unavailable > 0 && (
+                <span className="flex items-center gap-0.5 text-red-500">
+                  <XCircle className="h-3 w-3" />{availabilitySummary.unavailable}
+                </span>
               )}
             </div>
-
-            {/* Staff / coaches */}
-            {currentTeam.staffIds.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                <UserCheck className="h-3 w-3 text-muted-foreground shrink-0" />
-                {currentTeam.staffIds.map(id => (
-                  <span key={id} className="text-xs text-muted-foreground">
-                    {staffNames[id] || '…'}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Availability breakdown */}
-            {(availabilitySummary.available + availabilitySummary.pending + availabilitySummary.unavailable) > 0 && (
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                {availabilitySummary.available > 0 && (
-                  <span className="flex items-center gap-1 text-emerald-600">
-                    <CheckCircle className="h-3 w-3" />
-                    {availabilitySummary.available}
-                  </span>
-                )}
-                {availabilitySummary.pending > 0 && (
-                  <span className="flex items-center gap-1 text-amber-600">
-                    <Clock className="h-3 w-3" />
-                    {availabilitySummary.pending}
-                  </span>
-                )}
-                {availabilitySummary.unavailable > 0 && (
-                  <span className="flex items-center gap-1 text-red-500">
-                    <XCircle className="h-3 w-3" />
-                    {availabilitySummary.unavailable}
-                  </span>
-                )}
-              </div>
-            )}
           </CardHeader>
 
-          <CardContent className="space-y-3 px-3 pb-3">
+          <CardContent className="space-y-2 px-3 pb-2.5">
             {event.event_type === 'training' ? (
-              <div className="text-sm">
-                <h4 className="font-medium mb-2 text-sm flex items-center gap-1">
+              <div>
+                <h4 className="font-medium mb-1.5 text-xs flex items-center gap-1 text-muted-foreground uppercase tracking-wide">
                   <Timer className="h-3 w-3" />
                   Training Drills
                 </h4>
                 {trainingDrills.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {trainingDrills.map((drill) => (
-                      <div key={drill.id} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
+                      <div key={drill.id} className="flex justify-between items-center py-1 px-2 bg-muted/50 rounded text-xs">
                         <span className="font-medium">{drill.name}</span>
-                        <span className="text-muted-foreground">{drill.duration_minutes}min</span>
+                        <span className="text-muted-foreground">{drill.duration_minutes}m</span>
                       </div>
                     ))}
                   </div>
