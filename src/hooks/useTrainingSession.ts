@@ -34,7 +34,8 @@ export const useTrainingSession = () => {
     eventId: string,
     teamId: string,
     drills: TrainingSessionDrill[],
-    equipment: Equipment[]
+    equipment: Equipment[],
+    sessionObjectives?: string
   ) => {
     logger.log('🔥 SAVE TRAINING SESSION CALLED:', { eventId, teamId, drillsCount: drills.length, equipmentCount: equipment.length });
     setSaving(true);
@@ -66,7 +67,8 @@ export const useTrainingSession = () => {
           .insert({
             event_id: eventId,
             team_id: teamId,
-            total_duration_minutes: drills.reduce((total, drill) => total + drill.duration_minutes, 0)
+            total_duration_minutes: drills.reduce((total, drill) => total + drill.duration_minutes, 0),
+            session_objectives: sessionObjectives ?? null
           })
           .select('id')
           .single();
@@ -83,6 +85,7 @@ export const useTrainingSession = () => {
           .from('training_sessions')
           .update({
             total_duration_minutes: drills.reduce((total, drill) => total + drill.duration_minutes, 0),
+            session_objectives: sessionObjectives ?? null,
             updated_at: new Date().toISOString()
           })
           .eq('id', sessionId);

@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target, Sparkles } from 'lucide-react';
+import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target, Sparkles, ChevronDown } from 'lucide-react';
 import { RecommendedDrillsPanel } from '@/components/training/RecommendedDrillsPanel';
 import { AITrainingBuilderDialog } from '@/components/training/AITrainingBuilderDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,6 +87,9 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expandedDrills, setExpandedDrills] = useState<Set<string>>(new Set());
   const [showAIBuilder, setShowAIBuilder] = useState(false);
+  const [sessionInstructions, setSessionInstructions] = useState('');
+  const [showRecommendedDrills, setShowRecommendedDrills] = useState(false);
+  const [liveSquadPlayers, setLiveSquadPlayers] = useState<SquadPlayer[]>([]);
 
   // Load drill tags
   const { data: drillTags = [] } = useQuery({
@@ -178,6 +181,10 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
             quantity_needed: eq.quantity_needed,
             notes: eq.notes
           })) || []);
+
+          if (session.session_objectives) {
+            setSessionInstructions(session.session_objectives);
+          }
         }
       } catch (error) {
         logger.error('Error loading training session:', error);
@@ -186,6 +193,43 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
 
     loadTrainingSession();
   }, [eventId, teamId]);
+
+  // Load the squad directly from team_squads so we always see the players
+  // assigned in the Squad tab, regardless of what the parent passed via prop.
+  useEffect(() => {
+    const loadSquadPlayers = async () => {
+      if (!eventId || !teamId) return;
+      try {
+        const { data } = await supabase
+          .from('team_squads')
+          .select(`
+            player_id,
+            squad_role,
+            availability_status,
+            players!inner(id, name, squad_number, type)
+          `)
+          .eq('team_id', teamId)
+          .eq('event_id', eventId)
+          .eq('team_number', teamNumber);
+
+        if (data && data.length > 0) {
+          const players: SquadPlayer[] = (data as any[]).map(row => ({
+            id: row.players.id,
+            name: row.players.name,
+            squadNumber: row.players.squad_number,
+            type: row.players.type === 'goalkeeper' ? 'goalkeeper' : 'outfield',
+            availabilityStatus: (row.availability_status || 'pending') as 'available' | 'unavailable' | 'pending',
+            isAssignedToSquad: true,
+            squadRole: (row.squad_role || 'player') as 'player' | 'captain' | 'vice_captain',
+          }));
+          setLiveSquadPlayers(players);
+        }
+      } catch (error) {
+        logger.error('Error loading squad players for training plan:', error);
+      }
+    };
+    loadSquadPlayers();
+  }, [eventId, teamId, teamNumber]);
 
   const addDrillFromLibrary = (drill: Drill) => {
     const newDrill: TrainingSessionDrill = {
@@ -307,6 +351,9 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
     });
   };
 
+  // Prefer players loaded directly from team_squads; fall back to parent prop
+  const effectiveSquadPlayers = liveSquadPlayers.length > 0 ? liveSquadPlayers : squadPlayers;
+
   const getPrimaryTagColor = (drill: TrainingSessionDrill) => {
     const tags = drill.drill?.tags || drill.selected_tags || [];
     return tags.length > 0 ? tags[0].color : '#94a3b8'; // Default gray
@@ -328,7 +375,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
       return;
     }
     
-    const success = await saveTrainingSession(eventId, teamId, sessionDrills, equipment);
+    const success = await saveTrainingSession(eventId, teamId, sessionDrills, equipment, sessionInstructions);
     logger.log('💾 Save result:', success);
     if (success && onSave) {
       await onSave();
@@ -371,37 +418,38 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Training Plan Overview */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 text-white">
+      {/* Training Plan Overview — stacks on mobile */}
+      <div className="space-y-3">
         <div>
-          <h3 className="text-lg font-semibold">Training Plan</h3>
-          <p className="text-sm text-muted-foreground">
-            {sessionDrills.length} drills • {getTotalDuration()} minutes total
+          <h3 className="text-base font-semibold text-white">Training Plan</h3>
+          <p className="text-xs text-white/60">
+            {effectiveSquadPlayers.length} players • {sessionDrills.length} drills • {getTotalDuration()} mins total
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={handleSave} 
-            disabled={saving} 
+        {/* Action buttons — wrap on mobile so nothing is clipped */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
             size="sm"
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 text-xs"
           >
-            {saving ? 'Saving...' : 'Save Plan'}
+            {saving ? 'Saving…' : 'Save Plan'}
           </Button>
           <Button
             onClick={() => setShowAIBuilder(true)}
             variant="outline"
             size="sm"
-            className="bg-primary/5 hover:bg-primary/10 border-primary/20"
+            className="flex items-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10"
           >
-            <Sparkles className="w-4 h-4 mr-1" />
+            <Sparkles className="w-3 h-3" />
             AI Builder
           </Button>
           <Dialog open={showDrillLibrary} onOpenChange={setShowDrillLibrary}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Search className="w-4 h-4 mr-1" />
+              <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10">
+                <Search className="w-3 h-3" />
                 Drill Library
               </Button>
             </DialogTrigger>
@@ -483,27 +531,48 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
             </DialogContent>
           </Dialog>
 
-          <Button onClick={addCustomDrill} variant="outline" size="sm">
-            <Plus className="w-4 h-4 mr-1" />
+          <Button onClick={addCustomDrill} variant="outline" size="sm" className="flex items-center gap-1 text-xs bg-white/5 border-white/20 text-white hover:bg-white/10">
+            <Plus className="w-3 h-3" />
             Custom Drill
           </Button>
         </div>
       </div>
 
-      {/* Main Content Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-hidden max-w-full">
-        {/* Recommendations Panel */}
-        <div className="lg:col-span-1 overflow-hidden min-w-0">
-          <RecommendedDrillsPanel 
-            teamId={teamId}
-            onAddDrill={addDrillFromLibrary}
-            className="sticky top-4"
-          />
-        </div>
+      {/* Session Instructions */}
+      <div className="ios-card p-3 space-y-2">
+        <label className="text-xs font-semibold text-white/80 uppercase tracking-wider">Session Instructions</label>
+        <Textarea
+          placeholder="Enter free-form instructions for this training session…"
+          value={sessionInstructions}
+          onChange={(e) => setSessionInstructions(e.target.value)}
+          rows={3}
+          className="bg-white/5 border-white/15 text-white placeholder:text-white/35 text-sm resize-none focus:border-white/30"
+        />
+      </div>
 
-        {/* Drill Sequence */}
-        <div className="lg:col-span-3">
-          <h4 className="text-md font-medium mb-4">Training Session Drills</h4>
+      {/* Recommended Drills — collapsible, collapsed by default */}
+      <div className="ios-card overflow-hidden">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-3 py-2.5 text-white"
+          onClick={() => setShowRecommendedDrills(prev => !prev)}
+        >
+          <span className="text-xs font-semibold uppercase tracking-wider text-white/80">Recommended Drills</span>
+          <ChevronDown className={`h-4 w-4 text-white/60 transition-transform duration-200 ${showRecommendedDrills ? 'rotate-180' : ''}`} />
+        </button>
+        {showRecommendedDrills && (
+          <div className="border-t border-white/10 p-2">
+            <RecommendedDrillsPanel
+              teamId={teamId}
+              onAddDrill={addDrillFromLibrary}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Drill Sequence */}
+      <div>
+        <h4 className="text-sm font-semibold uppercase tracking-wider text-white/80 mb-3">Training Session Drills</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {sessionDrills.map((drill, index) => {
           const isExpanded = expandedDrills.has(drill.id);
@@ -713,7 +782,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
                             
                             {/* Player selection */}
                             <div className="flex flex-wrap gap-1">
-                              {squadPlayers.map((player) => (
+                              {effectiveSquadPlayers.map((player) => (
                                 <Badge
                                   key={player.id}
                                   variant={subgroup.players?.includes(player.id) ? "default" : "outline"}
@@ -815,8 +884,6 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
           )}
         </CardContent>
       </Card>
-        </div>
-      </div>
 
       <AITrainingBuilderDialog
         open={showAIBuilder}
