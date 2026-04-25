@@ -412,7 +412,7 @@ export default function CalendarEventsMobile() {
             'id, team_id, title, date, start_time, end_time, event_type, opponent, ' +
             'is_home, scores, location, latitude, longitude, description, notes, ' +
             'coach_notes, staff_notes, training_notes, kit_selection, game_format, ' +
-            'game_duration, meeting_time, recurring_group_id, created_at, updated_at'
+            'game_duration, meeting_time, recurring_group_id, teams, created_at, updated_at'
           )
           .in('team_id', teamIds)
           .gte('date', startDateStr)
@@ -650,8 +650,12 @@ export default function CalendarEventsMobile() {
         .eq('id', selectedEvent.id);
 
       toast({ title: 'Team added successfully' });
+
+      // Update local state instead of reloading all 300 events
+      const updatedEvent = { ...selectedEvent, teams: newTeamsArray };
+      setSelectedEvent(updatedEvent);
+      setEvents(prev => prev.map(e => e.id === selectedEvent.id ? updatedEvent : e));
       setTeamRefreshTrigger(prev => prev + 1);
-      loadEvents();
     } catch (error) {
       logger.error('Error adding team:', error);
       toast({ title: 'Failed to add team', variant: 'destructive' });
