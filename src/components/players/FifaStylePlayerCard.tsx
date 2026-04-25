@@ -1,6 +1,6 @@
 
 import { logger } from '@/lib/logger';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { playStylesService, PlayStyle } from '@/types/playStyles';
 import { MobileImageEditor } from '@/components/players/MobileImageEditor';
 import { formatFileSize, isHeicFormat, isSupportedImageFormat } from '@/utils/imageUtils';
+import { pickPhoto, isNativePlatform } from '@/utils/cameraUtils';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -134,6 +135,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   // Image editing state
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const photoFileInputRef = useRef<HTMLInputElement>(null);
 
   // Cleanup any object URLs we create
   useEffect(() => {
@@ -384,48 +386,48 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
   }
 
+  const openEditorWithFile = (file: File) => {
+    if (isHeicFormat(file)) {
+      toast({
+        title: 'Unsupported Photo Format',
+        description: 'HEIC/HEIF is not supported. Please choose a JPEG, PNG, or WebP image.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!isSupportedImageFormat(file)) {
+      toast({
+        title: 'Unsupported Photo Format',
+        description: `Unsupported type: ${file.type || 'unknown'}. Please choose JPEG, PNG, or WebP.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (selectedImageUrl?.startsWith('blob:')) URL.revokeObjectURL(selectedImageUrl);
+    toast({ title: 'Photo Selected', description: `${file.name} (${formatFileSize(file.size)})` });
+    const objectUrl = URL.createObjectURL(file);
+    logger.log('[FifaStylePlayerCard] Opening editor with blob URL:', objectUrl, 'file:', file.name, file.type, file.size);
+    setSelectedImageUrl(objectUrl);
+    setShowImageEditor(true);
+  };
+
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Always reset input to allow selecting the same file again
-      event.target.value = '';
+    event.target.value = '';
+    if (file) openEditorWithFile(file);
+  };
 
-      // Validate early to avoid silent failures (especially on iOS/large camera images)
-      if (isHeicFormat(file)) {
-        toast({
-          title: 'Unsupported Photo Format',
-          description: 'HEIC/HEIF is not supported. Please choose a JPEG, PNG, or WebP image.',
-          variant: 'destructive',
-        });
-        return;
+  const handleCameraButtonClick = async () => {
+    try {
+      const file = await pickPhoto('prompt');
+      if (file) {
+        openEditorWithFile(file);
+      } else {
+        photoFileInputRef.current?.click();
       }
-
-      if (!isSupportedImageFormat(file)) {
-        toast({
-          title: 'Unsupported Photo Format',
-          description: `Unsupported type: ${file.type || 'unknown'}. Please choose JPEG, PNG, or WebP.`,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Revoke any previous object URL to prevent memory leaks
-      if (selectedImageUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(selectedImageUrl);
-      }
-
-      toast({
-        title: 'Photo Selected',
-        description: `${file.name} (${formatFileSize(file.size)})`,
-      });
-
-      const objectUrl = URL.createObjectURL(file);
-      logger.log('[FifaStylePlayerCard] Opening editor with blob URL:', objectUrl, 'file:', file.name, file.type, file.size);
-      setSelectedImageUrl(objectUrl);
-      setShowImageEditor(true);
+    } catch {
+      // User cancelled — ignore
     }
-
-    // Reset input to allow same file selection
   };
 
   const handleSaveEditedImage = (blob: Blob) => {
@@ -645,15 +647,25 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   )}
                 </div>
                 {onUpdatePhoto && canManageCard && (
-                  <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
-                    <Camera className="h-4 w-4" />
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-                  </label>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleCameraButtonClick}
+                      className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                    {/* Web fallback — not shown on native */}
+                    {!isNativePlatform() && (
+                      <input
+                        ref={photoFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    )}
+                  </>
                 )}
               </div>
             </div>

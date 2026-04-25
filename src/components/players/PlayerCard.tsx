@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Player } from '@/types';
 import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Trophy, BarChart3, Brain, Target, MessageSquare, History, Camera, Upload } from 'lucide-react';
+import { pickPhoto, isNativePlatform } from '@/utils/cameraUtils';
 
 interface PlayerCardProps {
   player: Player;
@@ -43,6 +44,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   showSubscription = true
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const photoFileInputRef = useRef<HTMLInputElement>(null);
 
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
@@ -123,8 +125,20 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && onUpdatePhoto) {
-      onUpdatePhoto(player, file);
+    event.target.value = '';
+    if (file && onUpdatePhoto) onUpdatePhoto(player, file);
+  };
+
+  const handleCameraButtonClick = async () => {
+    try {
+      const file = await pickPhoto('prompt');
+      if (file && onUpdatePhoto) {
+        onUpdatePhoto(player, file);
+      } else {
+        photoFileInputRef.current?.click();
+      }
+    } catch {
+      // User cancelled — ignore
     }
   };
 
@@ -154,15 +168,24 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                 </AvatarFallback>
               </Avatar>
               {!inactive && onUpdatePhoto && (
-                <label className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90 transition-colors">
-                  <Camera className="h-3 w-3" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCameraButtonClick}
+                    className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90 transition-colors"
+                  >
+                    <Camera className="h-3 w-3" />
+                  </button>
+                  {!isNativePlatform() && (
+                    <input
+                      ref={photoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  )}
+                </>
               )}
             </div>
 
