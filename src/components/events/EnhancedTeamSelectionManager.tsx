@@ -1,6 +1,6 @@
 
 import { logger } from '@/lib/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lo
 import { format as formatDate, parseISO } from 'date-fns';
 import { GameDayStyleFormationEditor } from './GameDayStyleFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
-import { TrainingPlanEditor } from './TrainingPlanEditor';
+import { TrainingPlanEditor, TrainingPlanEditorHandle } from './TrainingPlanEditor';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
@@ -153,6 +153,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [staffLinksRefresh, setStaffLinksRefresh] = useState(0);
   const [hasAutoSyncedFormation, setHasAutoSyncedFormation] = useState(false);
   const [showAIBuilder, setShowAIBuilder] = useState(false);
+  const trainingPlanRef = useRef<TrainingPlanEditorHandle>(null);
 
   // Sync currentTeamIndex when modal opens with initialTeamIndex
   useEffect(() => {
@@ -1060,7 +1061,11 @@ return (
               {/* Save & Close - right */}
               {!isFormationReadOnly ? (
                 <Button
-                  onClick={async () => { await saveSelections(); onClose(); }}
+                  onClick={async () => {
+                    if (isTrainingEvent) await trainingPlanRef.current?.save();
+                    await saveSelections();
+                    onClose();
+                  }}
                   disabled={saving}
                   size="sm"
                   className={`${isMobile ? 'h-10 px-3 bg-primary text-primary-foreground' : 'h-8 px-3'} shrink-0`}
@@ -1301,6 +1306,7 @@ return (
                 <TabsContent value="training-plan" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                   {currentTeam && (
                     <TrainingPlanEditor
+                      ref={trainingPlanRef}
                       teamId={teamId}
                       eventId={event.id}
                       squadPlayers={currentTeam.squadPlayers}
