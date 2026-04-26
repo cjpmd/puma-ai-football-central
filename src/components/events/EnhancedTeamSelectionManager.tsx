@@ -910,15 +910,6 @@ const { data: teamData } = useQuery({
     setSaving(true);
     
     try {
-      // Delete existing selections for this event
-      const { error: deleteError } = await supabase
-        .from('event_selections')
-        .delete()
-        .eq('event_id', event.id)
-        .eq('team_id', teamId);
-
-      if (deleteError) throw deleteError;
-
       // Create new selections for each team
       const selectionsToInsert = [];
       
@@ -969,11 +960,14 @@ const { data: teamData } = useQuery({
       }
 
       if (selectionsToInsert.length > 0) {
-        const { error: insertError } = await supabase
+        const { error: upsertError } = await supabase
           .from('event_selections')
-          .insert(selectionsToInsert);
+          .upsert(selectionsToInsert, {
+            onConflict: 'event_id,team_id,team_number,period_number',
+            ignoreDuplicates: false,
+          });
 
-        if (insertError) throw insertError;
+        if (upsertError) throw upsertError;
       }
 
       // Update the event's teams data

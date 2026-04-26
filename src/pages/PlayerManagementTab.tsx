@@ -13,6 +13,7 @@ import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player } from '@/types';
 import { Search, Users, Cog, Calendar, BarChart3, MessageSquare, Target, TrendingUp, TrendingDown, Minus, Brain, Crown, Trophy, Trash2 } from 'lucide-react';
+import { EditPlayerModal } from '@/components/players/mobile/EditPlayerModal';
 import { PlayerParentModal } from '@/components/players/PlayerParentModal';
 import { PlayerAttributesModal } from '@/components/players/PlayerAttributesModal';
 import { PlayerObjectivesModal } from '@/components/players/PlayerObjectivesModal';
@@ -175,13 +176,7 @@ const PlayerManagementTab = () => {
   // FIFA Card specific handlers
   const handleEditPlayer = (player: Player) => {
     logger.log(`[PlayerTab] handleEditPlayer called for player: ${player.name}`);
-    toast({
-      title: 'Edit Player (handler called)',
-      description: `Edit player clicked: ${player.name}`,
-    });
-    // TODO: Implement edit player functionality or open a specific modal for editing
-    // For now, let's try opening a generic modal or just logging
-    // handleModalOpen('editPlayerForm', player); // Example if you had an EditPlayerFormModal
+    handleModalOpen('edit', player);
   };
 
   const handleManageParents = (player: Player) => {
@@ -206,11 +201,12 @@ const PlayerManagementTab = () => {
 
   const handleUpdatePhoto = async (player: Player, file: File) => {
     logger.log(`[PlayerTab] handleUpdatePhoto for player: ${player.name}`);
-    toast({
-      title: 'Photo Upload (handler called)',
-      description: `Photo upload triggered for: ${player.name}`,
-    });
-    // TODO: Implement photo upload
+    try {
+      const photoUrl = await playersService.uploadPlayerPhoto(player.id, file);
+      updatePlayerMutation.mutate({ id: player.id, data: { photoUrl } });
+    } catch (error: any) {
+      toast({ title: 'Upload Failed', description: error.message || 'Failed to upload photo', variant: 'destructive' });
+    }
   };
 
   const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
@@ -656,6 +652,16 @@ const PlayerManagementTab = () => {
         {/* Modals */}
         {selectedPlayer && (
           <>
+            <EditPlayerModal
+              player={selectedPlayer}
+              isOpen={activeModal === 'edit'}
+              onClose={handleModalClose}
+              onSave={() => {
+                queryClient.invalidateQueries({ queryKey: ['active-players'] });
+                handleModalClose();
+              }}
+            />
+
             <PlayerParentModal
               player={selectedPlayer}
               isOpen={activeModal === 'parents'}

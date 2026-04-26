@@ -32,7 +32,6 @@ import { PlayerTrainingPlansModal } from '@/components/players/PlayerTrainingPla
 import { PlayerTransferForm } from '@/components/players/PlayerTransferForm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
-// Use the actual database player type
 type DatabasePlayerRow = {
   id: string;
   name: string;
@@ -58,10 +57,17 @@ type DatabasePlayerRow = {
   play_style?: string;
   linking_code?: string;
   parent_id?: string;
-  medical_conditions?: string;
-  medical_treatment?: string;
   created_at: string;
   updated_at: string;
+};
+
+type MedicalRecord = {
+  id: string;
+  name: string;
+  squadNumber?: number;
+  photoUrl?: string;
+  medicalConditions?: string;
+  medicalTreatment?: string;
 };
 
 export default function PlayerManagementMobile() {
@@ -103,6 +109,8 @@ export default function PlayerManagementMobile() {
   const [showCodeManagement, setShowCodeManagement] = useState(false);
   const [showStaffManagement, setShowStaffManagement] = useState(false);
   const [showMedicalSummary, setShowMedicalSummary] = useState(false);
+  const [medicalData, setMedicalData] = useState<MedicalRecord[]>([]);
+  const [medicalLoading, setMedicalLoading] = useState(false);
   
   // User-player links for access control
   const [userPlayerLinks, setUserPlayerLinks] = useState<{player_id: string; relationship: string}[]>([]);
@@ -160,7 +168,7 @@ export default function PlayerManagementMobile() {
       
       const { data, error } = await supabase
         .from('players')
-        .select('*')
+        .select('id,name,squad_number,team_id,availability,type,date_of_birth,attributes,objectives,comments,match_stats,kit_sizes,subscription_type,subscription_status,status,leave_date,leave_comments,performance_category_id,photo_url,card_design_id,fun_stats,play_style,linking_code,parent_id,created_at,updated_at')
         .eq('team_id', currentTeam.id)
         .order('squad_number', { ascending: true });
 
@@ -193,8 +201,6 @@ export default function PlayerManagementMobile() {
         parentId: player.parent_id,
         leaveDate: player.leave_date,
         leaveComments: player.leave_comments,
-        medicalConditions: player.medical_conditions,
-        medicalTreatment: player.medical_treatment,
         createdAt: player.created_at,
         updatedAt: player.updated_at
       }));
@@ -208,6 +214,34 @@ export default function PlayerManagementMobile() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMedicalData = async () => {
+    if (!currentTeam) return;
+    setMedicalLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id,name,squad_number,photo_url,medical_conditions,medical_treatment')
+        .eq('team_id', currentTeam.id)
+        .or('medical_conditions.neq.,medical_treatment.neq.')
+        .order('squad_number', { ascending: true });
+      if (error) throw error;
+      setMedicalData(
+        (data || []).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          squadNumber: r.squad_number,
+          photoUrl: r.photo_url,
+          medicalConditions: r.medical_conditions || undefined,
+          medicalTreatment: r.medical_treatment || undefined,
+        })).filter(r => r.medicalConditions || r.medicalTreatment)
+      );
+    } catch {
+      // silently ignore; medical sheet will show empty state
+    } finally {
+      setMedicalLoading(false);
     }
   };
 
@@ -633,7 +667,7 @@ export default function PlayerManagementMobile() {
               </button>
             )}
             <button
-              onClick={() => setShowMedicalSummary(true)}
+              onClick={() => { setShowMedicalSummary(true); loadMedicalData(); }}
               className="flex-shrink-0 flex items-center justify-center ios-card h-10 px-3 text-white active:scale-[0.98] transition-transform"
               title="Medical"
             >
@@ -933,45 +967,47 @@ export default function PlayerManagementMobile() {
           </SheetHeader>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {players.filter(p => p.medicalConditions || p.medicalTreatment).length === 0 ? (
+            {medicalLoading ? (
+              <div className="text-center py-8">
+                <LoadingSpinner size="md" message="Loading medical data..." />
+              </div>
+            ) : medicalData.length === 0 ? (
               <div className="text-center py-8 text-white/60">
                 <Heart className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No players with medical conditions recorded</p>
               </div>
             ) : (
-              players
-                .filter(p => p.medicalConditions || p.medicalTreatment)
-                .map(player => (
-                  <div key={player.id} className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-3">
-                      {player.photoUrl ? (
-                        <img src={player.photoUrl} alt={player.name} className="w-10 h-10 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">
-                          {player.squadNumber || '?'}
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="font-semibold">{player.name}</h4>
-                        <p className="text-sm text-white/60">#{player.squadNumber}</p>
+              medicalData.map(record => (
+                <div key={record.id} className="border rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-3">
+                    {record.photoUrl ? (
+                      <img src={record.photoUrl} alt={record.name} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">
+                        {record.squadNumber || '?'}
                       </div>
+                    )}
+                    <div>
+                      <h4 className="font-semibold">{record.name}</h4>
+                      <p className="text-sm text-white/60">#{record.squadNumber}</p>
                     </div>
-                    
-                    {player.medicalConditions && (
-                      <div>
-                        <p className="text-xs font-medium text-white/60">Conditions</p>
-                        <p className="text-sm">{player.medicalConditions}</p>
-                      </div>
-                    )}
-                    
-                    {player.medicalTreatment && (
-                      <div>
-                        <p className="text-xs font-medium text-white/60">Treatment / Medicines</p>
-                        <p className="text-sm">{player.medicalTreatment}</p>
-                      </div>
-                    )}
                   </div>
-                ))
+
+                  {record.medicalConditions && (
+                    <div>
+                      <p className="text-xs font-medium text-white/60">Conditions</p>
+                      <p className="text-sm">{record.medicalConditions}</p>
+                    </div>
+                  )}
+
+                  {record.medicalTreatment && (
+                    <div>
+                      <p className="text-xs font-medium text-white/60">Treatment / Medicines</p>
+                      <p className="text-sm">{record.medicalTreatment}</p>
+                    </div>
+                  )}
+                </div>
+              ))
             )}
           </div>
         </SheetContent>
