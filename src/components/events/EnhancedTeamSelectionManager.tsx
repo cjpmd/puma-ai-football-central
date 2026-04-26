@@ -174,7 +174,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     queryFn: async () => {
       const { data, error } = await supabase
         .from('performance_categories')
-        .select('*')
+        .select('id, name, color, sort_order')
         .eq('team_id', teamId)
         .order('name');
       
@@ -456,7 +456,7 @@ const { data: teamData } = useQuery({
             try {
               const { data: existingSelections, error } = await supabase
                 .from('event_selections')
-                .select('*')
+                .select('id')
                 .eq('event_id', event.id)
                 .eq('team_id', teamId)
                 .order('team_number', { ascending: true })

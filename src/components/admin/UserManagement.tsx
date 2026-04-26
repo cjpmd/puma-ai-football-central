@@ -52,7 +52,7 @@ export const UserManagement: React.FC = () => {
       // Load profiles with their staff roles from user_teams
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, name, email, phone, roles, created_at, updated_at')
         .order('created_at', { ascending: false })
         .limit(500);
 

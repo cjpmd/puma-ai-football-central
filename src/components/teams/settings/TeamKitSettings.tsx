@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Team, KitDesigns } from '@/types/team';
 import { KitDesigner } from '../KitDesigner';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { teamsService } from '@/services/teamsService';
 
 interface TeamKitSettingsProps {
   team: Team;
@@ -31,18 +31,9 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
     try {
       logger.log('Saving kit designs:', designs);
       
-      const { error } = await supabase
-        .from('teams')
-        .update({ 
-          kit_designs: designs as any,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', team.id);
-
-      if (error) {
-        logger.error('Database update error:', error);
-        throw error;
-      }
+      await teamsService.updateTeam(team.id, {
+        kit_designs: designs as any,
+      });
 
       // Update parent component with new designs - DO NOT close modal
       onUpdate({ kitDesigns: designs });

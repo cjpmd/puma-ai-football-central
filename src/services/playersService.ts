@@ -140,28 +140,16 @@ export const playersService = {
   },
 
   async deletePlayer(id: string): Promise<void> {
-    logger.log('Soft-deleting player:', id);
-
+    logger.log('Deactivating player:', id);
     const { error } = await supabase
       .from('players')
-      .update({ deleted_at: new Date().toISOString() } as any)
+      .update({ status: 'inactive' })
       .eq('id', id);
-
     if (error) {
-      // Fall back to hard delete if deleted_at column doesn't exist yet
-      if (error.message?.includes('deleted_at')) {
-        const { error: hardDeleteError } = await supabase
-          .from('players')
-          .delete()
-          .eq('id', id);
-        if (hardDeleteError) throw hardDeleteError;
-      } else {
-        logger.error('Error deleting player:', error);
-        throw error;
-      }
+      logger.error('Error deactivating player:', error);
+      throw error;
     }
-
-    logger.log('Player deleted successfully');
+    logger.log('Player deactivated successfully');
   },
 
   async getPlayerById(id: string): Promise<Player | null> {

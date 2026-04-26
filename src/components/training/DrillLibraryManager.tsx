@@ -1,5 +1,6 @@
 import { logger } from '@/lib/logger';
 import { useState } from 'react';
+import { useClubContext } from '@/contexts/ClubContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,6 +93,7 @@ export function DrillLibraryManager({ onAddToPlan }: DrillLibraryManagerProps = 
   const [detailDrill, setDetailDrill] = useState<Drill | null>(null);
 
   const queryClient = useQueryClient();
+  const { currentClub } = useClubContext();
 
   const { data: availableTags = [] } = useQuery({
     queryKey: ['drill-tags'],
@@ -103,12 +105,17 @@ export function DrillLibraryManager({ onAddToPlan }: DrillLibraryManagerProps = 
   });
 
   const { data: drills = [], isLoading } = useQuery({
-    queryKey: ['drills', searchTerm, selectedDifficulty, selectedAgeGroup, selectedTags],
+    queryKey: ['drills', searchTerm, selectedDifficulty, selectedAgeGroup, selectedTags, currentClub?.id],
     queryFn: async () => {
       let query = supabase
         .from('drills')
         .select(`*, drill_tags:drill_tag_assignments(tag:drill_tags(*)), drill_media(*)`)
         .order('created_at', { ascending: false });
+
+      // Scope to club's drills and globally-public drills (club_id IS NULL + is_public)
+      if (currentClub?.id) {
+        query = query.or(`club_id.eq.${currentClub.id},and(is_public.eq.true,club_id.is.null)`);
+      }
 
       if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
       if (selectedDifficulty && selectedDifficulty !== 'all') query = query.eq('difficulty_level', selectedDifficulty);

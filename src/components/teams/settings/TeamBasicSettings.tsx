@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { teamsService } from '@/services/teamsService';
 import { toast } from 'sonner';
 
 interface TeamBasicSettingsProps {
@@ -134,30 +135,20 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       // Call parent's onUpdate with form data first
       onUpdate(formData);
       
-      const { error } = await supabase
-        .from('teams')
-        .update({
-          name: formData.name,
-          age_group: formData.ageGroup,
-          game_format: formData.gameFormat,
-          game_duration: formData.gameDuration,
-          season_start: formData.seasonStart,
-          season_end: formData.seasonEnd,
-          manager_name: formData.managerName,
-          manager_email: formData.managerEmail,
-          manager_phone: formData.managerPhone,
-          home_location: formData.homeLocation,
-          home_latitude: formData.homeLatitude,
-          home_longitude: formData.homeLongitude,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', team.id);
-
-      if (error) {
-        logger.error('Error saving team:', error);
-        toast.error('Failed to save team settings');
-        return;
-      }
+      await teamsService.updateTeam(team.id, {
+        name: formData.name,
+        age_group: formData.ageGroup,
+        game_format: formData.gameFormat,
+        game_duration: formData.gameDuration,
+        season_start: formData.seasonStart,
+        season_end: formData.seasonEnd,
+        manager_name: formData.managerName,
+        manager_email: formData.managerEmail,
+        manager_phone: formData.managerPhone,
+        home_location: formData.homeLocation,
+        home_latitude: formData.homeLatitude,
+        home_longitude: formData.homeLongitude,
+      });
 
       logger.log('Team saved successfully');
       toast.success('Team settings saved successfully');
