@@ -20,29 +20,36 @@ interface UserProfile {
   phone?: string;
 }
 
+const PAGE_SIZE = 100;
+
 export default function UserManagementMobile() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
-    loadUsers();
+    setOffset(0);
+    setUsers([]);
+    loadUsers(0);
   }, [user]);
 
-  const loadUsers = async () => {
+  const loadUsers = async (pageOffset: number) => {
     try {
       if (!user) return;
-      
+
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, name, email, phone, roles, created_at')
         .order('name')
-        .limit(500);
+        .range(pageOffset, pageOffset + PAGE_SIZE - 1);
 
       if (error) throw error;
-      
+
       const transformedUsers: UserProfile[] = (data || []).map((profile: any) => ({
         id: profile.id,
         name: profile.name || 'No name',
@@ -51,8 +58,13 @@ export default function UserManagementMobile() {
         created_at: profile.created_at,
         phone: profile.phone
       }));
-      
-      setUsers(transformedUsers);
+
+      if (pageOffset === 0) {
+        setUsers(transformedUsers);
+      } else {
+        setUsers(prev => [...prev, ...transformedUsers]);
+      }
+      setHasMore(transformedUsers.length === PAGE_SIZE);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -61,7 +73,15 @@ export default function UserManagementMobile() {
       });
     } finally {
       setLoading(false);
+      setIsLoadingMore(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    const nextOffset = offset + PAGE_SIZE;
+    setOffset(nextOffset);
+    setIsLoadingMore(true);
+    loadUsers(nextOffset);
   };
 
   const filteredUsers = users.filter(user =>
@@ -125,45 +145,57 @@ export default function UserManagementMobile() {
               <p className="text-white/60">No users found</p>
             </div>
           ) : (
-            filteredUsers.map((userProfile) => (
-              <Card key={userProfile.id} className="touch-manipulation">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="text-lg font-medium">
-                        {getInitials(userProfile.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-lg truncate">{userProfile.name}</h3>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="text-sm text-white/60 truncate mb-2">
-                        {userProfile.email}
-                      </div>
-                      <div className="flex items-center space-x-2 flex-wrap">
-                        {userProfile.roles.map((role, index) => (
-                          <Badge 
-                            key={index} 
-                            className={`text-white text-xs ${getRoleColor(role)}`}
-                          >
-                            {role === 'global_admin' && <Shield className="h-3 w-3 mr-1" />}
-                            {role.replace('_', ' ')}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="text-xs text-white/60 mt-1">
-                        Joined {formatDate(userProfile.created_at)}
+            <>
+              {filteredUsers.map((userProfile) => (
+                <Card key={userProfile.id} className="touch-manipulation">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="text-lg font-medium">
+                          {getInitials(userProfile.name)}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-lg truncate">{userProfile.name}</h3>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="text-sm text-white/60 truncate mb-2">
+                          {userProfile.email}
+                        </div>
+                        <div className="flex items-center space-x-2 flex-wrap">
+                          {userProfile.roles.map((role, index) => (
+                            <Badge
+                              key={index}
+                              className={`text-white text-xs ${getRoleColor(role)}`}
+                            >
+                              {role === 'global_admin' && <Shield className="h-3 w-3 mr-1" />}
+                              {role.replace('_', ' ')}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="text-xs text-white/60 mt-1">
+                          Joined {formatDate(userProfile.created_at)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))}
+              {hasMore && !searchTerm && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore ? 'Loading...' : `Load more users`}
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

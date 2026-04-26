@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, UserPlus, Trash2, Mail, Users } from 'lucide-react';
+import { useTeamPlayers } from '@/hooks/useTeamPlayers';
 
 interface LinkedParent {
   id: string;
@@ -37,11 +38,20 @@ export function PlayerParentLinkManager({
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+  const [playerTeamId, setPlayerTeamId] = useState<string | undefined>(undefined);
   const { toast } = useToast();
+  const { players: teamPlayers } = useTeamPlayers(playerTeamId);
 
   useEffect(() => {
     if (isOpen && playerId) {
       loadLinkedParents();
+      // Fetch the player's team_id to drive the useTeamPlayers hook
+      supabase
+        .from('players')
+        .select('team_id')
+        .eq('id', playerId)
+        .single()
+        .then(({ data }) => { if (data) setPlayerTeamId(data.team_id); });
     }
   }, [isOpen, playerId]);
 
@@ -126,12 +136,8 @@ export function PlayerParentLinkManager({
 
     setIsInviting(true);
     try {
-      // Get current player's team_id
-      const { data: currentPlayer } = await supabase
-        .from('players')
-        .select('team_id')
-        .eq('id', playerId)
-        .single();
+      // Get current player's team_id from hook-initialised state
+      const currentPlayer = playerTeamId ? { team_id: playerTeamId } : null;
 
       // Check if user exists
       const { data: existingProfile } = await supabase

@@ -236,30 +236,53 @@ export const eventsService = {
       const invitationRecords: any[] = [];
       
       if (invitations.type === 'everyone' || invitations.type === 'players_only' || invitations.type === 'staff_only') {
-        // Get players if needed (for 'everyone' or 'players_only')
-        let players: any[] = [];
-        let playerUsers: any[] = [];
-        
-        if (invitations.type === 'everyone' || invitations.type === 'players_only') {
-          // Get all active players for the team
-          // @ts-ignore - Supabase type inference causes excessive depth
-          const playersResult: any = await supabase
-            .from('players')
-            .select('id')
-            .eq('team_id', teamId)
-            .eq('status', 'active');
-            
-          if (playersResult.error) throw playersResult.error;
-          players = playersResult.data || [];
-          
-          // Get user IDs for players
-          const playerUsersResult: any = await supabase
-            .from('user_players')
-            .select('user_id, player_id')
-            .in('player_id', players.map((p: any) => p.id));
-          if (playerUsersResult.error) throw playerUsersResult.error;
-          playerUsers = playerUsersResult.data || [];
-          
+        const needPlayers = invitations.type === 'everyone' || invitations.type === 'players_only';
+        const needStaff = invitations.type === 'everyone' || invitations.type === 'staff_only';
+
+        // Phase 1: run all independent queries in parallel
+        const [playersResult, staffResult, userTeamsStaffResult] = await Promise.all([
+          needPlayers
+            // @ts-ignore - Supabase type inference causes excessive depth
+            ? (supabase.from('players').select('id').eq('team_id', teamId).eq('status', 'active') as Promise<any>)
+            : Promise.resolve({ data: [], error: null }),
+          needStaff
+            // @ts-ignore - Supabase type inference causes excessive depth
+            ? (supabase.from('team_staff').select('id').eq('team_id', teamId) as Promise<any>)
+            : Promise.resolve({ data: [], error: null }),
+          needStaff
+            // @ts-ignore - Supabase type inference causes excessive depth
+            ? (supabase.from('user_teams').select('user_id, role').eq('team_id', teamId)
+                .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'manager', 'coach', 'staff', 'helper', 'team_helper']) as Promise<any>)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+
+        if (playersResult.error) throw playersResult.error;
+        if (staffResult.error) throw staffResult.error;
+        if (userTeamsStaffResult.error) throw userTeamsStaffResult.error;
+
+        const players: any[] = playersResult.data || [];
+        const staff: any[] = staffResult.data || [];
+        const userTeamsStaff: any[] = userTeamsStaffResult.data || [];
+
+        // Phase 2: dependent queries (need player IDs / staff IDs from phase 1)
+        const [playerUsersResult, staffUsersResult] = await Promise.all([
+          needPlayers && players.length > 0
+            ? (supabase.from('user_players').select('user_id, player_id')
+                .in('player_id', players.map((p: any) => p.id)) as Promise<any>)
+            : Promise.resolve({ data: [], error: null }),
+          needStaff && staff.length > 0
+            ? (supabase.from('user_staff').select('user_id, staff_id')
+                .in('staff_id', staff.map((s: any) => s.id)) as Promise<any>)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+
+        if (playerUsersResult.error) throw playerUsersResult.error;
+        if (staffUsersResult.error) throw staffUsersResult.error;
+
+        const playerUsers: any[] = playerUsersResult.data || [];
+        const staffUsers: any[] = staffUsersResult.data || [];
+
+        if (needPlayers) {
           // Create invitation records for players (with or without linked users)
           const mappedPlayerIds = new Set(playerUsers.map((pu: any) => pu.player_id));
           playerUsers.forEach((pu: any) => {
@@ -281,37 +304,8 @@ export const eventsService = {
             }
           });
         }
-        
-        // Get staff if needed (for 'everyone' or 'staff_only')
-        if (invitations.type === 'everyone' || invitations.type === 'staff_only') {
-          // Get all active staff for the team from team_staff table
-          // @ts-ignore - Supabase type inference causes excessive depth
-          const staffResult: any = await supabase
-            .from('team_staff')
-            .select('id')
-            .eq('team_id', teamId);
-            
-          if (staffResult.error) throw staffResult.error;
-          const staff = staffResult.data || [];
-          
-          // Also get staff from user_teams (users with staff-like roles)
-          // @ts-ignore - Supabase type inference causes excessive depth
-          const userTeamsStaffResult: any = await supabase
-            .from('user_teams')
-            .select('user_id, role')
-            .eq('team_id', teamId)
-            .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'manager', 'coach', 'staff', 'helper', 'team_helper']);
-          
-          if (userTeamsStaffResult.error) throw userTeamsStaffResult.error;
-          const userTeamsStaff = userTeamsStaffResult.data || [];
-          
-          // Get user IDs for team_staff
-          const staffUsersResult: any = await supabase
-            .from('user_staff')
-            .select('user_id, staff_id')
-            .in('staff_id', staff.map((s: any) => s.id));
-          if (staffUsersResult.error) throw staffUsersResult.error;
-          const staffUsers = staffUsersResult.data || [];
+
+        if (needStaff) {
           
           // Add user_teams staff to staffUsers (they already have user_id)
           const userTeamsStaffUsers = userTeamsStaff.map((uts: any) => ({

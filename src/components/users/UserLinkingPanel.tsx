@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Search, Link2, Users, UserCheck } from 'lucide-react';
+import { useTeamPlayers } from '@/hooks/useTeamPlayers';
 
 interface UnlinkedUser {
   id: string;
@@ -37,11 +38,12 @@ export const UserLinkingPanel: React.FC = () => {
   const [linkType, setLinkType] = useState<'self' | 'parent' | 'guardian'>('self');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { players: teamPlayersRaw } = useTeamPlayers(teams?.[0]?.id);
 
   useEffect(() => {
     loadUnlinkedUsers();
     loadAvailableEntities();
-  }, []);
+  }, [teamPlayersRaw]);
 
   const loadUnlinkedUsers = async () => {
     try {
@@ -91,31 +93,21 @@ export const UserLinkingPanel: React.FC = () => {
     try {
       const entities: LinkableEntity[] = [];
 
-      // Load players without user links
-      const { data: players, error: playersError } = await supabase
-        .from('players')
-        .select(`
-          id, name, team_id,
-          teams!inner(name)
-        `)
-        .eq('status', 'active');
-
-      if (playersError) throw playersError;
-
-      // Get players without user links
+      // Get players without user links using hook results
       const { data: playerLinks } = await supabase
         .from('user_players')
         .select('player_id');
 
       const linkedPlayerIds = new Set(playerLinks?.map(pl => pl.player_id) || []);
+      const teamNameMap = Object.fromEntries(teams.map(t => [t.id, t.name]));
 
-      players?.forEach(player => {
+      teamPlayersRaw.forEach(player => {
         if (!linkedPlayerIds.has(player.id)) {
           entities.push({
             id: player.id,
             name: player.name,
             type: 'player',
-            team_name: (player as any).teams?.name
+            team_name: teamNameMap[player.team_id]
           });
         }
       });
