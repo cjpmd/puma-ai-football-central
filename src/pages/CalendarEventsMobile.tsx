@@ -453,11 +453,8 @@ export default function CalendarEventsMobile() {
       });
       setTeamPrivacySettings(settingsMap);
 
-      const loadedEvents = (eventsResult.data || []) as DatabaseEvent[];
-      logger.log('Loaded events:', loadedEvents.length, 'View mode:', viewMode);
-      setEvents(loadedEvents);
-      setHasMoreEventsServer(loadedEvents.length === eventsPageSize);
-      setEventsServerOffset(0);
+      logger.log('Loaded events:', eventsResult.data?.length, 'View mode:', viewMode);
+      setEvents(((eventsResult.data || []) as unknown) as DatabaseEvent[]);
 
       // Group selections by event_id for easy lookup
       const selectionsByEvent: {[key: string]: any[]} = {};
