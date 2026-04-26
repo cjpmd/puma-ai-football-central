@@ -10,8 +10,8 @@ import {
   Settings, Image, Monitor, Trophy, Target, Star, Wifi, 
   Wrench, Package, User, Shield, GitBranch, ChevronRight, ChevronLeft, Building2
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { teamsService } from '@/services/teamsService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { Team } from '@/types/index';
 
@@ -62,13 +62,7 @@ export default function TeamSettingsMobile() {
     if (!id) return;
     
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
+      const data = await teamsService.getTeamWithMembers(id);
 
       // Transform to Team type - cast as any first to add extra properties
       const transformedTeam = {

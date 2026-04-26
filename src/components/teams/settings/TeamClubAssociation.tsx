@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Building2, Link2, Unlink, Search, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { teamsService } from '@/services/teamsService';
 import { Team } from '@/types/team';
 
 interface TeamClubAssociationProps {
@@ -98,12 +99,7 @@ export const TeamClubAssociation: React.FC<TeamClubAssociationProps> = ({ team, 
 
     try {
       // First, update the team's club_id
-      const { error: teamError } = await supabase
-        .from('teams')
-        .update({ club_id: searchResult.id })
-        .eq('id', team.id);
-
-      if (teamError) throw teamError;
+      await teamsService.updateTeam(team.id, { club_id: searchResult.id });
 
       // Then, create the club_teams relationship
       const { error: linkError } = await supabase
@@ -154,12 +150,7 @@ export const TeamClubAssociation: React.FC<TeamClubAssociationProps> = ({ team, 
       if (unlinkError) throw unlinkError;
 
       // Update team's club_id to null
-      const { error: teamError } = await supabase
-        .from('teams')
-        .update({ club_id: null })
-        .eq('id', team.id);
-
-      if (teamError) throw teamError;
+      await teamsService.updateTeam(team.id, { club_id: null });
 
       const clubName = linkedClub.name;
       setLinkedClub(null);

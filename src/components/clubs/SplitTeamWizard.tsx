@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { teamsService } from "@/services/teamsService";
 import { Users, Plus, Trash2, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import type { YearGroup } from "@/types/index";
 
@@ -204,12 +205,10 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
         }
       }));
 
-      const { data: createdTeams, error: teamsError } = await supabase
-        .from('teams')
-        .insert(teamsToCreate)
-        .select();
-
-      if (teamsError) throw teamsError;
+      const createdTeams = [];
+      for (const teamData of teamsToCreate) {
+        createdTeams.push(await teamsService.createTeam(teamData));
+      }
 
       // Update players' team assignments
       for (let i = 0; i < newTeams.length; i++) {

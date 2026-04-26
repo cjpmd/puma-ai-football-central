@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { User } from 'lucide-react';
 import { Team, NameDisplayOption } from '@/types/team';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { teamsService } from '@/services/teamsService';
 
 interface TeamNameDisplaySettingsProps {
   team: Team;
@@ -36,18 +36,7 @@ export const TeamNameDisplaySettings: React.FC<TeamNameDisplaySettingsProps> = (
     try {
       logger.log('Saving name display option:', nameDisplayOption, 'for team:', team.id);
       
-      const { error } = await supabase
-        .from('teams')
-        .update({ 
-          name_display_option: nameDisplayOption,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', team.id);
-
-      if (error) {
-        logger.error('Error updating name display setting:', error);
-        throw error;
-      }
+      await teamsService.updateTeam(team.id, { name_display_option: nameDisplayOption });
 
       logger.log('Name display option saved successfully');
       onUpdate({ nameDisplayOption });

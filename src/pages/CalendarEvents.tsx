@@ -94,7 +94,7 @@ export default function CalendarEvents() {
 
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('id,team_id,title,description,date,start_time,end_time,location,latitude,longitude,notes,event_type,opponent,is_home,game_format,game_duration,scores,player_of_match_id,coach_notes,staff_notes,training_notes,facility_id,facility_booking_id,meeting_time,total_minutes,teams,kit_selection,is_recurring,recurrence_pattern,recurrence_day_of_week,recurrence_end_date,recurrence_occurrences,recurring_group_id,created_at,updated_at')
         .in('team_id', teamIds)
         .gte('date', windowStart.toISOString().split('T')[0])
         .lte('date', windowEnd.toISOString().split('T')[0])

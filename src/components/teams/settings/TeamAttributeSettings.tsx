@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Team, PlayerAttributeGroup, PlayerAttribute } from '@/types/team';
 import { STANDARD_PLAYER_ATTRIBUTES } from '@/types/playerAttributes';
 import { Plus, X, Edit, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { teamsService } from '@/services/teamsService';
 
 interface TeamAttributeSettingsProps {
   team: Team;
@@ -115,12 +115,7 @@ export const TeamAttributeSettings: React.FC<TeamAttributeSettingsProps> = ({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('teams')
-        .update({ player_attributes: attributes as any })
-        .eq('id', team.id);
-
-      if (error) throw error;
+      await teamsService.updateTeam(team.id, { player_attributes: attributes as any });
 
       toast({
         title: 'Success',

@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Team, HeaderDisplayType } from '@/types/team';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { teamsService } from '@/services/teamsService';
 import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -71,20 +72,10 @@ export const TeamHeaderSettings: React.FC<TeamHeaderSettingsProps> = ({
 
   const handleSave = async () => {
     try {
-      const { error } = await supabase
-        .from('teams')
-        .update({
-          header_display_type: formData.headerDisplayType,
-          header_image_url: formData.headerImageUrl,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', team.id);
-
-      if (error) {
-        logger.error('Error saving header settings:', error);
-        toast.error('Failed to save header settings');
-        return;
-      }
+      await teamsService.updateTeam(team.id, {
+        header_display_type: formData.headerDisplayType,
+        header_image_url: formData.headerImageUrl,
+      });
 
       toast.success('Header settings saved successfully');
       onSave();
