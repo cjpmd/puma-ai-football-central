@@ -12,6 +12,7 @@ import { GameFormat } from '@/types';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { NameDisplayOption } from '@/types/team';
+import { useTeamPlayers } from '@/hooks/useTeamPlayers';
 
 interface Player {
   id: string;
@@ -55,7 +56,8 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
   periodNumber,
   getPlayerTimeInfo = () => ''
 }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
+  const { players: rawPlayers, loading: playersLoading } = useTeamPlayers(teamId);
+  const players = rawPlayers as Player[];
   const [availability, setAvailability] = useState<Record<string, any>>({});
   const [nameDisplayOption, setNameDisplayOption] = useState<NameDisplayOption>('surname');
   const [loading, setLoading] = useState(true);
@@ -84,16 +86,6 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
   const loadPlayersAndAvailability = async () => {
     try {
       setLoading(true);
-      
-      // Load players
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('id, name, squad_number')
-        .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('squad_number');
-
-      if (playersError) throw playersError;
 
       // Load availability
       const { data: availabilityData, error: availabilityError } = await supabase
@@ -112,14 +104,14 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
 
       // Create availability mapping
       const availabilityMap: Record<string, any> = {};
-      
+
       if (availabilityData && userPlayersData) {
         userPlayersData.forEach(userPlayer => {
-          const playerAvailability = availabilityData.find(avail => 
-            avail.user_id === userPlayer.user_id && 
+          const playerAvailability = availabilityData.find(avail =>
+            avail.user_id === userPlayer.user_id &&
             (avail.role === 'player' || avail.role === 'parent')
           );
-          
+
           if (playerAvailability) {
             availabilityMap[userPlayer.player_id] = {
               status: playerAvailability.status,
@@ -129,7 +121,6 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
         });
       }
 
-      setPlayers(playersData || []);
       setAvailability(availabilityMap);
     } catch (error) {
       logger.error('Error loading players and availability:', error);
@@ -258,7 +249,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
   const positions = getPositionsForFormation(formation, gameFormat);
   const maxPlayers = positions.length;
 
-  if (loading) {
+  if (loading || playersLoading) {
     return (
       <Card>
         <CardContent className="p-6">

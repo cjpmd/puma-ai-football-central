@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useTeamPlayers } from '@/hooks/useTeamPlayers';
 import { Team } from '@/types';
 import { Loader2, Plus, Trash2, Users } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,6 +46,7 @@ export const TeamSplitWizard: React.FC<TeamSplitWizardProps> = ({
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
+  const { players: teamPlayersRaw } = useTeamPlayers(isOpen ? team.id : undefined);
   const [newTeams, setNewTeams] = useState<NewTeamConfig[]>([
     {
       id: crypto.randomUUID(),
@@ -66,22 +68,8 @@ export const TeamSplitWizard: React.FC<TeamSplitWizardProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      loadPlayers();
-    }
-  }, [isOpen, team.id]);
-
-  const loadPlayers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('id, name')
-        .eq('team_id', team.id)
-        .order('name');
-
-      if (error) throw error;
-      
-      // Map the data to match our Player interface
-      const mappedPlayers = (data || []).map(p => {
+      // Map the hook results to match our Player interface
+      const mappedPlayers = teamPlayersRaw.map(p => {
         const [firstName = '', ...lastNameParts] = (p.name || '').split(' ');
         return {
           id: p.id,
@@ -89,17 +77,9 @@ export const TeamSplitWizard: React.FC<TeamSplitWizardProps> = ({
           last_name: lastNameParts.join(' ') || firstName,
         };
       });
-      
       setPlayers(mappedPlayers);
-    } catch (error) {
-      logger.error('Error loading players:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load players",
-        variant: "destructive",
-      });
     }
-  };
+  }, [isOpen, teamPlayersRaw]);
 
   const addTeam = () => {
     const letter = String.fromCharCode(65 + newTeams.length); // A, B, C, etc.

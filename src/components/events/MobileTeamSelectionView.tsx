@@ -8,6 +8,7 @@ import { Users, Gamepad2, ChevronLeft, Timer, Trash2, CheckCircle, Clock, XCircl
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useTeamPlayers } from '@/hooks/useTeamPlayers';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -75,6 +76,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   const [staffNames, setStaffNames] = useState<Record<string, string>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [availabilitySummary, setAvailabilitySummary] = useState<AvailabilitySummary>({ available: 0, pending: 0, unavailable: 0 });
+  const { players: teamPlayers } = useTeamPlayers(teamId);
 
   // Helper to get display name for a team.
   // Priority: team name (single-team only) > performance category > "Team N"
@@ -252,23 +254,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         const teamsArray = Object.values(groupedSelections);
         setTeamSelections(teamsArray);
 
-        // Fetch captain names
-        const captainIds = teamsArray
-          .map(team => team.periods[0]?.captain_id)
-          .filter(Boolean) as string[];
-
-        if (captainIds.length > 0) {
-          const { data: players } = await supabase
-            .from('players')
-            .select('id, name')
-            .in('id', captainIds);
-
-          if (players) {
-            const namesMap: Record<string, string> = {};
-            players.forEach(p => { namesMap[p.id] = p.name; });
-            setCaptainNames(namesMap);
-          }
-        }
+        // Captain name resolution deferred to the teamPlayers+teamSelections effect below
 
         // Fetch staff names via team staff RPC — avoids profile RLS issues
         if (teamsArray.some(t => t.staffIds.length > 0)) {
@@ -343,6 +329,23 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
       setTrainingDrills([]);
     }
   };
+
+  // Resolve captain names whenever team selections or team players change
+  useEffect(() => {
+    if (teamSelections.length === 0 || teamPlayers.length === 0) return;
+    const captainIds = teamSelections
+      .map(team => team.periods[0]?.captain_id)
+      .filter(Boolean) as string[];
+    if (captainIds.length > 0) {
+      const namesMap: Record<string, string> = {};
+      teamPlayers.forEach(p => {
+        if (captainIds.includes(p.id)) {
+          namesMap[p.id] = p.name;
+        }
+      });
+      setCaptainNames(namesMap);
+    }
+  }, [teamSelections, teamPlayers]);
 
   const currentTeam = teamSelections[currentTeamIndex];
 

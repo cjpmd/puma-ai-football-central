@@ -222,6 +222,10 @@ export default function CalendarEventsMobile() {
   const [loading, setLoading] = useState(true);
   const [eventsToShow, setEventsToShow] = useState(5);
   const showMoreIncrement = 5;
+  const eventsPageSize = 50;
+  const [eventsServerOffset, setEventsServerOffset] = useState(0);
+  const [hasMoreEventsServer, setHasMoreEventsServer] = useState(false);
+  const [isLoadingMoreEvents, setIsLoadingMoreEvents] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
@@ -274,6 +278,8 @@ export default function CalendarEventsMobile() {
   };
 
   useEffect(() => {
+    setEventsServerOffset(0);
+    setHasMoreEventsServer(false);
     loadEvents();
   }, [currentTeam, viewMode, availableTeams]);
 
@@ -418,7 +424,7 @@ export default function CalendarEventsMobile() {
           .gte('date', startDateStr)
           .lte('date', endDateStr)
           .order('date', { ascending: false })
-          .limit(300),
+          .range(0, eventsPageSize - 1),
 
         // Scoped to the same 9-month window via a join filter so we don't load
         // all-time event_selections for the team on every mount.
@@ -468,6 +474,54 @@ export default function CalendarEventsMobile() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreEvents = async () => {
+    const teamsToQuery = viewMode === 'all'
+      ? (authTeams?.length ? authTeams : allTeams || [])
+      : (currentTeam ? [currentTeam] : []);
+    if (teamsToQuery.length === 0) return;
+
+    const teamIds = teamsToQuery.map(t => t.id);
+    const now = new Date();
+    const windowStart = new Date(now);
+    windowStart.setMonth(windowStart.getMonth() - 3);
+    const windowEnd = new Date(now);
+    windowEnd.setMonth(windowEnd.getMonth() + 6);
+    const startDateStr = windowStart.toISOString().split('T')[0];
+    const endDateStr = windowEnd.toISOString().split('T')[0];
+    const nextOffset = eventsServerOffset + eventsPageSize;
+
+    setIsLoadingMoreEvents(true);
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select(
+          'id, team_id, title, date, start_time, end_time, event_type, opponent, ' +
+          'is_home, scores, location, latitude, longitude, description, notes, ' +
+          'coach_notes, staff_notes, training_notes, kit_selection, game_format, ' +
+          'game_duration, meeting_time, recurring_group_id, teams, created_at, updated_at'
+        )
+        .in('team_id', teamIds)
+        .gte('date', startDateStr)
+        .lte('date', endDateStr)
+        .order('date', { ascending: false })
+        .range(nextOffset, nextOffset + eventsPageSize - 1);
+
+      if (error) throw error;
+      const moreEvents = (data || []) as DatabaseEvent[];
+      setEvents(prev => [...prev, ...moreEvents]);
+      setHasMoreEventsServer(moreEvents.length === eventsPageSize);
+      setEventsServerOffset(nextOffset);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load more events',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingMoreEvents(false);
     }
   };
 
@@ -1223,7 +1277,7 @@ export default function CalendarEventsMobile() {
               </div>
             ))}
             
-            {/* Show More Button */}
+            {/* Show More Button (client-side within loaded batch) */}
             {hasMoreVisibleEvents && (
               <div className="flex justify-center pt-4">
                 <Button
@@ -1232,6 +1286,19 @@ export default function CalendarEventsMobile() {
                   className="px-6"
                 >
                   Show More ({Math.min(showMoreIncrement, orderedEvents.length - eventsToShow)} more)
+                </Button>
+              </div>
+            )}
+            {/* Load More Events (server-side next page) */}
+            {!hasMoreVisibleEvents && hasMoreEventsServer && !selectedDate && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={loadMoreEvents}
+                  disabled={isLoadingMoreEvents}
+                  className="px-6"
+                >
+                  {isLoadingMoreEvents ? 'Loading...' : 'Load more events'}
                 </Button>
               </div>
             )}
