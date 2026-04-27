@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
@@ -53,6 +53,10 @@ export default function DashboardMobile() {
     pendingAvailability: []
   });
   const [loading, setLoading] = useState(true);
+  // Sequence guard: only the latest loadLiveData() invocation may write to stats.
+  // Prevents stale data from a previous team's request from overwriting the
+  // current team's state (e.g. seeing Jags results while viewing Pumas).
+  const loadSeqRef = useRef(0);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
