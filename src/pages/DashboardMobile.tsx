@@ -482,6 +482,22 @@ export default function DashboardMobile() {
         }
       });
 
+      // Build per-event role map: which roles does the user already have an
+      // availability record for? Used to render the inline availability
+      // buttons even when an `event_invitations` row is missing.
+      const eventRolesMap = new Map<string, Set<'player' | 'staff'>>();
+      userAvailabilityData.forEach(record => {
+        const role = record.role === 'staff' ? 'staff' : 'player';
+        const set = eventRolesMap.get(record.event_id) ?? new Set<'player' | 'staff'>();
+        set.add(role);
+        eventRolesMap.set(record.event_id, set);
+      });
+      playerAvailabilityData.forEach(record => {
+        const set = eventRolesMap.get(record.event_id) ?? new Set<'player' | 'staff'>();
+        set.add('player');
+        eventRolesMap.set(record.event_id, set);
+      });
+
       const upcomingEvents = upcomingEventsResult.data?.map(event => ({
         ...event,
         team_context: {
@@ -490,7 +506,8 @@ export default function DashboardMobile() {
           club_name: event.teams.clubs?.name,
           club_logo_url: event.teams.clubs?.logo_url
         },
-        user_availability: availabilityMap.get(event.id) || null
+        user_availability: availabilityMap.get(event.id) || null,
+        assumed_roles: Array.from(eventRolesMap.get(event.id) ?? []) as Array<'player' | 'staff'>
       })) || [];
 
       // ─── Recent results ───────────────────────────────────────────────────
