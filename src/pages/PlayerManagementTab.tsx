@@ -316,7 +316,7 @@ const PlayerManagementTab = () => {
 
   const executeTransfer = async (data: {
     toTeamId: string;
-    dataTransferOptions: { full: boolean; attributes: boolean; comments: boolean; objectives: boolean; events: boolean };
+    dataTransferOptions: { full: boolean; attributes: boolean; comments: boolean; objectives: boolean; events: boolean; performanceHistory: boolean };
   }) => {
     if (!selectedPlayer) return;
     if (!window.confirm(`Confirm transfer of ${selectedPlayer.name} to the selected team? This cannot be undone.`)) return;
@@ -334,11 +334,25 @@ const PlayerManagementTab = () => {
         .eq('id', selectedPlayer.id);
       if (updateError) throw updateError;
 
+      // Build performance history snapshot if requested
+      let performanceHistorySnapshot: any = null;
+      if (data.dataTransferOptions.performanceHistory) {
+        const { data: playerRow } = await supabase
+          .from('players')
+          .select('match_stats')
+          .eq('id', selectedPlayer.id)
+          .single();
+        performanceHistorySnapshot = {
+          snapshotDate: new Date().toISOString().split('T')[0],
+          careerStats: playerRow?.match_stats ?? null,
+        };
+      }
+
       await supabase.from('player_transfers').insert({
         player_id: selectedPlayer.id,
         from_team_id: selectedPlayer.teamId || (selectedPlayer as any).team_id,
         to_team_id: data.toTeamId,
-        data_transfer_options: data.dataTransferOptions,
+        data_transfer_options: { ...data.dataTransferOptions, performanceHistorySnapshot },
         status: 'completed',
         transfer_date: new Date().toISOString(),
         requested_by: user?.id ?? null,

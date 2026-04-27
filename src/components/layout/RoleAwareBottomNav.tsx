@@ -68,12 +68,25 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    name: 'Profile',
+    name: 'Team',
     href: '/my-team',
     icon: (active) => (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="8" r="4" stroke={active ? PURPLE_ACTIVE : PURPLE_INACTIVE} strokeWidth={active ? STROKE_ACTIVE : STROKE_INACTIVE} fill={active ? PURPLE_ACTIVE : 'none'} fillOpacity={active ? 0.2 : 0}/>
-        <path d="M3 21c1-4.5 4.7-7 9-7s8 2.5 9 7" stroke={active ? PURPLE_ACTIVE : PURPLE_INACTIVE} strokeWidth={active ? STROKE_ACTIVE : STROKE_INACTIVE} strokeLinecap="round"/>
+        <path
+          d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
+          stroke={active ? PURPLE_ACTIVE : PURPLE_INACTIVE}
+          strokeWidth={active ? STROKE_ACTIVE : STROKE_INACTIVE}
+          strokeLinejoin="round"
+          fill={active ? PURPLE_ACTIVE : 'none'}
+          fillOpacity={active ? 0.18 : 0}
+        />
+        <path
+          d="M9 12l2 2 4-4"
+          stroke={active ? PURPLE_ACTIVE : PURPLE_INACTIVE}
+          strokeWidth={active ? STROKE_ACTIVE : STROKE_INACTIVE}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
