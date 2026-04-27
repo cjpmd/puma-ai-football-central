@@ -12,10 +12,17 @@ dist
 dist-ssr
 *.local
 
-# Environment variables
+# Environment variables — never commit these files
+# Note: a .env file containing only publishable Supabase anon keys was committed
+# in early history (commits f7673c6, 3794eea). Those keys are intentionally public
+# (client-side) and cannot be rotated without breaking deployed clients, but the
+# file is now excluded to prevent accidental exposure of future private keys.
 .env
 .env.local
 .env.production
+.env.*.local
+.env.development
+.env.staging
 
 # Editor directories and files
 .vscode/*

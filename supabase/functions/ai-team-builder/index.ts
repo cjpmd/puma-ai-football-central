@@ -6,6 +6,30 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Strip common prompt-injection patterns and constrain length. */
+function sanitizeUserPrompt(raw: string | undefined | null): string {
+  if (!raw) return '';
+  const INJECTION_PATTERNS = [
+    /system\s*:/gi,
+    /ignore\s+(all\s+)?previous\s+instructions?/gi,
+    /\[INST\]/gi,
+    /<\|system\|>/gi,
+    /<\|user\|>/gi,
+    /<\|assistant\|>/gi,
+    /<<SYS>>/gi,
+    /you\s+are\s+now/gi,
+    /disregard\s+(all\s+)?previous/gi,
+    /forget\s+(all\s+)?previous/gi,
+    /new\s+instructions?:/gi,
+    /override\s+(previous\s+)?instructions?/gi,
+  ];
+  let sanitized = raw.slice(0, 500); // hard cap
+  for (const pattern of INJECTION_PATTERNS) {
+    sanitized = sanitized.replace(pattern, '[removed]');
+  }
+  return sanitized.trim();
+}
+
 /** Stable hash of an array of player IDs so the cache key is order-independent. */
 function hashSquad(playerIds: string[]): string {
   return [...playerIds].sort().join(",");
@@ -144,7 +168,7 @@ Guidelines:
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
+          { role: "user", content: `Coaching note: ${sanitizeUserPrompt(prompt)}` },
         ],
         tools: [
           {

@@ -115,9 +115,17 @@ export const userInvitationService = {
       throw error;
     }
 
+    // Audit log: user invitation is a security-relevant action
+    supabase.from('audit_logs').insert({
+      table_name: 'user_invitations',
+      operation: 'INSERT',
+      new_data: { email: inviteData.email, role: inviteData.role, team_id: inviteData.teamId },
+      user_id: currentUser.data.user.id,
+    }).then(({ error: auditError }) => { if (auditError) logger.warn('Audit log write failed for invitation:', auditError); });
+
     // Send invitation email
     await this.sendInvitationEmail(data as unknown as UserInvitation);
-    
+
     return data as unknown as UserInvitation;
   },
 
