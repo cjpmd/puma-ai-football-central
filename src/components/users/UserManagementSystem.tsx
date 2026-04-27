@@ -629,6 +629,17 @@ export const UserManagementSystem = () => {
 
   const [activeTab, setActiveTab] = useState('users');
 
+  // Guard: only global admins may view this component.
+  // The queries below intentionally bypass club-scoped RLS because a global admin
+  // needs visibility across all profiles/teams/clubs. Non-admins must not reach here.
+  if (!loading && !isGlobalAdmin) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-muted-foreground">You do not have permission to access user management.</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">

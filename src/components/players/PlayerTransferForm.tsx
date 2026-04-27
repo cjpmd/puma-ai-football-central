@@ -1,12 +1,29 @@
 
 import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Player, Team, SubscriptionType, GameFormat } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+
+const transferSchema = z.object({
+  toTeamId: z.string().min(1, 'Please select a destination team'),
+  dataTransferOptions: z.object({
+    full: z.boolean(),
+    attributes: z.boolean(),
+    comments: z.boolean(),
+    objectives: z.boolean(),
+    events: z.boolean(),
+  }).refine(
+    opts => opts.full || opts.attributes || opts.comments || opts.objectives || opts.events,
+    { message: 'Please select at least one data option to transfer', path: ['_root'] }
+  ),
+});
+
+type TransferFormErrors = { toTeamId?: string; dataTransferOptions?: string };
 
 interface PlayerTransferFormProps {
   player: Player;
@@ -40,6 +57,7 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
     events: false
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [formErrors, setFormErrors] = useState<TransferFormErrors>({});
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -78,12 +96,18 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedTeamId) {
-      onSubmit({
-        toTeamId: selectedTeamId,
-        dataTransferOptions
-      });
+    setFormErrors({});
+    const result = transferSchema.safeParse({ toTeamId: selectedTeamId, dataTransferOptions });
+    if (!result.success) {
+      const errors: TransferFormErrors = {};
+      for (const issue of result.error.issues) {
+        if (issue.path[0] === 'toTeamId') errors.toTeamId = issue.message;
+        if (issue.path[0] === 'dataTransferOptions') errors.dataTransferOptions = issue.message;
+      }
+      setFormErrors(errors);
+      return;
     }
+    onSubmit({ toTeamId: selectedTeamId, dataTransferOptions });
   };
 
   const handleFullToggle = (checked: boolean) => {
@@ -139,27 +163,34 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
             No other teams available for transfer.
           </div>
         ) : (
-          <Select 
-            value={selectedTeamId}
-            onValueChange={setSelectedTeamId}
-            required
-          >
-            <SelectTrigger id="toTeamId">
-              <SelectValue placeholder="Select destination team" />
-            </SelectTrigger>
-            <SelectContent>
-              {teams.map(team => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name} ({team.ageGroup})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <>
+            <Select
+              value={selectedTeamId}
+              onValueChange={(v) => { setSelectedTeamId(v); setFormErrors(prev => ({ ...prev, toTeamId: undefined })); }}
+            >
+              <SelectTrigger id="toTeamId" className={formErrors.toTeamId ? 'border-destructive' : ''}>
+                <SelectValue placeholder="Select destination team" />
+              </SelectTrigger>
+              <SelectContent>
+                {teams.map(team => (
+                  <SelectItem key={team.id} value={team.id}>
+                    {team.name} ({team.ageGroup})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formErrors.toTeamId && (
+              <p className="text-xs text-destructive mt-1">{formErrors.toTeamId}</p>
+            )}
+          </>
         )}
       </div>
 
       <div className="space-y-4 mt-4">
         <Label>Data Transfer Options</Label>
+        {formErrors.dataTransferOptions && (
+          <p className="text-xs text-destructive">{formErrors.dataTransferOptions}</p>
+        )}
         
         <div className="flex items-center space-x-2">
           <Checkbox 

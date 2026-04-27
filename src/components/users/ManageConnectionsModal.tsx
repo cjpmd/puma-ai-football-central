@@ -35,8 +35,11 @@ interface ConnectedPlayer {
   relationship: string;
 }
 
-export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({ 
-  isOpen, onClose 
+// All queries in this component are scoped to the authenticated user's own data
+// (user_players filtered by user.id, clubs searched by serial number).
+// There is no cross-user data exposure — no admin RLS bypass is needed here.
+export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
+  isOpen, onClose
 }) => {
   const { user, profile, teams, clubs, refreshUserData } = useAuth();
   const { toast } = useToast();

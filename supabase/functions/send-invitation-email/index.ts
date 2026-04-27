@@ -23,11 +23,8 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Starting send-invitation-email function");
     
-    // Get the Resend API key from environment variables - try the new secret name first
-    const resendApiKey = Deno.env.get("puma-ai api key Resend2") || Deno.env.get("RESEND_API_KEY") || Deno.env.get("puma-ai api key Resend");
-    
-    console.log("Available environment variables:", Object.keys(Deno.env.toObject()));
-    
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
     if (!resendApiKey) {
       console.error("RESEND_API_KEY not found in environment variables");
       throw new Error("RESEND_API_KEY not configured. Please add your Resend API key to Supabase secrets.");
