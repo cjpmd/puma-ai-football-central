@@ -14,6 +14,16 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSeasonContext, Season } from '@/hooks/useSeasonContext';
 
+interface MatchResult {
+  eventId: string;
+  date: string;
+  opponent: string | null;
+  eventType: string;
+  categoryName: string;
+  ourScore: number;
+  opponentScore: number;
+}
+
 interface CategoryStats {
   categoryId: string | null;
   categoryName: string;
@@ -45,6 +55,9 @@ interface AnalyticsData {
   topScorers: any[];
   topAssisters: any[];
   categoryStats: CategoryStats[];
+  matchResults: MatchResult[];
+  trainingCount: number;
+  availableEventTypes: string[];
 }
 
 const EMPTY_ANALYTICS: AnalyticsData = {
@@ -53,6 +66,17 @@ const EMPTY_ANALYTICS: AnalyticsData = {
   avgGoalsPerGame: 0, recentResults: [], topPerformers: [],
   totalGoals: 0, totalAssists: 0, totalSaves: 0,
   yellowCards: 0, redCards: 0, topScorers: [], topAssisters: [], categoryStats: [],
+  matchResults: [], trainingCount: 0, availableEventTypes: [],
+};
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  fixture: 'Fixtures',
+  friendly: 'Friendlies',
+  tournament: 'Tournaments',
+  festival: 'Festivals',
+  match: 'Matches',
+  cup: 'Cups',
+  training: 'Training',
 };
 
 export default function MyTeamMobile() {
@@ -62,6 +86,7 @@ export default function MyTeamMobile() {
   const [loading, setLoading] = useState(false);
   const [showSeasonList, setShowSeasonList] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedEventType, setSelectedEventType] = useState<string>('all');
 
   const {
     allSeasons,
@@ -81,20 +106,21 @@ export default function MyTeamMobile() {
     setLoading(true);
 
     try {
-      let eventsQuery = supabase
+      const { data: events } = await supabase
         .from('events')
         .select('*')
         .eq('team_id', currentTeam.id)
-        .not('scores', 'is', null)
         .lt('date', new Date().toISOString().split('T')[0])
         .gte('date', selectedSeason.start)
-        .lte('date', selectedSeason.end);
-
-      const { data: events } = await eventsQuery.order('date', { ascending: false });
+        .lte('date', selectedSeason.end)
+        .order('date', { ascending: false });
 
       if (!events) { setLoading(false); return; }
 
-      const eventIds = events.map(e => e.id);
+      const matchEvents = events.filter(e => e.scores !== null);
+      const trainingCount = events.filter(e => e.event_type === 'training').length;
+      const availableEventTypes = [...new Set(events.map(e => e.event_type as string))];
+      const eventIds = matchEvents.map(e => e.id);
       const { data: eventSelections } = await supabase
         .from('event_selections')
         .select('event_id, team_number, performance_category_id, performance_categories(id, name)')
@@ -114,8 +140,9 @@ export default function MyTeamMobile() {
 
       let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
       const categoryStatsMap = new Map<string, CategoryStats>();
+      const matchResults: MatchResult[] = [];
 
-      events.forEach(event => {
+      matchEvents.forEach(event => {
         const scores = event.scores as any;
         if (!scores) return;
         const categories = eventCategoryMap.get(event.id) || [{ categoryId: null, categoryName: 'Default', teamNumber: 1 }];
@@ -133,6 +160,15 @@ export default function MyTeamMobile() {
             ourScore = parseInt(String(event.is_home ? scores.home : scores.away), 10) || 0;
             opponentScore = parseInt(String(event.is_home ? scores.away : scores.home), 10) || 0;
           }
+          matchResults.push({
+            eventId: event.id,
+            date: event.date,
+            opponent: event.opponent,
+            eventType: event.event_type,
+            categoryName: cat.categoryName,
+            ourScore,
+            opponentScore,
+          });
           goalsFor += ourScore;
           goalsAgainst += opponentScore;
           if (ourScore > opponentScore) wins++;
@@ -184,7 +220,7 @@ export default function MyTeamMobile() {
         goalsScored: goalsFor, goalsConceded: goalsAgainst,
         goalDifference: goalsFor - goalsAgainst,
         avgGoalsPerGame: totalGames > 0 ? Math.round((goalsFor / totalGames) * 10) / 10 : 0,
-        recentResults: events.slice(0, 5),
+        recentResults: matchEvents.slice(0, 5),
         topPerformers: Array.from(playerMap.values()).sort((a, b) => b.appearances - a.appearances).slice(0, 3),
         totalGoals: sumStat('totalGoals'),
         totalAssists: sumStat('totalAssists'),
@@ -200,6 +236,9 @@ export default function MyTeamMobile() {
           .sort((a, b) => ((b.match_stats as any)?.totalAssists || 0) - ((a.match_stats as any)?.totalAssists || 0))
           .slice(0, 3),
         categoryStats: Array.from(categoryStatsMap.values()).filter(c => c.totalGames > 0).sort((a, b) => b.totalGames - a.totalGames),
+        matchResults,
+        trainingCount,
+        availableEventTypes,
       });
     } catch {
       toast({ title: 'Error', description: 'Failed to load analytics data', variant: 'destructive' });
@@ -252,22 +291,42 @@ export default function MyTeamMobile() {
   }
 
   const categoryKeys = analytics.categoryStats.map(c => c.categoryName);
+  const isTrainingMode = selectedEventType === 'training';
 
-  const activeCat = selectedCategory !== 'all'
-    ? analytics.categoryStats.find(c => c.categoryName === selectedCategory) ?? null
-    : null;
+  const displayStats = (() => {
+    const needsFilter = selectedCategory !== 'all' || (selectedEventType !== 'all' && !isTrainingMode);
+    if (!needsFilter) return analytics;
 
-  const displayStats = activeCat ? {
-    ...analytics,
-    totalWins: activeCat.wins,
-    totalDraws: activeCat.draws,
-    totalLosses: activeCat.losses,
-    totalGames: activeCat.totalGames,
-    winRate: activeCat.totalGames > 0 ? Math.round((activeCat.wins / activeCat.totalGames) * 100) : 0,
-    goalsScored: activeCat.goalsFor,
-    goalsConceded: activeCat.goalsAgainst,
-    goalDifference: activeCat.goalsFor - activeCat.goalsAgainst,
-  } : analytics;
+    const filtered = analytics.matchResults.filter(r =>
+      (selectedCategory === 'all' || r.categoryName === selectedCategory) &&
+      (selectedEventType === 'all' || r.eventType === selectedEventType)
+    );
+
+    let wins = 0, draws = 0, losses = 0, gf = 0, ga = 0;
+    const catMap = new Map<string, CategoryStats>();
+    filtered.forEach(r => {
+      gf += r.ourScore; ga += r.opponentScore;
+      if (r.ourScore > r.opponentScore) wins++;
+      else if (r.ourScore < r.opponentScore) losses++;
+      else draws++;
+      if (!catMap.has(r.categoryName)) {
+        catMap.set(r.categoryName, { categoryId: null, categoryName: r.categoryName, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, totalGames: 0 });
+      }
+      const cs = catMap.get(r.categoryName)!;
+      cs.goalsFor += r.ourScore; cs.goalsAgainst += r.opponentScore; cs.totalGames++;
+      if (r.ourScore > r.opponentScore) cs.wins++;
+      else if (r.ourScore < r.opponentScore) cs.losses++;
+      else cs.draws++;
+    });
+    const totalGames = wins + draws + losses;
+    return {
+      ...analytics,
+      totalWins: wins, totalDraws: draws, totalLosses: losses, totalGames,
+      winRate: totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0,
+      goalsScored: gf, goalsConceded: ga, goalDifference: gf - ga,
+      categoryStats: Array.from(catMap.values()).filter(c => c.totalGames > 0).sort((a, b) => b.totalGames - a.totalGames),
+    };
+  })();
 
   return (
     <MobileLayout>
@@ -350,10 +409,42 @@ export default function MyTeamMobile() {
           </div>
         )}
 
+        {/* Event type filter */}
+        {analytics.availableEventTypes.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {['all', ...analytics.availableEventTypes].map(type => (
+              <button
+                key={type}
+                onClick={() => setSelectedEventType(type)}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                style={selectedEventType === type ? {
+                  background: 'rgba(184,159,255,0.15)',
+                  border: '1px solid rgba(184,159,255,0.35)',
+                  color: '#b89fff',
+                } : {
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '0.5px solid rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.6)',
+                }}
+              >
+                {type === 'all' ? 'All Events' : (EVENT_TYPE_LABELS[type] ?? type)}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center h-48">
             <LoadingSpinner size="lg" />
           </div>
+        ) : isTrainingMode ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Calendar className="h-10 w-10 mx-auto mb-3 text-[#b89fff]" />
+              <div className="text-4xl font-bold">{analytics.trainingCount}</div>
+              <div className="text-sm text-white/50 mt-1">Training Sessions</div>
+            </CardContent>
+          </Card>
         ) : (
           <>
             {/* Key Metrics Grid */}
@@ -391,7 +482,7 @@ export default function MyTeamMobile() {
             </Card>
 
             {/* Performance Category Breakdown */}
-            {analytics.categoryStats.length > 1 && (
+            {selectedCategory === 'all' && displayStats.categoryStats.length > 1 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center">
@@ -400,7 +491,7 @@ export default function MyTeamMobile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {analytics.categoryStats.map((cat, i) => (
+                  {displayStats.categoryStats.map((cat, i) => (
                     <div key={i} className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
                       <div className="font-medium mb-2">{cat.categoryName}</div>
                       <div className="flex items-center justify-between text-sm">
