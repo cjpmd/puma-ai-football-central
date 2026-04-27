@@ -75,19 +75,10 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
 
       if (yearGroupsError) throw yearGroupsError;
 
-      // Load existing club-team relationships
-      const { data: clubTeams, error: clubTeamsError } = await supabase
-        .from('club_teams')
-        .select('team_id')
-        .eq('club_id', clubId);
-
-      if (clubTeamsError) throw clubTeamsError;
-
-      const linkedTeamIds = clubTeams?.map(ct => ct.team_id) || [];
-      
-      // Separate linked and available teams
-      const linked = allTeams?.filter(team => linkedTeamIds.includes(team.id)) || [];
-      const available = allTeams?.filter(team => !linkedTeamIds.includes(team.id) && !team.club_id) || [];
+      // Use club_id as source of truth for linked teams
+      const linked = allTeams?.filter(team => team.club_id === clubId) || [];
+      // Only show teams with no club association to avoid exposing teams from other clubs
+      const available = allTeams?.filter(team => !team.club_id) || [];
 
       setLinkedTeams(linked);
       setAvailableTeams(available);
