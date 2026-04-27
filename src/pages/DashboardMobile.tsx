@@ -1029,7 +1029,8 @@ export default function DashboardMobile() {
                         <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                           <QuickAvailabilityControls
                             eventId={event.id}
-                            currentStatus="pending"
+                            currentStatus={(event.user_availability as any) || 'pending'}
+                            assumedRoles={event.assumed_roles}
                             size="sm"
                             onStatusChange={(status) => handleAvailabilityStatusChange(event.id, status)}
                           />
