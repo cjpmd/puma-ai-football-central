@@ -11,13 +11,30 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { teamsService } from "@/services/teamsService";
-import { Users, Plus, Trash2, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { Users, Plus, Trash2, ArrowRight, CheckCircle2, AlertCircle, UserCheck } from "lucide-react";
 import type { YearGroup } from "@/types/index";
 
 interface Player {
   id: string;
   name: string;
   squad_number?: number;
+}
+
+interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  role: string;
+  user_id?: string | null;
+  pvg_checked?: boolean | null;
+  pvg_checked_at?: string | null;
+  pvg_checked_by?: string | null;
+  linking_code?: string | null;
+  coaching_badges?: any;
+  certificates?: any;
+  kit_sizes?: any;
+  assignedTeamIndex: number | null; // null = unassigned
 }
 
 interface NewTeam {
@@ -38,6 +55,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [newTeams, setNewTeams] = useState<NewTeam[]>([
     { name: "", ageGroup: yearGroup.name, gameFormat: yearGroup.playingFormat || "11-a-side", assignedPlayerIds: [] },
     { name: "", ageGroup: yearGroup.name, gameFormat: yearGroup.playingFormat || "11-a-side", assignedPlayerIds: [] }
@@ -48,19 +66,17 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
 
   useEffect(() => {
     if (isOpen) {
-      loadPlayers();
-      // Set default season dates (current year)
+      loadPlayersAndStaff();
       const currentYear = new Date().getFullYear();
       setSeasonStart(`${currentYear}-09-01`);
       setSeasonEnd(`${currentYear + 1}-06-30`);
     }
   }, [isOpen, yearGroup.id]);
 
-  const loadPlayers = async () => {
+  const loadPlayersAndStaff = async () => {
     try {
       setLoading(true);
-      
-      // Get all teams in this year group
+
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id')
@@ -72,26 +88,42 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
 
       if (teamIds.length === 0) {
         setPlayers([]);
+        setStaff([]);
         return;
       }
 
-      // Get all players from those teams
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('id, name, squad_number')
-        .in('team_id', teamIds)
-        .order('name');
+      const [playersResult, staffResult] = await Promise.all([
+        supabase
+          .from('players')
+          .select('id, name, squad_number')
+          .in('team_id', teamIds)
+          .order('name'),
+        supabase
+          .from('team_staff')
+          .select('id, name, email, phone, role, user_id, pvg_checked, pvg_checked_at, pvg_checked_by, linking_code, coaching_badges, certificates, kit_sizes')
+          .in('team_id', teamIds)
+          .order('name'),
+      ]);
 
-      if (playersError) throw playersError;
+      if (playersResult.error) throw playersResult.error;
+      if (staffResult.error) throw staffResult.error;
 
-      setPlayers(playersData || []);
+      setPlayers(playersResult.data || []);
+
+      // Deduplicate staff by user_id (if linked) or email
+      const seen = new Set<string>();
+      const deduped: StaffMember[] = [];
+      for (const s of staffResult.data || []) {
+        const key = s.user_id || s.email;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push({ ...s, assignedTeamIndex: null });
+        }
+      }
+      setStaff(deduped);
     } catch (error) {
-      logger.error('Error loading players:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load players",
-        variant: "destructive",
-      });
+      logger.error('Error loading players/staff:', error);
+      toast({ title: "Error", description: "Failed to load team data", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -100,25 +132,22 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
   const addTeam = () => {
     setNewTeams([
       ...newTeams,
-      { 
-        name: "", 
-        ageGroup: yearGroup.name, 
-        gameFormat: yearGroup.playingFormat || "11-a-side", 
-        assignedPlayerIds: [] 
-      }
+      { name: "", ageGroup: yearGroup.name, gameFormat: yearGroup.playingFormat || "11-a-side", assignedPlayerIds: [] }
     ]);
   };
 
   const removeTeam = (index: number) => {
     if (newTeams.length <= 2) {
-      toast({
-        title: "Cannot Remove",
-        description: "You must have at least 2 teams",
-        variant: "destructive",
-      });
+      toast({ title: "Cannot Remove", description: "You must have at least 2 teams", variant: "destructive" });
       return;
     }
+    // Unassign any players/staff pointing to this or later indices
     setNewTeams(newTeams.filter((_, i) => i !== index));
+    setStaff(prev => prev.map(s => {
+      if (s.assignedTeamIndex === index) return { ...s, assignedTeamIndex: null };
+      if (s.assignedTeamIndex !== null && s.assignedTeamIndex > index) return { ...s, assignedTeamIndex: s.assignedTeamIndex - 1 };
+      return s;
+    }));
   };
 
   const updateTeam = (index: number, field: keyof NewTeam, value: any) => {
@@ -129,62 +158,40 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
 
   const assignPlayerToTeam = (playerId: string, teamIndex: number) => {
     const updated = [...newTeams];
-    
-    // Remove from all teams first
     updated.forEach(team => {
       team.assignedPlayerIds = team.assignedPlayerIds.filter(id => id !== playerId);
     });
-    
-    // Add to selected team
     updated[teamIndex].assignedPlayerIds.push(playerId);
-    
     setNewTeams(updated);
   };
 
-  const autoDistribute = () => {
-    const unassignedPlayers = players.filter(
-      p => !newTeams.some(t => t.assignedPlayerIds.includes(p.id))
-    );
-    
-    const playersPerTeam = Math.ceil(players.length / newTeams.length);
+  const assignStaffToTeam = (staffId: string, teamIndex: number | null) => {
+    setStaff(prev => prev.map(s => s.id === staffId ? { ...s, assignedTeamIndex: teamIndex } : s));
+  };
+
+  const autoDistributePlayers = () => {
     const updated = [...newTeams];
-    
-    // Clear current assignments
-    updated.forEach(team => team.assignedPlayerIds = []);
-    
-    // Distribute players evenly
+    updated.forEach(team => (team.assignedPlayerIds = []));
     players.forEach((player, index) => {
-      const teamIndex = Math.floor(index / playersPerTeam) % newTeams.length;
+      const teamIndex = index % newTeams.length;
       updated[teamIndex].assignedPlayerIds.push(player.id);
     });
-    
     setNewTeams(updated);
-    
-    toast({
-      title: "Players Distributed",
-      description: `Players have been evenly distributed across ${newTeams.length} teams`,
-    });
+    toast({ title: "Players Distributed", description: `Players evenly distributed across ${newTeams.length} teams` });
   };
 
-  const validateStep1 = () => {
-    return newTeams.every(team => team.name.trim() !== "") && seasonStart && seasonEnd;
+  const autoAssignStaff = () => {
+    setStaff(prev => prev.map((s, i) => ({ ...s, assignedTeamIndex: i % newTeams.length })));
+    toast({ title: "Staff Assigned", description: `Staff evenly assigned across ${newTeams.length} teams` });
   };
 
+  const validateStep1 = () => newTeams.every(t => t.name.trim() !== "") && !!seasonStart && !!seasonEnd;
   const validateStep2 = () => {
-    const assignedCount = newTeams.reduce((sum, team) => sum + team.assignedPlayerIds.length, 0);
-    return assignedCount === players.length;
+    const assigned = newTeams.reduce((sum, t) => sum + t.assignedPlayerIds.length, 0);
+    return assigned === players.length;
   };
 
   const handleSubmit = async () => {
-    if (!validateStep2()) {
-      toast({
-        title: "Incomplete Distribution",
-        description: "All players must be assigned to a team",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setLoading(true);
 
@@ -195,6 +202,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
         season_start: seasonStart,
         season_end: seasonEnd,
         year_group_id: yearGroup.id,
+        club_id: yearGroup.clubId,
         game_format: team.gameFormat,
         subscription_type: 'free',
         kit_icons: {
@@ -210,47 +218,54 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
         createdTeams.push(await teamsService.createTeam(teamData));
       }
 
-      // Update players' team assignments
+      // Move players
       for (let i = 0; i < newTeams.length; i++) {
-        const teamId = createdTeams[i].id;
         const playerIds = newTeams[i].assignedPlayerIds;
-
         if (playerIds.length > 0) {
-          const { error: playersError } = await supabase
+          const { error } = await supabase
             .from('players')
-            .update({ team_id: teamId })
+            .update({ team_id: createdTeams[i].id })
             .in('id', playerIds);
-
-          if (playersError) throw playersError;
+          if (error) throw error;
         }
       }
 
-      // Link teams to club
-      const clubLinkData = createdTeams.map(team => ({
-        club_id: yearGroup.clubId,
-        team_id: team.id
-      }));
+      // Assign staff: insert new team_staff rows for each assignment
+      const staffToInsert = staff
+        .filter(s => s.assignedTeamIndex !== null)
+        .map(s => ({
+          team_id: createdTeams[s.assignedTeamIndex!].id,
+          name: s.name,
+          email: s.email,
+          phone: s.phone,
+          role: s.role,
+          user_id: s.user_id,
+          pvg_checked: s.pvg_checked,
+          pvg_checked_at: s.pvg_checked_at,
+          pvg_checked_by: s.pvg_checked_by,
+          linking_code: s.linking_code,
+          coaching_badges: s.coaching_badges,
+          certificates: s.certificates,
+          kit_sizes: s.kit_sizes,
+          suspended: false,
+        }));
 
-      const { error: clubLinkError } = await supabase
-        .from('club_teams')
-        .insert(clubLinkData);
+      if (staffToInsert.length > 0) {
+        const { error: staffError } = await supabase.from('team_staff').insert(staffToInsert);
+        if (staffError) throw staffError;
+      }
 
+      // Link new teams to the club via club_teams join table
+      const clubLinkData = createdTeams.map(team => ({ club_id: yearGroup.clubId, team_id: team.id }));
+      const { error: clubLinkError } = await supabase.from('club_teams').insert(clubLinkData);
       if (clubLinkError) throw clubLinkError;
 
-      toast({
-        title: "Success!",
-        description: `Created ${newTeams.length} teams and distributed ${players.length} players`,
-      });
-
+      toast({ title: "Success!", description: `Created ${newTeams.length} teams, distributed ${players.length} players and ${staffToInsert.length} staff assignments` });
       onComplete();
       handleClose();
     } catch (error) {
       logger.error('Error creating teams:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create teams. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to create teams. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -262,45 +277,49 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
       { name: "", ageGroup: yearGroup.name, gameFormat: yearGroup.playingFormat || "11-a-side", assignedPlayerIds: [] },
       { name: "", ageGroup: yearGroup.name, gameFormat: yearGroup.playingFormat || "11-a-side", assignedPlayerIds: [] }
     ]);
+    setStaff(prev => prev.map(s => ({ ...s, assignedTeamIndex: null })));
     onClose();
   };
 
-  const getPlayerById = (playerId: string) => players.find(p => p.id === playerId);
+  const getPlayerById = (id: string) => players.find(p => p.id === id);
+  const unassignedPlayers = players.filter(p => !newTeams.some(t => t.assignedPlayerIds.includes(p.id)));
+  const unassignedStaff = staff.filter(s => s.assignedTeamIndex === null);
 
-  const unassignedPlayers = players.filter(
-    p => !newTeams.some(t => t.assignedPlayerIds.includes(p.id))
-  );
+  const stepLabels = [
+    { n: 1, label: "Team Setup" },
+    { n: 2, label: "Players" },
+    { n: 3, label: "Staff" },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Split Year Group: {yearGroup.name}</DialogTitle>
-          <DialogDescription>
-            Create multiple teams and distribute players for the new season
-          </DialogDescription>
+          <DialogDescription>Create multiple teams and distribute players and staff for the new season</DialogDescription>
         </DialogHeader>
 
         {/* Progress Indicator */}
-        <div className="flex items-center justify-center gap-4 py-4">
-          <div className={`flex items-center gap-2 ${step === 1 ? 'text-primary' : 'text-muted-foreground'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step === 1 ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground'}`}>
-              {step > 1 ? <CheckCircle2 className="h-5 w-5" /> : '1'}
+        <div className="flex items-center justify-center gap-2 py-4 flex-wrap">
+          {stepLabels.map(({ n, label }, idx) => (
+            <div key={n} className="flex items-center gap-2">
+              <div className={`flex items-center gap-2 ${step === n ? 'text-primary' : step > n ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                  step === n ? 'border-primary bg-primary text-primary-foreground' :
+                  step > n ? 'border-green-500 bg-green-500 text-white' : 'border-muted-foreground'
+                }`}>
+                  {step > n ? <CheckCircle2 className="h-5 w-5" /> : n}
+                </div>
+                <span className="font-medium text-sm">{label}</span>
+              </div>
+              {idx < stepLabels.length - 1 && <ArrowRight className="h-4 w-4 text-muted-foreground" />}
             </div>
-            <span className="font-medium">Team Setup</span>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-          <div className={`flex items-center gap-2 ${step === 2 ? 'text-primary' : 'text-muted-foreground'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step === 2 ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground'}`}>
-              2
-            </div>
-            <span className="font-medium">Player Distribution</span>
-          </div>
+          ))}
         </div>
 
         <Separator />
 
-        {/* Step 1: Team Setup */}
+        {/* ── Step 1: Team Setup ── */}
         {step === 1 && (
           <div className="space-y-6">
             <Card>
@@ -311,19 +330,11 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
               <CardContent className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Season Start</Label>
-                  <Input
-                    type="date"
-                    value={seasonStart}
-                    onChange={(e) => setSeasonStart(e.target.value)}
-                  />
+                  <Input type="date" value={seasonStart} onChange={e => setSeasonStart(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Season End</Label>
-                  <Input
-                    type="date"
-                    value={seasonEnd}
-                    onChange={(e) => setSeasonEnd(e.target.value)}
-                  />
+                  <Input type="date" value={seasonEnd} onChange={e => setSeasonEnd(e.target.value)} />
                 </div>
               </CardContent>
             </Card>
@@ -336,8 +347,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                     <CardDescription>Configure the teams to create</CardDescription>
                   </div>
                   <Button onClick={addTeam} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Team
+                    <Plus className="h-4 w-4 mr-2" />Add Team
                   </Button>
                 </div>
               </CardHeader>
@@ -348,11 +358,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">Team {index + 1}</CardTitle>
                         {newTeams.length > 2 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeTeam(index)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => removeTeam(index)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
@@ -361,28 +367,16 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                     <CardContent className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Team Name *</Label>
-                        <Input
-                          value={team.name}
-                          onChange={(e) => updateTeam(index, 'name', e.target.value)}
-                          placeholder={`e.g., ${yearGroup.name} Red`}
-                        />
+                        <Input value={team.name} onChange={e => updateTeam(index, 'name', e.target.value)} placeholder={`e.g., ${yearGroup.name} Red`} />
                       </div>
                       <div className="space-y-2">
                         <Label>Age Group</Label>
-                        <Input
-                          value={team.ageGroup}
-                          onChange={(e) => updateTeam(index, 'ageGroup', e.target.value)}
-                        />
+                        <Input value={team.ageGroup} onChange={e => updateTeam(index, 'ageGroup', e.target.value)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Game Format</Label>
-                        <Select
-                          value={team.gameFormat}
-                          onValueChange={(value) => updateTeam(index, 'gameFormat', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                        <Select value={team.gameFormat} onValueChange={value => updateTeam(index, 'gameFormat', value)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="5-a-side">5-a-side</SelectItem>
                             <SelectItem value="7-a-side">7-a-side</SelectItem>
@@ -398,18 +392,15 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
             </Card>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={handleClose}>Cancel</Button>
               <Button onClick={() => setStep(2)} disabled={!validateStep1()}>
-                Next: Distribute Players
-                <ArrowRight className="h-4 w-4 ml-2" />
+                Next: Distribute Players <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Player Distribution */}
+        {/* ── Step 2: Player Distribution ── */}
         {step === 2 && (
           <div className="space-y-6">
             <Card>
@@ -417,21 +408,15 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Player Distribution</CardTitle>
-                    <CardDescription>
-                      Assign {players.length} players to {newTeams.length} teams
-                    </CardDescription>
+                    <CardDescription>Assign {players.length} players to {newTeams.length} teams</CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={unassignedPlayers.length === 0 ? "default" : "destructive"}>
-                      {unassignedPlayers.length === 0 ? (
-                        <><CheckCircle2 className="h-3 w-3 mr-1" /> All Assigned</>
-                      ) : (
-                        <><AlertCircle className="h-3 w-3 mr-1" /> {unassignedPlayers.length} Unassigned</>
-                      )}
+                      {unassignedPlayers.length === 0
+                        ? <><CheckCircle2 className="h-3 w-3 mr-1" />All Assigned</>
+                        : <><AlertCircle className="h-3 w-3 mr-1" />{unassignedPlayers.length} Unassigned</>}
                     </Badge>
-                    <Button onClick={autoDistribute} variant="outline" size="sm">
-                      Auto Distribute
-                    </Button>
+                    <Button onClick={autoDistributePlayers} variant="outline" size="sm">Auto Distribute</Button>
                   </div>
                 </div>
               </CardHeader>
@@ -441,9 +426,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center justify-between">
                         <span>{team.name}</span>
-                        <Badge variant="secondary">
-                          {team.assignedPlayerIds.length} player{team.assignedPlayerIds.length !== 1 ? 's' : ''}
-                        </Badge>
+                        <Badge variant="secondary">{team.assignedPlayerIds.length} player{team.assignedPlayerIds.length !== 1 ? 's' : ''}</Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -455,32 +438,19 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                               <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-muted-foreground" />
                                 <span>{player.name}</span>
-                                {player.squad_number && (
-                                  <Badge variant="outline">#{player.squad_number}</Badge>
-                                )}
+                                {player.squad_number && <Badge variant="outline">#{player.squad_number}</Badge>}
                               </div>
-                              <Select
-                                value={String(teamIndex)}
-                                onValueChange={(value) => assignPlayerToTeam(playerId, parseInt(value))}
-                              >
-                                <SelectTrigger className="w-48">
-                                  <SelectValue />
-                                </SelectTrigger>
+                              <Select value={String(teamIndex)} onValueChange={v => assignPlayerToTeam(playerId, parseInt(v))}>
+                                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  {newTeams.map((t, i) => (
-                                    <SelectItem key={i} value={String(i)}>
-                                      {t.name || `Team ${i + 1}`}
-                                    </SelectItem>
-                                  ))}
+                                  {newTeams.map((t, i) => <SelectItem key={i} value={String(i)}>{t.name || `Team ${i + 1}`}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
                           ) : null;
                         })}
                         {team.assignedPlayerIds.length === 0 && (
-                          <div className="text-center py-4 text-muted-foreground">
-                            No players assigned yet
-                          </div>
+                          <div className="text-center py-4 text-muted-foreground">No players assigned yet</div>
                         )}
                       </div>
                     </CardContent>
@@ -490,9 +460,7 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                 {unassignedPlayers.length > 0 && (
                   <Card className="border-2 border-destructive">
                     <CardHeader>
-                      <CardTitle className="text-lg text-destructive">
-                        Unassigned Players ({unassignedPlayers.length})
-                      </CardTitle>
+                      <CardTitle className="text-lg text-destructive">Unassigned Players ({unassignedPlayers.length})</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
@@ -501,22 +469,12 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
                             <div className="flex items-center gap-2">
                               <AlertCircle className="h-4 w-4 text-destructive" />
                               <span>{player.name}</span>
-                              {player.squad_number && (
-                                <Badge variant="outline">#{player.squad_number}</Badge>
-                              )}
+                              {player.squad_number && <Badge variant="outline">#{player.squad_number}</Badge>}
                             </div>
-                            <Select
-                              onValueChange={(value) => assignPlayerToTeam(player.id, parseInt(value))}
-                            >
-                              <SelectTrigger className="w-48">
-                                <SelectValue placeholder="Assign to team..." />
-                              </SelectTrigger>
+                            <Select onValueChange={v => assignPlayerToTeam(player.id, parseInt(v))}>
+                              <SelectTrigger className="w-48"><SelectValue placeholder="Assign to team..." /></SelectTrigger>
                               <SelectContent>
-                                {newTeams.map((t, i) => (
-                                  <SelectItem key={i} value={String(i)}>
-                                    {t.name || `Team ${i + 1}`}
-                                  </SelectItem>
-                                ))}
+                                {newTeams.map((t, i) => <SelectItem key={i} value={String(i)}>{t.name || `Team ${i + 1}`}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
@@ -529,13 +487,81 @@ export const SplitTeamWizard = ({ yearGroup, isOpen, onClose, onComplete }: Spli
             </Card>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)}>
-                Back
+              <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
+              <Button onClick={() => setStep(3)} disabled={!validateStep2()}>
+                Next: Assign Staff <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-              <Button 
-                onClick={handleSubmit} 
-                disabled={!validateStep2() || loading}
-              >
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Staff Assignment ── */}
+        {step === 3 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Staff Assignment</CardTitle>
+                    <CardDescription>
+                      Assign {staff.length} staff member{staff.length !== 1 ? 's' : ''} to the new teams.
+                      Unassigned staff will not be copied.
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {unassignedStaff.length > 0 && (
+                      <Badge variant="outline" className="text-orange-600 border-orange-400">
+                        <AlertCircle className="h-3 w-3 mr-1" />{unassignedStaff.length} Unassigned
+                      </Badge>
+                    )}
+                    {staff.length > 0 && (
+                      <Button onClick={autoAssignStaff} variant="outline" size="sm">Auto Assign</Button>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {staff.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <UserCheck className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                    <p>No staff found in this year group's teams.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {staff.map(member => (
+                      <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{member.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{member.email}</div>
+                          <Badge variant="outline" className="capitalize text-xs mt-1">{member.role}</Badge>
+                        </div>
+                        <Select
+                          value={member.assignedTeamIndex !== null ? String(member.assignedTeamIndex) : 'none'}
+                          onValueChange={v => assignStaffToTeam(member.id, v === 'none' ? null : parseInt(v))}
+                        >
+                          <SelectTrigger className="w-48 ml-4">
+                            <SelectValue placeholder="Assign to team..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground">Do not assign</span>
+                            </SelectItem>
+                            <Separator />
+                            {newTeams.map((t, i) => (
+                              <SelectItem key={i} value={String(i)}>{t.name || `Team ${i + 1}`}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
+              <Button onClick={handleSubmit} disabled={loading}>
                 {loading ? "Creating Teams..." : `Create ${newTeams.length} Teams`}
               </Button>
             </div>
