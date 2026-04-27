@@ -636,6 +636,9 @@ export default function DashboardMobile() {
           events: { ...event, team_context: event.team_context }
         }));
 
+      // Only the latest request may commit to state.
+      if (seq !== loadSeqRef.current) return;
+
       setStats({
         playersCount: playersCountResult.count || 0,
         eventsCount: eventsCountResult.count || 0,
@@ -644,13 +647,16 @@ export default function DashboardMobile() {
         pendingAvailability: pendingAvailabilityData
       });
     } catch (error: any) {
+      if (seq !== loadSeqRef.current) return;
       toast({
         title: 'Error',
         description: 'Failed to load dashboard data',
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
