@@ -588,6 +588,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                         kitDesign={kitDesign}
                         goalkeeperKitDesign={goalkeeperKitDesign}
                         nameDisplayOption={nameDisplayOption}
+                        gameFormat={gameFormat}
                       />
                     )}
                   </div>

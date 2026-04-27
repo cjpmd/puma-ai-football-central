@@ -1,5 +1,5 @@
 import React from 'react';
-import { FPLShirtIcon } from '@/components/shared/FPLShirtIcon';
+import { KitShirt } from '@/components/shared/KitShirt';
 import { KitDesign, NameDisplayOption } from '@/types/team';
 import { formatPlayerName } from '@/utils/nameUtils';
 
@@ -18,26 +18,46 @@ interface FPLPlayerTokenProps {
   nameDisplayOption?: NameDisplayOption;
   /** Position abbreviation rendered as a muted secondary line under the name (e.g. "DC · 4") */
   positionAbbr?: string;
+  /** Game format — drives shirt sizing on the pitch so 11 players never overlap. */
+  gameFormat?: string;
+  /** Whether the viewport is mobile. */
+  isMobile?: boolean;
 }
+
+/**
+ * Per-format pitch token sizing.
+ * Bench tokens stay constant; pitch tokens scale so 11-a-side fits without overlap
+ * but smaller formats use the available space.
+ */
+const PITCH_SIZE_MAP: Record<string, { mobile: number; desktop: number; nameMaxWidth: number }> = {
+  '4-a-side': { mobile: 56, desktop: 72, nameMaxWidth: 88 },
+  '5-a-side': { mobile: 52, desktop: 68, nameMaxWidth: 84 },
+  '7-a-side': { mobile: 46, desktop: 60, nameMaxWidth: 78 },
+  '9-a-side': { mobile: 40, desktop: 52, nameMaxWidth: 72 },
+  '11-a-side': { mobile: 36, desktop: 46, nameMaxWidth: 68 },
+};
+const DEFAULT_PITCH_SIZE = PITCH_SIZE_MAP['11-a-side'];
+const BENCH_SIZE = 40;
+const BENCH_NAME_MAX = 72;
 
 const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
   switch (positionGroup) {
     case 'goalkeeper':
-      return 'oklch(0.75 0.16 80)';  // amber
+      return '#facc15'; // amber
     case 'defender':
-      return 'oklch(0.55 0.18 270)'; // purple
+      return '#7c3aed'; // purple
     case 'midfielder':
-      return 'oklch(0.55 0.20 25)';  // magenta-red
+      return '#dc2626'; // red
     case 'forward':
-      return 'oklch(0.62 0.22 25)';  // red
+      return '#ef4444';
     default:
-      return 'oklch(0.55 0.18 270)';
+      return '#7c3aed';
   }
 };
 
 /**
  * FPL-style Player Token — shirt icon with glass name pill below.
- * Design based on Formation.html (Origin Sports iOS design bundle).
+ * Sizes dynamically by game format on the pitch.
  */
 export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   name,
@@ -50,14 +70,22 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   goalkeeperKitDesign,
   nameDisplayOption = 'surname',
   positionAbbr,
+  gameFormat,
+  isMobile = false,
 }) => {
   const isPitch = size === 'pitch';
-  const shirtSize = isPitch ? 'w-11 h-11' : 'w-9 h-9';
+
+  const sizing = isPitch
+    ? PITCH_SIZE_MAP[gameFormat || ''] ?? DEFAULT_PITCH_SIZE
+    : null;
+
+  const shirtPx = isPitch
+    ? (isMobile ? sizing!.mobile : sizing!.desktop)
+    : BENCH_SIZE;
+  const nameMaxWidth = isPitch ? sizing!.nameMaxWidth : BENCH_NAME_MAX;
 
   const effectiveKitDesign = positionGroup === 'goalkeeper' ? goalkeeperKitDesign : kitDesign;
-  const shirtColor = effectiveKitDesign?.shirtColor || getDefaultShirtColor(positionGroup);
-  const stripeColor = effectiveKitDesign?.stripeColor;
-  const hasStripes = effectiveKitDesign?.hasStripes || false;
+  const fallbackPrimary = getDefaultShirtColor(positionGroup);
 
   return (
     <div className={`fpl-player-token ${className}`}>
@@ -68,17 +96,15 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
         </div>
       )}
 
-      {/* Shirt — no circle container, shown directly */}
-      <FPLShirtIcon
-        className={shirtSize}
-        squadNumber={squadNumber}
-        shirtColor={shirtColor}
-        stripeColor={stripeColor}
-        hasStripes={hasStripes}
-      />
+      {/* Shirt — driven by KitShirt with explicit pixel size */}
+      {effectiveKitDesign ? (
+        <KitShirt design={effectiveKitDesign} squadNumber={squadNumber} size={shirtPx} />
+      ) : (
+        <KitShirt primary={fallbackPrimary} squadNumber={squadNumber} size={shirtPx} />
+      )}
 
       {/* Player name — dark glass pill (with optional position·# meta line) */}
-      <div className="fpl-player-name-glass">
+      <div className="fpl-player-name-glass" style={{ maxWidth: nameMaxWidth }}>
         <div>{formatPlayerName(name, nameDisplayOption)}</div>
         {positionAbbr && (
           <div className="fpl-player-meta-line">

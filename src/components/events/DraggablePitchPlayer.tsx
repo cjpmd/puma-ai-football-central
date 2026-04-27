@@ -3,6 +3,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { FPLPlayerToken } from './FPLPlayerToken';
 import { SquadPlayer, PositionSlot as PositionSlotType } from '@/types/teamSelection';
 import { KitDesign } from '@/types/team';
+import { useMobileDetection } from '@/hooks/useMobileDetection';
 
 interface DraggablePitchPlayerProps {
   player: SquadPlayer;
@@ -14,6 +15,8 @@ interface DraggablePitchPlayerProps {
   nameDisplayOption?: 'surname' | 'firstName' | 'fullName' | 'initials';
   kitDesign?: KitDesign;
   goalkeeperKitDesign?: KitDesign;
+  /** Drives dynamic shirt sizing (4/5/7/9/11-a-side). */
+  gameFormat?: string;
 }
 
 const getPositionGroup = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
@@ -34,9 +37,11 @@ export const DraggablePitchPlayer: React.FC<DraggablePitchPlayerProps> = ({
   nameDisplayOption = 'surname',
   kitDesign,
   goalkeeperKitDesign,
+  gameFormat,
 }) => {
   const dragId = `${periodId}|position-${positionIndex}|${player.id}`;
-  
+  const isMobile = useMobileDetection();
+
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
     data: { player, type: 'pitch-player', periodId, positionIndex },
@@ -72,6 +77,8 @@ export const DraggablePitchPlayer: React.FC<DraggablePitchPlayerProps> = ({
         goalkeeperKitDesign={goalkeeperKitDesign}
         nameDisplayOption={nameDisplayOption}
         positionAbbr={position.abbreviation}
+        gameFormat={gameFormat}
+        isMobile={isMobile}
       />
     </div>
   );
