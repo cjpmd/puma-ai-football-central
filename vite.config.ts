@@ -17,10 +17,13 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'favicon-16.png', 'favicon-32.png', 'lovable-uploads/*'],
-      injectRegister: 'auto',
+      injectRegister: null,
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
+      devOptions: {
+        enabled: false,
+      },
       manifest: {
         name: 'Origin Sports Football Team Manager',
         short_name: 'Origin Sports',
