@@ -305,9 +305,22 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     return false;
   };
 
+  // Build a resilient role list. If `userRoles` (from get_user_event_roles RPC)
+  // is empty but the caller supplied `assumedRoles` (e.g. the Home dashboard
+  // already found availability rows for this user/event), synthesize entries
+  // so the controls still render. This is the safety net for users whose
+  // staff access comes via user_teams without a team_staff link.
+  const effectiveRoles: UserRole[] = userRoles.length > 0
+    ? userRoles
+    : (assumedRoles ?? []).map((r) => ({
+        role: r,
+        sourceId: r === 'player' ? (cachedPlayerId || user?.id || '') : (user?.id || ''),
+        sourceType: r === 'player' ? 'player_link' : 'user_team',
+      }));
+
   // If user has multiple roles, show each role separately
-  if (hasMultipleRoles) {
-    const filteredRoles = userRoles.filter(isRoleInvited);
+  if (effectiveRoles.length > 1) {
+    const filteredRoles = effectiveRoles.filter(isRoleInvited);
     if (filteredRoles.length === 0) return null;
     return (
       <div className="space-y-2">
@@ -324,7 +337,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   }
 
   // Single role - show with avatar and improved layout
-  const singleRoleEntry = userRoles[0];
+  const singleRoleEntry = effectiveRoles[0];
   if (!singleRoleEntry) return null;
   if (!isRoleInvited(singleRoleEntry)) return null;
   const singleRole = singleRoleEntry.role;

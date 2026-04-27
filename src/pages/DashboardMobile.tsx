@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
@@ -53,6 +53,10 @@ export default function DashboardMobile() {
     pendingAvailability: []
   });
   const [loading, setLoading] = useState(true);
+  // Sequence guard: only the latest loadLiveData() invocation may write to stats.
+  // Prevents stale data from a previous team's request from overwriting the
+  // current team's state (e.g. seeing Jags results while viewing Pumas).
+  const loadSeqRef = useRef(0);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
@@ -345,11 +349,24 @@ export default function DashboardMobile() {
   const handleViewHistory = () => setHistoryModalOpen(true);
 
   useEffect(() => {
+    // Reset team-scoped stats immediately on team/view change so previously
+    // loaded data from another team can't be visible while the new request
+    // is still in flight.
+    setStats(prev => ({
+      ...prev,
+      upcomingEvents: [],
+      recentResults: [],
+      pendingAvailability: [],
+    }));
     loadLiveData();
   }, [allTeams, connectedPlayers, currentTeam?.id, viewMode, availableTeams]);
 
   const loadLiveData = async () => {
     if (!user) return;
+
+    // Sequence guard: each invocation gets a unique id; only the latest may
+    // commit results to state.
+    const seq = ++loadSeqRef.current;
 
     try {
       // In single-team mode require a concrete currentTeam (no fallback to all teams).
@@ -360,7 +377,9 @@ export default function DashboardMobile() {
         : (currentTeam ? [currentTeam] : []);
 
       if (!teamsToUse.length) {
-        setLoading(false);
+        if (seq === loadSeqRef.current) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -617,6 +636,9 @@ export default function DashboardMobile() {
           events: { ...event, team_context: event.team_context }
         }));
 
+      // Only the latest request may commit to state.
+      if (seq !== loadSeqRef.current) return;
+
       setStats({
         playersCount: playersCountResult.count || 0,
         eventsCount: eventsCountResult.count || 0,
@@ -625,13 +647,16 @@ export default function DashboardMobile() {
         pendingAvailability: pendingAvailabilityData
       });
     } catch (error: any) {
+      if (seq !== loadSeqRef.current) return;
       toast({
         title: 'Error',
         description: 'Failed to load dashboard data',
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
