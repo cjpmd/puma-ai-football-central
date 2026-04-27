@@ -575,24 +575,55 @@ export type Database = {
       }
       drill_subgroups: {
         Row: {
+          coach_id: string | null
           created_at: string | null
           id: string
           subgroup_name: string
           training_session_drill_id: string | null
         }
         Insert: {
+          coach_id?: string | null
           created_at?: string | null
           id?: string
           subgroup_name: string
           training_session_drill_id?: string | null
         }
         Update: {
+          coach_id?: string | null
           created_at?: string | null
           id?: string
           subgroup_name?: string
           training_session_drill_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "drill_subgroups_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "player_profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "drill_subgroups_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profile_player_team"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "drill_subgroups_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_subgroups_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff_roles"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "drill_subgroups_training_session_drill_id_fkey"
             columns: ["training_session_drill_id"]
@@ -655,36 +686,45 @@ export type Database = {
       }
       drills: {
         Row: {
+          age_group: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           difficulty_level: string | null
           duration_minutes: number | null
+          external_url: string | null
           id: string
           is_public: boolean | null
           name: string
+          team_id: string | null
           updated_at: string | null
         }
         Insert: {
+          age_group?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           difficulty_level?: string | null
           duration_minutes?: number | null
+          external_url?: string | null
           id?: string
           is_public?: boolean | null
           name: string
+          team_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          age_group?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           difficulty_level?: string | null
           duration_minutes?: number | null
+          external_url?: string | null
           id?: string
           is_public?: boolean | null
           name?: string
+          team_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -694,6 +734,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "all_user_roles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "drills_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drills_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff_roles"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "drills_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
           },
         ]
       }
