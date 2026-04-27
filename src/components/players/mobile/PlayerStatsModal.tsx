@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player } from '@/types';
 import { Clock, Target, Crown, Trophy, MapPin, Calendar, BarChart3, TrendingUp, History, CheckCircle, Goal, Shield, Square } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { availabilityService } from '@/services/availabilityService';
 import { format as formatDate } from 'date-fns';
 
@@ -33,6 +34,11 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   // Availability state
   const [availabilityHistory, setAvailabilityHistory] = useState<any[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  // History tab state
+  const [histFilter, setHistFilter] = useState<'current' | 'all'>('current');
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [transferTeamNames, setTransferTeamNames] = useState<Record<string, string>>({});
 
   const topPositions = Object.entries(minutesByPosition)
     .filter(([pos]) => pos !== 'SUB' && pos !== 'TBD')
@@ -62,6 +68,85 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
         });
     }
   }, [isOpen, player.id]);
+
+  useEffect(() => {
+    if (!isOpen || !player.id) return;
+    supabase
+      .from('player_transfers')
+      .select('from_team_id, to_team_id, transfer_date')
+      .eq('player_id', player.id)
+      .order('transfer_date', { ascending: true })
+      .then(async ({ data }) => {
+        const list = data || [];
+        setTransfers(list);
+        const ids = new Set<string>([player.team_id]);
+        list.forEach((t: any) => {
+          if (t.from_team_id) ids.add(t.from_team_id);
+          if (t.to_team_id) ids.add(t.to_team_id);
+        });
+        const { data: teams } = await supabase.from('teams').select('id, name').in('id', Array.from(ids));
+        const map: Record<string, string> = {};
+        teams?.forEach((t: any) => { map[t.id] = t.name; });
+        setTransferTeamNames(map);
+      });
+  }, [isOpen, player.id]);
+
+  type TeamPeriod = { teamId: string; teamName: string; from: string; to: string | null };
+
+  const teamPeriods = useMemo((): TeamPeriod[] => {
+    const currentId = player.team_id;
+    if (transfers.length === 0) {
+      return [{ teamId: currentId, teamName: transferTeamNames[currentId] || 'Current Team', from: '1970-01-01', to: null }];
+    }
+    const periods: TeamPeriod[] = [];
+    const first = transfers[0];
+    periods.push({ teamId: first.from_team_id, teamName: transferTeamNames[first.from_team_id] || 'Unknown Team', from: '1970-01-01', to: first.transfer_date });
+    for (let i = 0; i < transfers.length - 1; i++) {
+      const t = transfers[i], next = transfers[i + 1];
+      periods.push({ teamId: t.to_team_id, teamName: transferTeamNames[t.to_team_id] || 'Unknown Team', from: t.transfer_date, to: next.transfer_date });
+    }
+    const last = transfers[transfers.length - 1];
+    periods.push({ teamId: last.to_team_id, teamName: transferTeamNames[last.to_team_id] || 'Unknown Team', from: last.transfer_date, to: null });
+    return periods;
+  }, [transfers, transferTeamNames, player.team_id]);
+
+  const currentPeriod = teamPeriods[teamPeriods.length - 1];
+  const getGamePeriod = (game: any) =>
+    teamPeriods.find(p => game.date >= p.from && (p.to === null || game.date < p.to)) ?? null;
+  const currentTeamGames = recentGames.filter((game: any) => getGamePeriod(game)?.teamId === currentPeriod?.teamId);
+  const gamesByPeriod = [...teamPeriods]
+    .reverse()
+    .map(period => ({ period, games: recentGames.filter((game: any) => getGamePeriod(game)?.teamId === period.teamId) }))
+    .filter(({ games }) => games.length > 0);
+
+  const renderGameRow = (game: any, i: number) => (
+    <div key={i} className="p-3 bg-muted/30 rounded-lg">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">vs {game.opponent || 'Unknown'}</span>
+          {game.captain && <Crown className="h-3 w-3 text-yellow-500" />}
+          {game.playerOfTheMatch && <Trophy className="h-3 w-3 text-amber-500" />}
+        </div>
+        <span className="text-xs text-white/60">{new Date(game.date).toLocaleDateString()}</span>
+      </div>
+      <div className="flex gap-4 text-xs">
+        <div><span className="text-white/60">Minutes: </span><span className="font-medium">{game.minutes}</span></div>
+        {game.performanceCategory && (
+          <div><span className="text-white/60">Performance: </span><span className="font-medium">{game.performanceCategory}</span></div>
+        )}
+      </div>
+      {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 && (
+        <div className="mt-2 pt-2 border-t">
+          <span className="text-xs text-white/60">Positions:</span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {Object.entries(game.minutesByPosition).map(([pos, mins]) => (
+              <Badge key={pos} variant="outline" className="text-xs">{pos}: {Number(mins)}min</Badge>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -484,60 +569,66 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             <TabsContent value="history" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
               <ScrollArea className="flex-1 px-6 h-[60vh]">
                 <div className="space-y-4 py-4">
-                  <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Match History
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {recentGames.length > 0 ? (
-                    <div className="space-y-3">
-                      {recentGames.map((game: any, index: number) => (
-                        <div key={index} className="p-3 bg-muted/30 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">
-                                vs {game.opponent || 'Unknown'}
-                              </span>
-                              {game.captain && <Crown className="h-3 w-3 text-yellow-500" />}
-                              {game.playerOfTheMatch && <Trophy className="h-3 w-3 text-amber-500" />}
-                            </div>
-                            <span className="text-xs text-white/60">
-                              {new Date(game.date).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div>
-                              <span className="text-white/60">Minutes:</span>
-                              <div className="font-medium">{game.minutes}</div>
-                            </div>
-                            <div>
-                              <span className="text-white/60">Performance:</span>
-                              <div className="font-medium">{game.performanceCategory || 'None'}</div>
-                            </div>
-                          </div>
-                          {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 && (
-                            <div className="mt-2 pt-2 border-t">
-                              <span className="text-xs text-white/60">Positions:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {Object.entries(game.minutesByPosition).map(([pos, mins]) => (
-                                  <Badge key={pos} variant="outline" className="text-xs">
-                                    {pos}: {Number(mins)}min
-                                  </Badge>
-                                ))}
-                               </div>
-                             </div>
-                           )}
-                         </div>
-                       ))}
-                    </div>
-                    ) : (
-                      <p className="text-white/60 text-center py-8">No match history available</p>
-                    )}
-                  </CardContent>
-                </Card>
+                  {/* Current Team / All Clubs toggle */}
+                  <div className="flex gap-2">
+                    {(['current', 'all'] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setHistFilter(f)}
+                        className="flex-1 py-1.5 rounded-full text-sm font-medium transition-colors"
+                        style={histFilter === f ? {
+                          background: 'rgba(184,159,255,0.15)',
+                          border: '1px solid rgba(184,159,255,0.35)',
+                          color: '#b89fff',
+                        } : {
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '0.5px solid rgba(255,255,255,0.1)',
+                          color: 'rgba(255,255,255,0.6)',
+                        }}
+                      >
+                        {f === 'current' ? 'Current Team' : 'All Clubs'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {histFilter === 'current' ? (
+                    <Card>
+                      <CardContent className="pt-4">
+                        {currentTeamGames.length > 0 ? (
+                          <div className="space-y-3">{currentTeamGames.map(renderGameRow)}</div>
+                        ) : (
+                          <p className="text-white/60 text-center py-8">No match history for current team</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : gamesByPeriod.length > 0 ? (
+                    gamesByPeriod.map(({ period, games }) => (
+                      <Card key={`${period.teamId}-${period.from}`}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">
+                            {period.teamId === currentPeriod?.teamId
+                              ? 'Match History'
+                              : `Previous Club: ${period.teamName}`}
+                          </CardTitle>
+                          {period.teamId !== currentPeriod?.teamId && (
+                            <p className="text-xs text-white/50">
+                              {new Date(period.from).toLocaleDateString()} –{' '}
+                              {period.to ? new Date(period.to).toLocaleDateString() : 'Present'}
+                            </p>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">{games.map(renderGameRow)}</div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <p className="text-white/60">No match history available</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </ScrollArea>
             </TabsContent>
