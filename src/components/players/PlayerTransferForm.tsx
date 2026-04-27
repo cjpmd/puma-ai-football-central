@@ -163,24 +163,26 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
             No other teams available for transfer.
           </div>
         ) : (
-          <Select
-            value={selectedTeamId}
-            onValueChange={(v) => { setSelectedTeamId(v); setFormErrors(prev => ({ ...prev, toTeamId: undefined })); }}
-          >
-            <SelectTrigger id="toTeamId" className={formErrors.toTeamId ? 'border-destructive' : ''}>
-              <SelectValue placeholder="Select destination team" />
-            </SelectTrigger>
-            <SelectContent>
-              {teams.map(team => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name} ({team.ageGroup})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {formErrors.toTeamId && (
-            <p className="text-xs text-destructive mt-1">{formErrors.toTeamId}</p>
-          )}
+          <>
+            <Select
+              value={selectedTeamId}
+              onValueChange={(v) => { setSelectedTeamId(v); setFormErrors(prev => ({ ...prev, toTeamId: undefined })); }}
+            >
+              <SelectTrigger id="toTeamId" className={formErrors.toTeamId ? 'border-destructive' : ''}>
+                <SelectValue placeholder="Select destination team" />
+              </SelectTrigger>
+              <SelectContent>
+                {teams.map(team => (
+                  <SelectItem key={team.id} value={team.id}>
+                    {team.name} ({team.ageGroup})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formErrors.toTeamId && (
+              <p className="text-xs text-destructive mt-1">{formErrors.toTeamId}</p>
+            )}
+          </>
         )}
       </div>
 
