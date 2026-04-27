@@ -1,67 +1,78 @@
-# Fix Home tab availability + cross-team data leakage
+# Plan
 
-Two related issues on the mobile Home tab (`DashboardMobile.tsx`).
+I found two separate root causes behind the Home tab issues.
 
-## Issue 1 — Availability buttons missing in "Upcoming Events"
+## What will be fixed
 
-In your Jags screenshot (chrisjcdonald, staff) the event card shows no Available/Unavailable buttons, while the Pumas card does. This is because `QuickAvailabilityControls` returns `null` whenever it can't find a matching row in the `event_invitations` table for the current user's linked staff/player records.
+1. Restore Home-tab availability controls for Jags.
+2. Stop Home-tab Recent Results / Upcoming Events from showing stale data from another selected team.
+3. Verify the fix against the Pumas/Jags case before closing.
 
-For some Jags events, the staff invitation row was likely never created (the event was made before chrisjcdonald was added as staff, or the invite list is missing his `staff_id`). So even though the event is in his Upcoming list and shows "Pending response", the inline buttons get hidden.
+## Root causes found
 
-**Fix:** broaden how the Home tab decides who can respond. Instead of requiring a row in `event_invitations`, treat the user as invited whenever **any** of these is true for the event:
+- **Jags availability issue:** the Home card uses `QuickAvailabilityControls`, which depends on `get_user_event_roles(...)`. That database function currently only returns:
+  - player roles from `user_players`
+  - staff roles from `user_staff`
 
-1. There is an `event_availability` record for them as user/player/staff (this is what already drives the "pending" badge), OR
-2. There is a row in `event_invitations` matching their user / linked player / linked staff IDs, OR
-3. They are an active staff member of the event's team (via `team_staff` / `user_staff`), OR
-4. They are linked (via `user_players`) to a player on the event's team.
+  It does **not** return staff access granted through `user_teams` (for example `team_manager`, `team_coach`, `team_assistant_manager`). For the affected user, the Jags event has a valid staff invitation and staff availability row, but the RPC returns no roles, so the Home controls render nothing.
 
-Add a new prop `forceVisible` (or `inferredRole`) on `QuickAvailabilityControls` so the Home dashboard can pass in the role(s) it has already inferred from `pendingAvailability` / `userAvailabilityData`, bypassing the strict `invitedRoleSources` gate when those records exist.
+- **Cross-team results leakage:** the Pumas recent-results query itself is team-filtered correctly in the database. That means the wrong result cards are most likely coming from **stale client state / out-of-order async responses** when switching between team views. `DashboardMobile` currently fires async loads on team/view changes, but it does not guard against an older request finishing after a newer one and overwriting the state.
 
-Also pass the real `currentStatus` (from `event.user_availability`) instead of the hard-coded `"pending"` so the buttons reflect existing state.
+## Implementation steps
 
-## Issue 2 — Recent Results / Upcoming Events leaking across teams
+### 1) Fix database role resolution for event availability
+- Add a migration to replace `public.get_user_event_roles(p_event_id, p_user_id)` so it also returns **staff roles coming from `user_teams`** for the event’s team.
+- Keep existing player-role and `user_staff` logic.
+- Return a normalized `staff` role for team roles such as:
+  - `team_manager`
+  - `team_assistant_manager`
+  - `team_coach`
+  - `manager`
+  - `coach`
+  - other existing team-staff-equivalent roles already used in the app
 
-In your Pumas screenshot, "Recent Results" shows a Jags 5-2 vs Arbroath line above the Pumas 1-0 vs Riverside. Events and results should respect the team selector.
+### 2) Make `QuickAvailabilityControls` resilient when invitations/availability exist but role rows are missing
+- Update `QuickAvailabilityControls.tsx` so `assumedRoles` can render a fallback control even when `userRoles` is empty.
+- Add synthetic fallback entries for:
+  - `staff` using the current user/profile
+  - `player` using the linked player / cached player id
+- Keep the existing invited-role filtering, but stop the component from returning `null` just because the RPC returned no rows.
 
-Root cause: `loadLiveData()` only filters by a single team when `viewMode === 'single'`. If the team context is in `'all'` mode (the default and what `localStorage` often restores it to), every team you belong to is queried — that's how Jags rows appear on a "Pumas" screen.
+### 3) Eliminate stale Home data when switching teams
+- Update `DashboardMobile.tsx` so each `loadLiveData()` call is tied to a request key / sequence guard.
+- Only apply `setStats(...)` if the response still matches the latest selected scope.
+- Clear or reset the scoped Home data when team/view changes so previous team results do not linger while the new request is loading.
+- Tighten team sourcing:
+  - in `single` mode: only use `currentTeam.id`
+  - in `all` mode: use the current `availableTeams` set for that context
+  - avoid broader fallbacks that can reintroduce stale scope
 
-The team picker chip on the Home tab currently shows "All Teams" when in all-mode, but the rest of the UI (and your mental model) treats whichever team you last viewed as "the" active team.
+### 4) Verify with the reported example
+- Confirm that on **Jags Home**, the user can set availability from the Upcoming Events card.
+- Confirm that on **Pumas Home**, Recent Results and Upcoming Events show only Pumas data.
+- Confirm that **All Teams** still shows combined data intentionally.
 
-**Fix:** make Home strictly respect the picker.
+## Technical details
 
-- Keep the current `viewMode` logic, but ensure the picker chip is the source of truth. When the user picks a single team, only that team's events/results load (already works).
-- When in `'all'` mode, prefix each card subtitle with the team name (already shown) but also add a small team-logo chip on the left edge of each list row so multi-team mixing is visually obvious — not a bug.
-- Add a guard: if `viewMode === 'single'` but `currentTeam` is `null` (race during first load), short-circuit and don't query at all instead of falling back to all teams. Today the code does `currentTeam ? [currentTeam] : []` which is fine — but the `useEffect` re-runs on `availableTeams` change, so a transient empty `teams` array can cause a flash. Add a `currentTeam?.id` dependency and gate the fetch on `viewMode === 'all' || !!currentTeam`.
-- Also tighten the fallback in `viewMode === 'all'`: use `availableTeams` (the user's actual teams) rather than `teams ?? allTeams` so global admins or users with cached `allTeams` don't get every team in the system.
-
-## Technical changes (files to edit)
-
-- `src/components/events/QuickAvailabilityControls.tsx`
-  - Add optional prop `assumedRoles?: Array<'player' | 'staff'>`.
-  - When provided and non-empty, treat the matching `userRoles` entries as invited (skip the `invitedRoleSources` gate for those roles only).
-  - Keep current behaviour when the prop is absent (so Calendar / Event Details pages are unchanged).
-
+Files expected to change:
 - `src/pages/DashboardMobile.tsx`
-  - In the Upcoming Events list, compute `assumedRoles` per event from `userAvailabilityData` (group statuses by `event_id` → unique roles) and `playerAvailabilityData` (→ `'player'`).
-  - Pass `assumedRoles` and `currentStatus={event.user_availability ?? 'pending'}` to `QuickAvailabilityControls`.
-  - In `loadLiveData()`:
-    - Replace `teamsToUse = viewMode === 'all' ? (teams?.length ? teams : allTeams || []) : (currentTeam ? [currentTeam] : [])` with a version that uses `availableTeams` for the all-mode source and bails when single-mode has no `currentTeam`.
-    - Add `currentTeam?.id` to the `useEffect` dependency array.
+- `src/components/events/QuickAvailabilityControls.tsx`
+- `supabase/migrations/...sql` for `get_user_event_roles`
 
-## Diagram
-
+Database change shape:
 ```text
-Home tab event row
-  ├─ event_availability has row for me?  ──► assumedRoles += role
-  ├─ event_invitations has row for me?   ──► invitedRoleSources (existing path)
-  └─ QuickAvailabilityControls
-        if assumedRoles non-empty OR invitedRoleSources match
-          → render Available / Unavailable buttons
-        else
-          → null (current behaviour)
+get_user_event_roles(event, user)
+  = player roles from user_players for event.team_id
+  + staff roles from user_staff/team_staff for event.team_id
+  + staff roles from user_teams for event.team_id and staff-capable roles
 ```
 
-## Out of scope
+Client-state hardening:
+```text
+team/view change
+  -> start new scoped dashboard request
+  -> invalidate older request responses
+  -> only newest response can update Home stats
+```
 
-- Backfilling missing `event_invitations` rows for past events (separate data-repair task if you want it).
-- Changing the Calendar / Event Details availability flow — only Home tab is touched.
+If you approve, I’ll implement the migration and the two frontend fixes together so the Home tab behaves consistently.
