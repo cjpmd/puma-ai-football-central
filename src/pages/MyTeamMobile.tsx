@@ -189,30 +189,46 @@ export default function MyTeamMobile() {
       const totalGames = wins + draws + losses;
       const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
 
+      const safeEventIds = eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000'];
+
+      // Appearances and minutes — season-scoped by event_id
       const { data: playerStats } = await supabase
         .from('event_player_stats')
-        .select('player_id, players!inner(name), event_id, minutes_played, is_captain')
+        .select('player_id, players!inner(name), minutes_played')
+        .in('event_id', safeEventIds)
         .eq('players.team_id', currentTeam.id)
         .gt('minutes_played', 0);
 
-      const playerMap = new Map<string, { name: string; appearances: number; totalMinutes: number; captainGames: number }>();
-      playerStats?.forEach(stat => {
-        const pid = stat.player_id;
-        if (!playerMap.has(pid)) {
-          playerMap.set(pid, { name: (stat.players as any).name, appearances: 0, totalMinutes: 0, captainGames: 0 });
-        }
-        const p = playerMap.get(pid)!;
-        p.appearances++; p.totalMinutes += stat.minutes_played;
-        if (stat.is_captain) p.captainGames++;
+      // Goals, assists, saves, cards — from match_events, season-scoped
+      const { data: matchEvData } = await supabase
+        .from('match_events')
+        .select('player_id, event_type, players!inner(name, team_id)')
+        .in('event_id', safeEventIds)
+        .eq('players.team_id', currentTeam.id);
+
+      type PlayerStat = { name: string; goals: number; assists: number; saves: number; yellowCards: number; redCards: number; appearances: number; totalMinutes: number };
+      const playerMap = new Map<string, PlayerStat>();
+      const ensurePlayer = (pid: string, name: string) => {
+        if (!playerMap.has(pid)) playerMap.set(pid, { name, goals: 0, assists: 0, saves: 0, yellowCards: 0, redCards: 0, appearances: 0, totalMinutes: 0 });
+        return playerMap.get(pid)!;
+      };
+
+      matchEvData?.forEach(ev => {
+        const p = ensurePlayer(ev.player_id, (ev.players as any).name);
+        if (ev.event_type === 'goal') p.goals++;
+        else if (ev.event_type === 'assist') p.assists++;
+        else if (ev.event_type === 'save') p.saves++;
+        else if (ev.event_type === 'yellow_card') p.yellowCards++;
+        else if (ev.event_type === 'red_card') p.redCards++;
       });
 
-      const { data: players } = await supabase
-        .from('players')
-        .select('id, name, match_stats')
-        .eq('team_id', currentTeam.id)
-        .eq('status', 'active');
+      playerStats?.forEach(stat => {
+        const p = ensurePlayer(stat.player_id, (stat.players as any).name);
+        p.appearances++;
+        p.totalMinutes += stat.minutes_played || 0;
+      });
 
-      const sumStat = (key: string) => players?.reduce((s, p) => s + ((p.match_stats as any)?.[key] || 0), 0) || 0;
+      const allPlayerStats = Array.from(playerMap.values());
 
       setAnalytics({
         totalWins: wins, totalDraws: draws, totalLosses: losses, totalGames,
@@ -221,20 +237,14 @@ export default function MyTeamMobile() {
         goalDifference: goalsFor - goalsAgainst,
         avgGoalsPerGame: totalGames > 0 ? Math.round((goalsFor / totalGames) * 10) / 10 : 0,
         recentResults: matchEvents.slice(0, 5),
-        topPerformers: Array.from(playerMap.values()).sort((a, b) => b.appearances - a.appearances).slice(0, 3),
-        totalGoals: sumStat('totalGoals'),
-        totalAssists: sumStat('totalAssists'),
-        totalSaves: sumStat('totalSaves'),
-        yellowCards: sumStat('yellowCards'),
-        redCards: sumStat('redCards'),
-        topScorers: [...(players || [])]
-          .filter(p => (p.match_stats as any)?.totalGoals > 0)
-          .sort((a, b) => ((b.match_stats as any)?.totalGoals || 0) - ((a.match_stats as any)?.totalGoals || 0))
-          .slice(0, 3),
-        topAssisters: [...(players || [])]
-          .filter(p => (p.match_stats as any)?.totalAssists > 0)
-          .sort((a, b) => ((b.match_stats as any)?.totalAssists || 0) - ((a.match_stats as any)?.totalAssists || 0))
-          .slice(0, 3),
+        topPerformers: allPlayerStats.filter(p => p.appearances > 0).sort((a, b) => b.appearances - a.appearances).slice(0, 3),
+        totalGoals: allPlayerStats.reduce((s, p) => s + p.goals, 0),
+        totalAssists: allPlayerStats.reduce((s, p) => s + p.assists, 0),
+        totalSaves: allPlayerStats.reduce((s, p) => s + p.saves, 0),
+        yellowCards: allPlayerStats.reduce((s, p) => s + p.yellowCards, 0),
+        redCards: allPlayerStats.reduce((s, p) => s + p.redCards, 0),
+        topScorers: allPlayerStats.filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 3),
+        topAssisters: allPlayerStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 3),
         categoryStats: Array.from(categoryStatsMap.values()).filter(c => c.totalGames > 0).sort((a, b) => b.totalGames - a.totalGames),
         matchResults,
         trainingCount,
@@ -634,21 +644,18 @@ export default function MyTeamMobile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {analytics.topScorers.map((player, i) => {
-                    const stats = player.match_stats as any;
-                    return (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg"
-                           style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
-                        <div>
-                          <div className="font-medium">{player.name}</div>
-                          <div className="text-sm text-white/50">{stats?.totalGames || 0} games</div>
-                        </div>
-                        <Badge style={{ background: 'rgba(184,159,255,0.2)', color: '#b89fff', border: '1px solid rgba(184,159,255,0.4)' }}>
-                          {stats?.totalGoals || 0} goals
-                        </Badge>
+                  {analytics.topScorers.map((player, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg"
+                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                      <div>
+                        <div className="font-medium">{player.name}</div>
+                        <div className="text-sm text-white/50">{player.appearances || 0} games</div>
                       </div>
-                    );
-                  })}
+                      <Badge style={{ background: 'rgba(184,159,255,0.2)', color: '#b89fff', border: '1px solid rgba(184,159,255,0.4)' }}>
+                        {player.goals || 0} goals
+                      </Badge>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
@@ -663,21 +670,18 @@ export default function MyTeamMobile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {analytics.topAssisters.map((player, i) => {
-                    const stats = player.match_stats as any;
-                    return (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg"
-                           style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
-                        <div>
-                          <div className="font-medium">{player.name}</div>
-                          <div className="text-sm text-white/50">{stats?.totalGames || 0} games</div>
-                        </div>
-                        <Badge style={{ background: 'rgba(45,212,191,0.15)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.35)' }}>
-                          {stats?.totalAssists || 0} assists
-                        </Badge>
+                  {analytics.topAssisters.map((player, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg"
+                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                      <div>
+                        <div className="font-medium">{player.name}</div>
+                        <div className="text-sm text-white/50">{player.appearances || 0} games</div>
                       </div>
-                    );
-                  })}
+                      <Badge style={{ background: 'rgba(45,212,191,0.15)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.35)' }}>
+                        {player.assists || 0} assists
+                      </Badge>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
