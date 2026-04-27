@@ -27,6 +27,7 @@ interface EventData {
   title: string;
   date: string;
   start_time: string;
+  team_id: string;
   opponent?: string;
   scores?: any;
   player_of_match_id?: string;
@@ -103,7 +104,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       
       const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .select('id, title, date, start_time, opponent, scores, player_of_match_id, coach_notes, staff_notes')
+        .select('id, title, date, start_time, team_id, opponent, scores, player_of_match_id, coach_notes, staff_notes')
         .eq('id', eventId)
         .single();
 
@@ -578,7 +579,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       )}
 
       {/* Performance Analysis - Only visible to coaches */}
-      {teamSelections.length > 0 && hasPermission({ resource: 'events', action: 'manage' }) && (
+      {teamSelections.length > 0 && hasPermission({ resource: 'events', action: 'manage', ...(event?.team_id ? { resourceId: event.team_id } : {}) }) && (
         <PerformanceAnalysisSection
           analysis={performanceAnalysis}
           onAnalysisChange={setPerformanceAnalysis}

@@ -302,10 +302,6 @@ const PlayerManagementTab = () => {
 
   const handleTransferPlayer = (player: Player) => {
     logger.log(`[PlayerTab] handleTransferPlayer for player: ${player.name}`);
-    toast({
-      title: 'Transfer (handler called)',
-      description: `Transfer dialog for: ${player.name}`,
-    });
     handleModalOpen('transfer', player);
   };
 

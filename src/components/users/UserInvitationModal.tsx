@@ -1,6 +1,7 @@
 
 import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
+import { z } from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,15 @@ import { userInvitationService, InviteUserData } from '@/services/userInvitation
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeText, validateEmail, validateName } from '@/utils/inputValidation';
 import { toast } from 'sonner';
+
+const invitationSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  name: z.string().min(1, 'Name is required'),
+  role: z.enum(['staff', 'parent', 'player'], { required_error: 'Please select a role' }),
+  teamId: z.string().min(1, 'Please select a team'),
+});
+
+type InvitationFormErrors = Partial<Record<keyof z.infer<typeof invitationSchema>, string>>;
 
 interface ValidationResult {
   is_valid: boolean;
@@ -36,6 +46,7 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
 }) => {
   const { teams } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<InvitationFormErrors>({});
   const [formData, setFormData] = useState({
     email: '',
     name: '',
@@ -46,10 +57,29 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
+
+    // Zod schema validation (catches empty fields, invalid email, missing team/role)
+    const zodResult = invitationSchema.safeParse({
+      email: formData.email,
+      name: formData.name,
+      role: formData.role,
+      teamId: prefilledData?.teamId || formData.teamId,
+    });
+    if (!zodResult.success) {
+      const errors: InvitationFormErrors = {};
+      for (const issue of zodResult.error.issues) {
+        const key = issue.path[0] as keyof InvitationFormErrors;
+        if (key && !errors[key]) errors[key] = issue.message;
+      }
+      setFieldErrors(errors);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Client-side validation
+      // Existing deeper validation (sanitization + server-side RPC check)
       const emailValidation = validateEmail(formData.email);
       if (!emailValidation.isValid) {
         toast.error(emailValidation.error);
@@ -143,10 +173,11 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => { setFormData(prev => ({ ...prev, name: e.target.value })); setFieldErrors(prev => ({ ...prev, name: undefined })); }}
               placeholder="Full name"
-              required
+              className={fieldErrors.name ? 'border-destructive' : ''}
             />
+            {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
           </div>
 
           <div className="space-y-2">
@@ -155,19 +186,20 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => { setFormData(prev => ({ ...prev, email: e.target.value })); setFieldErrors(prev => ({ ...prev, email: undefined })); }}
               placeholder="Email address"
-              required
+              className={fieldErrors.email ? 'border-destructive' : ''}
             />
+            {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
             <Select
               value={formData.role}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as any }))}
+              onValueChange={(value) => { setFormData(prev => ({ ...prev, role: value as any })); setFieldErrors(prev => ({ ...prev, role: undefined })); }}
             >
-              <SelectTrigger>
+              <SelectTrigger className={fieldErrors.role ? 'border-destructive' : ''}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -217,9 +249,9 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
               <Label htmlFor="team">Team</Label>
               <Select
                 value={formData.teamId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, teamId: value }))}
+                onValueChange={(value) => { setFormData(prev => ({ ...prev, teamId: value })); setFieldErrors(prev => ({ ...prev, teamId: undefined })); }}
               >
-                <SelectTrigger>
+                <SelectTrigger className={fieldErrors.teamId ? 'border-destructive' : ''}>
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
@@ -230,6 +262,7 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+              {fieldErrors.teamId && <p className="text-xs text-destructive">{fieldErrors.teamId}</p>}
             </div>
           )}
 

@@ -232,7 +232,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     if (targetTeamId && hasPermission({ resource: 'players', action: 'manage', resourceId: targetTeamId })) {
       canManage = true;
       isStaff = true;
-    } else if (hasPermission({ resource: 'players', action: 'manage' })) { // Broader manage permission (e.g., club admin, global admin)
+    } else if (hasPermission({ resource: 'players', action: 'manage', ...(targetTeamId ? { resourceId: targetTeamId } : {}) })) { // Broader manage permission (e.g., club admin, global admin)
       canManage = true;
       isStaff = true;
     }

@@ -1,3 +1,11 @@
+// Dual availability system — two intentionally separate concepts:
+//   players.availability  — general player status (fit / injured / suspended).
+//                           Stored on the players row; updated via player profile.
+//   event_availability    — per-event RSVP (pending / available / unavailable).
+//                           Stored in the event_availability table; one row per
+//                           user × event × role combination.
+// These are independent: a "fit" player can still decline a specific event, and
+// an "injured" player's RSVP records are retained for historical accuracy.
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { Player, Parent, PlayerTransfer, AttributeHistory } from '@/types';
