@@ -96,14 +96,21 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
       // Load players and staff for squad picker
       const loadSquadData = async () => {
         const teamId = currentTeam.id;
-        
+
         const [playersResult, staffResult] = await Promise.all([
           supabase.from('players').select('id, name').eq('team_id', teamId).order('name'),
-          supabase.from('team_staff').select('id, name').eq('team_id', teamId).order('name')
+          supabase.rpc('get_consolidated_team_staff', { p_team_id: teamId }),
         ]);
-        
+
         if (playersResult.data) setAvailablePlayers(playersResult.data);
-        if (staffResult.data) setAvailableStaff(staffResult.data);
+        if (staffResult.data) {
+          const dedupedStaff = staffResult.data
+            .filter((s: any, i: number, arr: any[]) =>
+              arr.findIndex(x => (x.user_id && x.user_id === s.user_id) || x.id === s.id) === i
+            )
+            .map((s: any) => ({ id: s.id, name: s.name }));
+          setAvailableStaff(dedupedStaff);
+        }
       };
       loadSquadData();
     }
