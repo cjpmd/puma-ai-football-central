@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { format, isSameDay, isToday, isTomorrow, isPast, parseISO, startOfDay, endOfWeek, addWeeks, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, addMonths, subMonths, isBefore } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { isEventPast, formatTime } from '@/utils/eventUtils';
@@ -245,6 +246,9 @@ export default function CalendarEventsMobile() {
   const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [editFormDirty, setEditFormDirty] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const pendingCloseActionRef = React.useRef<(() => void) | null>(null);
   const { toast } = useToast();
   const { user, profile, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
@@ -528,8 +532,9 @@ export default function CalendarEventsMobile() {
   const handleFormSubmit = async (eventData: any) => {
     try {
       setLoading(true);
-      
+
       if (selectedEvent) {
+        console.log('[CalendarEventsMobile.handleFormSubmit] Updating event id:', selectedEvent.id, 'data:', eventData);
         // Update existing event
         await eventsService.updateEvent({
           id: selectedEvent.id,
@@ -556,6 +561,7 @@ export default function CalendarEventsMobile() {
         });
       }
       
+      setEditFormDirty(false);
       setShowEventForm(false);
       setSelectedEvent(null);
       loadEvents();
@@ -1340,7 +1346,7 @@ export default function CalendarEventsMobile() {
                   className="ml-auto"
                   onClick={() => setShowEventDetails(false)}
                 >
-                  Save & Close
+                  Close
                 </Button>
               </div>
               
@@ -1565,9 +1571,18 @@ export default function CalendarEventsMobile() {
       </Dialog>
 
       {/* Event Form Modal */}
-      <Dialog 
-        open={showEventForm} 
+      <Dialog
+        open={showEventForm}
         onOpenChange={(open) => {
+          if (!open && editFormDirty && selectedEvent) {
+            pendingCloseActionRef.current = () => {
+              setEditFormDirty(false);
+              setShowEventForm(false);
+              setShowEventDetails(true);
+            };
+            setShowUnsavedChangesDialog(true);
+            return;
+          }
           setShowEventForm(open);
           if (!open && selectedEvent) {
             setShowEventDetails(true);
@@ -1584,8 +1599,17 @@ export default function CalendarEventsMobile() {
               size="sm"
               className="max-sm:inline-flex hidden"
               onClick={() => {
-                setShowEventForm(false);
-                if (selectedEvent) setShowEventDetails(true);
+                if (editFormDirty && selectedEvent) {
+                  pendingCloseActionRef.current = () => {
+                    setEditFormDirty(false);
+                    setShowEventForm(false);
+                    setShowEventDetails(true);
+                  };
+                  setShowUnsavedChangesDialog(true);
+                } else {
+                  setShowEventForm(false);
+                  if (selectedEvent) setShowEventDetails(true);
+                }
               }}
             >
               Close
@@ -1596,12 +1620,15 @@ export default function CalendarEventsMobile() {
               event={convertToEventFormat(selectedEvent)}
               teamId={teams?.[0]?.id || ''}
               onSubmit={handleFormSubmit}
+              onFormChange={() => { if (selectedEvent) setEditFormDirty(true); }}
               onEventCreated={(eventId) => {
+                setEditFormDirty(false);
                 setShowEventForm(false);
                 loadEvents();
                 setShowEventDetails(true);
               }}
               onCancel={() => {
+                setEditFormDirty(false);
                 setShowEventForm(false);
                 setShowEventDetails(true);
               }}
@@ -1609,6 +1636,32 @@ export default function CalendarEventsMobile() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Unsaved Changes Confirmation Dialog */}
+      <AlertDialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You have unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your event changes have not been saved. Are you sure you want to close without saving?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowUnsavedChangesDialog(false)}>
+              Keep Editing
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowUnsavedChangesDialog(false);
+                pendingCloseActionRef.current?.();
+                pendingCloseActionRef.current = null;
+              }}
+            >
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Team Selection Modal */}
       {selectedEvent && (
