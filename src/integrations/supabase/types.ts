@@ -3655,7 +3655,6 @@ export type Database = {
           pvg_checked_at: string | null
           pvg_checked_by: string | null
           role: string
-          suspended: boolean
           team_id: string
           updated_at: string | null
           user_id: string | null
@@ -3674,7 +3673,6 @@ export type Database = {
           pvg_checked_at?: string | null
           pvg_checked_by?: string | null
           role: string
-          suspended?: boolean
           team_id: string
           updated_at?: string | null
           user_id?: string | null
@@ -3693,7 +3691,6 @@ export type Database = {
           pvg_checked_at?: string | null
           pvg_checked_by?: string | null
           role?: string
-          suspended?: boolean
           team_id?: string
           updated_at?: string | null
           user_id?: string | null
