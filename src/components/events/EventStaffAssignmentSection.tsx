@@ -100,22 +100,53 @@ useEffect(() => {
           
           if (staffError) throw staffError;
           
-          // Get user IDs for linked staff
+          // Get user IDs for linked staff via user_staff
           const { data: userStaff } = await supabase
             .from('user_staff')
             .select('user_id, staff_id')
             .in('staff_id', invitedStaffIds);
           
           const userStaffMap = new Map(userStaff?.map(us => [us.staff_id, us.user_id]) || []);
-          
-          staffToLoad = (teamStaff || []).map(staff => ({
-            id: staff.id,
-            name: staff.name,
-            email: staff.email,
-            role: staff.role,
-            isLinked: userStaffMap.has(staff.id),
-            linkedUserId: userStaffMap.get(staff.id)
-          }));
+
+          // Also treat membership in user_teams (with profile email) as a valid link.
+          // This covers staff who were granted team roles directly (e.g., team_manager)
+          // without an explicit user_staff link row.
+          const { data: userTeamsRows } = await supabase
+            .from('user_teams')
+            .select('user_id')
+            .eq('team_id', teamId);
+
+          const userTeamUserIds = (userTeamsRows || [])
+            .map((r: any) => r.user_id)
+            .filter(Boolean);
+
+          const emailToUserMap = new Map<string, string>();
+          if (userTeamUserIds.length > 0) {
+            const { data: profileRows } = await supabase
+              .from('profiles')
+              .select('id, email')
+              .in('id', userTeamUserIds);
+            (profileRows || []).forEach((p: any) => {
+              if (p?.email && p?.id) {
+                emailToUserMap.set(String(p.email).toLowerCase(), p.id);
+              }
+            });
+          }
+
+          staffToLoad = (teamStaff || []).map(staff => {
+            const directUserId = userStaffMap.get(staff.id);
+            const emailKey = (staff.email || '').toLowerCase();
+            const fallbackUserId = emailKey ? emailToUserMap.get(emailKey) : undefined;
+            const linkedUserId = directUserId ?? fallbackUserId;
+            return {
+              id: staff.id,
+              name: staff.name,
+              email: staff.email,
+              role: staff.role,
+              isLinked: Boolean(linkedUserId),
+              linkedUserId
+            };
+          });
         }
       } else {
         // No eventId - load all team staff
