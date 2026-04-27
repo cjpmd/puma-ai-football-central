@@ -1,78 +1,45 @@
-# Plan
+## Problem
 
-I found two separate root causes behind the Home tab issues.
+In Team Selection → Staff for the **Broughty United Jags 2015s** event, Chris McDonald (chrisjpmcdonald@gmail.com) shows:
+- "No linked account"
+- "Not Linked" badge
+- The "Some staff members need account linking" warning
 
-## What will be fixed
+But he IS effectively linked to the Jags — just through `user_teams` (role `team_manager`), not through `user_staff`.
 
-1. Restore Home-tab availability controls for Jags.
-2. Stop Home-tab Recent Results / Upcoming Events from showing stale data from another selected team.
-3. Verify the fix against the Pumas/Jags case before closing.
+## Root cause
 
-## Root causes found
+Verified in the database:
+- `team_staff` row `a0427e24…` exists for Chris on the Jags (role `team_manager`, email `chrisjpmcdonald@gmail.com`).
+- There is **no matching row in `user_staff`** for that `staff_id`.
+- However Chris's user_id (`bdc91e32…`) IS in `user_teams` for that same team_id with role `team_manager`, and his email matches a profile.
 
-- **Jags availability issue:** the Home card uses `QuickAvailabilityControls`, which depends on `get_user_event_roles(...)`. That database function currently only returns:
-  - player roles from `user_players`
-  - staff roles from `user_staff`
+`src/components/events/EventStaffAssignmentSection.tsx` (the panel shown in the screenshot) determines `isLinked` using *only* the `user_staff` table. When an `eventId` is passed, it bypasses the `get_consolidated_team_staff` RPC and goes directly to `team_staff` + `user_staff`, so it never sees the `user_teams` link. Result: a falsely "Not Linked" staff member who actually has an account, and broken availability tracking for them.
 
-  It does **not** return staff access granted through `user_teams` (for example `team_manager`, `team_coach`, `team_assistant_manager`). For the affected user, the Jags event has a valid staff invitation and staff availability row, but the RPC returns no roles, so the Home controls render nothing.
+This is inconsistent with the existing project rule (memory `staff/user-teams-integration-in-event-invitations`) that `user_staff` and `user_teams` should be treated as equivalent linkage sources for staff and invitations.
 
-- **Cross-team results leakage:** the Pumas recent-results query itself is team-filtered correctly in the database. That means the wrong result cards are most likely coming from **stale client state / out-of-order async responses** when switching between team views. `DashboardMobile` currently fires async loads on team/view changes, but it does not guard against an older request finishing after a newer one and overwriting the state.
+## Fix
 
-## Implementation steps
+Update `src/components/events/EventStaffAssignmentSection.tsx` so that, in the invited-staff branch, a `team_staff` record is considered linked if **any** of the following is true:
 
-### 1) Fix database role resolution for event availability
-- Add a migration to replace `public.get_user_event_roles(p_event_id, p_user_id)` so it also returns **staff roles coming from `user_teams`** for the event’s team.
-- Keep existing player-role and `user_staff` logic.
-- Return a normalized `staff` role for team roles such as:
-  - `team_manager`
-  - `team_assistant_manager`
-  - `team_coach`
-  - `manager`
-  - `coach`
-  - other existing team-staff-equivalent roles already used in the app
+1. There is a matching row in `user_staff` (current behaviour), OR
+2. There is a row in `user_teams` for the same `team_id` whose user has the same email as the `team_staff.email` (looked up via `profiles.email`), OR
+3. As a safety net, the `team_staff.email` matches a profile that is in `user_teams` for this `team_id`.
 
-### 2) Make `QuickAvailabilityControls` resilient when invitations/availability exist but role rows are missing
-- Update `QuickAvailabilityControls.tsx` so `assumedRoles` can render a fallback control even when `userRoles` is empty.
-- Add synthetic fallback entries for:
-  - `staff` using the current user/profile
-  - `player` using the linked player / cached player id
-- Keep the existing invited-role filtering, but stop the component from returning `null` just because the RPC returned no rows.
+Concretely:
 
-### 3) Eliminate stale Home data when switching teams
-- Update `DashboardMobile.tsx` so each `loadLiveData()` call is tied to a request key / sequence guard.
-- Only apply `setStats(...)` if the response still matches the latest selected scope.
-- Clear or reset the scoped Home data when team/view changes so previous team results do not linger while the new request is loading.
-- Tighten team sourcing:
-  - in `single` mode: only use `currentTeam.id`
-  - in `all` mode: use the current `availableTeams` set for that context
-  - avoid broader fallbacks that can reintroduce stale scope
+- After loading `teamStaff` and existing `user_staff` rows, also query `user_teams` for `team_id = teamId` joined to `profiles` to get `{ user_id, email }` pairs.
+- Build an email → `user_id` map (lowercased) from those rows.
+- For each invited staff record, set:
+  - `isLinked = userStaffMap.has(staff.id) || emailToUserMap.has(staff.email.toLowerCase())`
+  - `linkedUserId = userStaffMap.get(staff.id) ?? emailToUserMap.get(staff.email.toLowerCase())`
+- Keep the rest of the component (availability lookup via `linkedUserId`, the warning banner, etc.) unchanged — it will now correctly resolve Chris's `user_id` and pull his availability.
 
-### 4) Verify with the reported example
-- Confirm that on **Jags Home**, the user can set availability from the Upcoming Events card.
-- Confirm that on **Pumas Home**, Recent Results and Upcoming Events show only Pumas data.
-- Confirm that **All Teams** still shows combined data intentionally.
+No DB migration is required. No other components are affected by this change because `StaffSelectionSection`, `TrainingPlanEditor`, and `EnhancedTeamSelectionManager` already use `get_consolidated_team_staff`, which already merges `user_teams`.
 
-## Technical details
+## Verification after change
 
-Files expected to change:
-- `src/pages/DashboardMobile.tsx`
-- `src/components/events/QuickAvailabilityControls.tsx`
-- `supabase/migrations/...sql` for `get_user_event_roles`
-
-Database change shape:
-```text
-get_user_event_roles(event, user)
-  = player roles from user_players for event.team_id
-  + staff roles from user_staff/team_staff for event.team_id
-  + staff roles from user_teams for event.team_id and staff-capable roles
-```
-
-Client-state hardening:
-```text
-team/view change
-  -> start new scoped dashboard request
-  -> invalidate older request responses
-  -> only newest response can update Home stats
-```
-
-If you approve, I’ll implement the migration and the two frontend fixes together so the Home tab behaves consistently.
+1. Open the Jags 2015s event → Team Selection → Staff. Chris should appear with no "Not Linked" badge and an availability status (Pending/Available/Unavailable) instead of "No linked account".
+2. The orange "Some staff members need account linking" warning should disappear when there are no other unlinked staff.
+3. Pumas 2015s should continue to show Chris as linked (unchanged behaviour, since he has a `user_staff` row there).
+4. Selecting/unselecting Chris should create/refresh his `event_availability` staff record correctly.

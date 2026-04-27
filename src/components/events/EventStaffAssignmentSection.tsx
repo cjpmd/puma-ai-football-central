@@ -100,22 +100,44 @@ useEffect(() => {
           
           if (staffError) throw staffError;
           
-          // Get user IDs for linked staff
+          // Get user IDs for linked staff via user_staff
           const { data: userStaff } = await supabase
             .from('user_staff')
             .select('user_id, staff_id')
             .in('staff_id', invitedStaffIds);
           
           const userStaffMap = new Map(userStaff?.map(us => [us.staff_id, us.user_id]) || []);
-          
-          staffToLoad = (teamStaff || []).map(staff => ({
-            id: staff.id,
-            name: staff.name,
-            email: staff.email,
-            role: staff.role,
-            isLinked: userStaffMap.has(staff.id),
-            linkedUserId: userStaffMap.get(staff.id)
-          }));
+
+          // Also treat membership in user_teams (with profile email) as a valid link.
+          // This covers staff who were granted team roles directly (e.g., team_manager)
+          // without an explicit user_staff link row.
+          const { data: userTeamsRows } = await supabase
+            .from('user_teams')
+            .select('user_id, profiles:profiles!user_teams_user_id_fkey(email)')
+            .eq('team_id', teamId);
+
+          const emailToUserMap = new Map<string, string>();
+          (userTeamsRows || []).forEach((row: any) => {
+            const email = row?.profiles?.email;
+            if (email && row.user_id) {
+              emailToUserMap.set(String(email).toLowerCase(), row.user_id);
+            }
+          });
+
+          staffToLoad = (teamStaff || []).map(staff => {
+            const directUserId = userStaffMap.get(staff.id);
+            const emailKey = (staff.email || '').toLowerCase();
+            const fallbackUserId = emailKey ? emailToUserMap.get(emailKey) : undefined;
+            const linkedUserId = directUserId ?? fallbackUserId;
+            return {
+              id: staff.id,
+              name: staff.name,
+              email: staff.email,
+              role: staff.role,
+              isLinked: Boolean(linkedUserId),
+              linkedUserId
+            };
+          });
         }
       } else {
         // No eventId - load all team staff
