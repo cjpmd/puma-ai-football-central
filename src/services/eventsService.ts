@@ -275,12 +275,12 @@ export const eventsService = {
         // Phase 2: dependent queries (need player IDs / staff IDs from phase 1)
         const [playerUsersResult, staffUsersResult] = await Promise.all([
           needPlayers && players.length > 0
-            ? (supabase.from('user_players').select('user_id, player_id')
-                .in('player_id', players.map((p: any) => p.id)) as Promise<any>)
+            ? ((supabase.from('user_players').select('user_id, player_id')
+                .in('player_id', players.map((p: any) => p.id))) as unknown as Promise<any>)
             : Promise.resolve({ data: [], error: null }),
           needStaff && staff.length > 0
-            ? (supabase.from('user_staff').select('user_id, staff_id')
-                .in('staff_id', staff.map((s: any) => s.id)) as Promise<any>)
+            ? ((supabase.from('user_staff').select('user_id, staff_id')
+                .in('staff_id', staff.map((s: any) => s.id))) as unknown as Promise<any>)
             : Promise.resolve({ data: [], error: null }),
         ]);
 

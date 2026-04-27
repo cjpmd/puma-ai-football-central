@@ -6,7 +6,7 @@ export const teamsService = {
   async createTeam(teamData: Record<string, any>): Promise<{ id: string; [key: string]: any }> {
     const { data, error } = await supabase
       .from('teams')
-      .insert({ ...teamData, updated_at: new Date().toISOString() })
+      .insert({ ...teamData, updated_at: new Date().toISOString() } as any)
       .select()
       .single();
     if (error) throw error;

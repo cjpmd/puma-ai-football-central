@@ -510,7 +510,7 @@ export default function CalendarEventsMobile() {
         .range(nextOffset, nextOffset + eventsPageSize - 1);
 
       if (error) throw error;
-      const moreEvents = (data || []) as DatabaseEvent[];
+      const moreEvents = ((data || []) as unknown) as DatabaseEvent[];
       setEvents(prev => [...prev, ...moreEvents]);
       setHasMoreEventsServer(moreEvents.length === eventsPageSize);
       setEventsServerOffset(nextOffset);
