@@ -113,16 +113,25 @@ useEffect(() => {
           // without an explicit user_staff link row.
           const { data: userTeamsRows } = await supabase
             .from('user_teams')
-            .select('user_id, profiles:profiles!user_teams_user_id_fkey(email)')
+            .select('user_id')
             .eq('team_id', teamId);
 
+          const userTeamUserIds = (userTeamsRows || [])
+            .map((r: any) => r.user_id)
+            .filter(Boolean);
+
           const emailToUserMap = new Map<string, string>();
-          (userTeamsRows || []).forEach((row: any) => {
-            const email = row?.profiles?.email;
-            if (email && row.user_id) {
-              emailToUserMap.set(String(email).toLowerCase(), row.user_id);
-            }
-          });
+          if (userTeamUserIds.length > 0) {
+            const { data: profileRows } = await supabase
+              .from('profiles')
+              .select('id, email')
+              .in('id', userTeamUserIds);
+            (profileRows || []).forEach((p: any) => {
+              if (p?.email && p?.id) {
+                emailToUserMap.set(String(p.email).toLowerCase(), p.id);
+              }
+            });
+          }
 
           staffToLoad = (teamStaff || []).map(staff => {
             const directUserId = userStaffMap.get(staff.id);
