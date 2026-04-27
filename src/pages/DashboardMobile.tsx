@@ -346,17 +346,21 @@ export default function DashboardMobile() {
 
   useEffect(() => {
     loadLiveData();
-  }, [allTeams, connectedPlayers, currentTeam, viewMode, availableTeams]);
+  }, [allTeams, connectedPlayers, currentTeam?.id, viewMode, availableTeams]);
 
   const loadLiveData = async () => {
     if (!user) return;
 
     try {
+      // In single-team mode require a concrete currentTeam (no fallback to all teams).
+      // In all-mode use the user's actual availableTeams to avoid leaking data
+      // from teams cached in `allTeams` that the user no longer belongs to.
       const teamsToUse = viewMode === 'all'
-        ? (teams?.length ? teams : allTeams || [])
+        ? (availableTeams?.length ? availableTeams : (teams?.length ? teams : (allTeams || [])))
         : (currentTeam ? [currentTeam] : []);
 
       if (!teamsToUse.length) {
+        setLoading(false);
         return;
       }
 
@@ -478,6 +482,22 @@ export default function DashboardMobile() {
         }
       });
 
+      // Build per-event role map: which roles does the user already have an
+      // availability record for? Used to render the inline availability
+      // buttons even when an `event_invitations` row is missing.
+      const eventRolesMap = new Map<string, Set<'player' | 'staff'>>();
+      userAvailabilityData.forEach(record => {
+        const role = record.role === 'staff' ? 'staff' : 'player';
+        const set = eventRolesMap.get(record.event_id) ?? new Set<'player' | 'staff'>();
+        set.add(role);
+        eventRolesMap.set(record.event_id, set);
+      });
+      playerAvailabilityData.forEach(record => {
+        const set = eventRolesMap.get(record.event_id) ?? new Set<'player' | 'staff'>();
+        set.add('player');
+        eventRolesMap.set(record.event_id, set);
+      });
+
       const upcomingEvents = upcomingEventsResult.data?.map(event => ({
         ...event,
         team_context: {
@@ -486,7 +506,8 @@ export default function DashboardMobile() {
           club_name: event.teams.clubs?.name,
           club_logo_url: event.teams.clubs?.logo_url
         },
-        user_availability: availabilityMap.get(event.id) || null
+        user_availability: availabilityMap.get(event.id) || null,
+        assumed_roles: Array.from(eventRolesMap.get(event.id) ?? []) as Array<'player' | 'staff'>
       })) || [];
 
       // ─── Recent results ───────────────────────────────────────────────────
@@ -1008,7 +1029,8 @@ export default function DashboardMobile() {
                         <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                           <QuickAvailabilityControls
                             eventId={event.id}
-                            currentStatus="pending"
+                            currentStatus={(event.user_availability as any) || 'pending'}
+                            assumedRoles={event.assumed_roles}
                             size="sm"
                             onStatusChange={(status) => handleAvailabilityStatusChange(event.id, status)}
                           />

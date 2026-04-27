@@ -28,13 +28,22 @@ interface QuickAvailabilityControlsProps {
   currentStatus?: 'pending' | 'available' | 'unavailable' | null;
   size?: 'sm' | 'md';
   onStatusChange?: (status: 'available' | 'unavailable') => void;
+  /**
+   * When the caller already knows the user has an availability record for
+   * this event in one or more roles (e.g. via `event_availability`), pass
+   * those roles here to bypass the strict `event_invitations` gate.
+   * Used by the Home dashboard to ensure buttons render even if the
+   * invitation row is missing.
+   */
+  assumedRoles?: Array<'player' | 'staff'>;
 }
 
 export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps> = ({
   eventId,
   currentStatus,
   size = 'md',
-  onStatusChange
+  onStatusChange,
+  assumedRoles
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -288,9 +297,17 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   };
 
+  // Helper: is this role considered invited (either via event_invitations
+  // or via the caller-supplied assumedRoles fallback)?
+  const isRoleInvited = (roleEntry: UserRole) => {
+    if (invitedRoleSources.has(`${roleEntry.role}:${roleEntry.sourceId}`)) return true;
+    if (assumedRoles && assumedRoles.includes(roleEntry.role)) return true;
+    return false;
+  };
+
   // If user has multiple roles, show each role separately
   if (hasMultipleRoles) {
-    const filteredRoles = userRoles.filter(r => invitedRoleSources.has(`${r.role}:${r.sourceId}`));
+    const filteredRoles = userRoles.filter(isRoleInvited);
     if (filteredRoles.length === 0) return null;
     return (
       <div className="space-y-2">
@@ -309,7 +326,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   // Single role - show with avatar and improved layout
   const singleRoleEntry = userRoles[0];
   if (!singleRoleEntry) return null;
-  if (!invitedRoleSources.has(`${singleRoleEntry.role}:${singleRoleEntry.sourceId}`)) return null;
+  if (!isRoleInvited(singleRoleEntry)) return null;
   const singleRole = singleRoleEntry.role;
   const singlePlayerId = singleRole === 'player' ? cachedPlayerId || undefined : undefined;
   const status = getAvailabilityStatusSync(eventId, singleRole, singlePlayerId) || getStaffRoleStatus(singleRole) || currentStatus;
