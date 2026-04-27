@@ -58,7 +58,7 @@ export function useTeamPlayers(teamId: string | undefined) {
         .neq('status', 'inactive')
         .order('squad_number', { ascending: true });
       if (queryError) throw queryError;
-      setPlayers((data as TeamPlayer[]) || []);
+      setPlayers(((data as unknown) as TeamPlayer[]) || []);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to load players'));
     } finally {

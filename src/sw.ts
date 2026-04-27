@@ -15,6 +15,13 @@ precacheAndRoute(self.__WB_MANIFEST);
 // Clean up old caches
 cleanupOutdatedCaches();
 
+// Activate new SW immediately on install so users with stale precaches
+// (e.g. referencing the old favicon.ico) self-heal on next visit instead
+// of seeing a blank screen until all tabs close.
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
 // Handle skip waiting message from PWAUpdatePrompt
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
