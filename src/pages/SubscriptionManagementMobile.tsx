@@ -1,12 +1,13 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Crown, Star, Check, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { CreditCard, Crown, Star, Check, AlertCircle, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+
+const CONTACT_EMAIL = 'hello@puma-ai.co.uk';
 
 interface SubscriptionPlan {
   id: string;
@@ -70,32 +71,15 @@ const subscriptionPlans: SubscriptionPlan[] = [
 ];
 
 export default function SubscriptionManagementMobile() {
-  const [currentPlan, setCurrentPlan] = useState('free');
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [currentPlan] = useState('free');
   const { user, teams } = useAuth();
 
-  const handleUpgrade = async (planId: string) => {
-    setLoading(true);
-    try {
-      // TODO: Implement actual subscription upgrade logic
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: 'Success',
-        description: `Successfully upgraded to ${planId} plan!`,
-      });
-      
-      setCurrentPlan(planId);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to upgrade subscription',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleUpgrade = (planName: string) => {
+    const subject = encodeURIComponent(`Upgrade request: ${planName} plan`);
+    const body = encodeURIComponent(
+      `Hi Origin Sports team,\n\nI'd like to upgrade to the ${planName} plan.\n\nAccount email: ${user?.email || ''}\n\nPlease get in touch to arrange this.\n\nThanks`
+    );
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
   };
 
   const getPlanIcon = (planId: string) => {
@@ -193,13 +177,13 @@ export default function SubscriptionManagementMobile() {
                     Current Plan
                   </Button>
                 ) : (
-                  <Button 
+                  <Button
                     className="w-full h-12"
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={loading}
+                    onClick={() => handleUpgrade(plan.name)}
                     variant={plan.isPopular ? 'default' : 'outline'}
                   >
-                    {loading ? 'Processing...' : `Upgrade to ${plan.name}`}
+                    <Mail className="mr-2 h-4 w-4" />
+                    Contact us to upgrade
                   </Button>
                 )}
               </CardContent>
@@ -207,31 +191,31 @@ export default function SubscriptionManagementMobile() {
           ))}
         </div>
 
-        {/* Billing Information */}
+        {/* Contact for billing */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
               <AlertCircle className="h-5 w-5 mr-2" />
-              Billing Information
+              Billing & Upgrades
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-white/60">Next billing date:</span>
-                <span>March 15, 2024</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/60">Payment method:</span>
-                <span>•••• •••• •••• 1234</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/60">Billing email:</span>
-                <span className="truncate">{user?.email}</span>
-              </div>
-            </div>
-            <Button variant="outline" className="w-full mt-4 h-12">
-              Update Billing Details
+            <p className="text-sm text-white/60 mb-4">
+              To upgrade your plan or manage billing, contact us at{' '}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-400 underline">
+                {CONTACT_EMAIL}
+              </a>
+              . We'll get you set up within one business day.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full h-12"
+              onClick={() => {
+                window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Billing enquiry')}&body=${encodeURIComponent(`Account email: ${user?.email || ''}\n\n`)}`;
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Contact billing support
             </Button>
           </CardContent>
         </Card>

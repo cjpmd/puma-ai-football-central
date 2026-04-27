@@ -157,6 +157,15 @@ export const playersService = {
       logger.error('Error deactivating player:', error);
       throw error;
     }
+    // Audit log: player deactivation (soft delete) is security-relevant
+    const { data: { user } } = await supabase.auth.getUser();
+    supabase.from('audit_logs').insert({
+      table_name: 'players',
+      operation: 'DEACTIVATE',
+      old_data: { id, status: 'active' },
+      new_data: { id, status: 'inactive' },
+      user_id: user?.id ?? null,
+    }).then(({ error: auditError }) => { if (auditError) logger.warn('Audit log write failed for player deactivation:', auditError); });
     logger.log('Player deactivated successfully');
   },
 

@@ -344,6 +344,15 @@ const PlayerManagementTab = () => {
         requested_by: user?.id ?? null,
       });
 
+      // Audit log: player transfer is a high-risk data operation
+      await supabase.from('audit_logs').insert({
+        table_name: 'players',
+        operation: 'TRANSFER',
+        old_data: { team_id: selectedPlayer.teamId || (selectedPlayer as any).team_id, player_id: selectedPlayer.id },
+        new_data: { team_id: data.toTeamId, data_transfer_options: data.dataTransferOptions },
+        user_id: user?.id ?? null,
+      }).then(({ error }) => { if (error) logger.warn('Audit log write failed for transfer:', error); });
+
       handleModalClose();
       queryClient.invalidateQueries({ queryKey: ['active-players'] });
       toast({ title: 'Transfer Complete', description: `${selectedPlayer.name} has been transferred successfully.` });
