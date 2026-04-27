@@ -1,11 +1,43 @@
+export type KitPattern = 'solid' | 'stripes' | 'hoops' | 'halves' | 'sash';
+
 export interface KitDesign {
   shirtColor: string;
   sleeveColor: string;
+  /** @deprecated Use `pattern === 'stripes'` instead. Retained for backwards compatibility on legacy records. */
   hasStripes: boolean;
   stripeColor: string;
   shortsColor: string;
   socksColor: string;
+  collarColor?: string;
+  pattern?: KitPattern;
 }
+
+/**
+ * Normalize a stored KitDesign so legacy records (which only have `hasStripes`)
+ * map to the new `pattern` field. Always returns a fully-populated object.
+ */
+export const normalizeKitDesign = (design?: Partial<KitDesign> | null): KitDesign => {
+  const shirtColor = design?.shirtColor || '#3b82f6';
+  const sleeveColor = design?.sleeveColor || shirtColor;
+  const stripeColor = design?.stripeColor || '#ffffff';
+  const explicitPattern = design?.pattern;
+  const pattern: KitPattern = explicitPattern
+    ? explicitPattern
+    : design?.hasStripes
+    ? 'stripes'
+    : 'solid';
+
+  return {
+    shirtColor,
+    sleeveColor,
+    hasStripes: pattern === 'stripes',
+    stripeColor,
+    shortsColor: design?.shortsColor || '#1e40af',
+    socksColor: design?.socksColor || '#1e40af',
+    collarColor: design?.collarColor || '#ffffff',
+    pattern,
+  };
+};
 
 export interface KitDesigns {
   home: KitDesign;
