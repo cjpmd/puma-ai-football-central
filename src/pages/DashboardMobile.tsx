@@ -346,17 +346,21 @@ export default function DashboardMobile() {
 
   useEffect(() => {
     loadLiveData();
-  }, [allTeams, connectedPlayers, currentTeam, viewMode, availableTeams]);
+  }, [allTeams, connectedPlayers, currentTeam?.id, viewMode, availableTeams]);
 
   const loadLiveData = async () => {
     if (!user) return;
 
     try {
+      // In single-team mode require a concrete currentTeam (no fallback to all teams).
+      // In all-mode use the user's actual availableTeams to avoid leaking data
+      // from teams cached in `allTeams` that the user no longer belongs to.
       const teamsToUse = viewMode === 'all'
-        ? (teams?.length ? teams : allTeams || [])
+        ? (availableTeams?.length ? availableTeams : (teams?.length ? teams : (allTeams || [])))
         : (currentTeam ? [currentTeam] : []);
 
       if (!teamsToUse.length) {
+        setLoading(false);
         return;
       }
 
