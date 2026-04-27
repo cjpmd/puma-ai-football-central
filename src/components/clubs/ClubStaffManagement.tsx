@@ -160,7 +160,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
           pvgCheckedAt: member.pvg_checked_at ?? undefined,
           userId: member.user_id ?? undefined,
           requiresPvg,
-          suspended: member.suspended ?? false,
+          suspended: (member as any).suspended ?? false,
         });
       });
 
@@ -309,7 +309,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       const newSuspended = !member.suspended;
       const { error } = await supabase
         .from('team_staff')
-        .update({ suspended: newSuspended })
+        .update({ suspended: newSuspended } as any)
         .eq('id', member.id);
       if (error) throw error;
       toast({
@@ -385,10 +385,10 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         ? { column: 'user_id', value: member.userId }
         : { column: 'email', value: member.email };
 
-      const { error } = await supabase
+      const { error } = await (supabase
         .from('team_staff')
         .delete()
-        .in('team_id', clubTeamIds)
+        .in('team_id', clubTeamIds) as any)
         .eq(identifier.column, identifier.value);
 
       if (error) throw error;
