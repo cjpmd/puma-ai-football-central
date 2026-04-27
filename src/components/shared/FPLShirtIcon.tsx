@@ -1,4 +1,6 @@
 import React from 'react';
+import { KitShirt } from './KitShirt';
+import { KitPattern } from '@/types/team';
 
 interface FPLShirtIconProps {
   className?: string;
@@ -6,104 +8,39 @@ interface FPLShirtIconProps {
   shirtColor?: string;
   stripeColor?: string;
   hasStripes?: boolean;
+  /** Optional size override in px (defaults to filling the container via className). */
+  size?: number;
+  pattern?: KitPattern;
+  collarColor?: string;
+  sleeveColor?: string;
 }
 
 /**
- * FPL-style shirt icon with squad number displayed on the shirt.
- * Supports solid colors and vertical stripes.
+ * Backwards-compatible wrapper around the unified KitShirt component.
+ * New code should import KitShirt directly.
  */
-export const FPLShirtIcon: React.FC<FPLShirtIconProps> = ({ 
-  className = "",
+export const FPLShirtIcon: React.FC<FPLShirtIconProps> = ({
+  className = '',
   squadNumber,
-  shirtColor = "#16a34a",
+  shirtColor,
   stripeColor,
   hasStripes = false,
+  size,
+  pattern,
+  collarColor,
+  sleeveColor,
 }) => {
-  const patternId = `stripe-pattern-${squadNumber || 'default'}`;
-  
-  // Determine text color based on shirt brightness
-  const getContrastColor = (hexColor: string): string => {
-    const hex = hexColor.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? '#000000' : '#FFFFFF';
-  };
-
-  const textColor = hasStripes 
-    ? getContrastColor(shirtColor || '#16a34a')
-    : getContrastColor(shirtColor || '#16a34a');
+  const resolvedPattern: KitPattern = pattern ?? (hasStripes ? 'stripes' : 'solid');
 
   return (
-    <svg
-      viewBox="0 0 64 64"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
+    <KitShirt
       className={className}
-    >
-      {/* Define stripe pattern if needed */}
-      {hasStripes && stripeColor && (
-        <defs>
-          <pattern
-            id={patternId}
-            patternUnits="userSpaceOnUse"
-            width="8"
-            height="64"
-          >
-            <rect x="0" y="0" width="4" height="64" fill={shirtColor} />
-            <rect x="4" y="0" width="4" height="64" fill={stripeColor} />
-          </pattern>
-        </defs>
-      )}
-      
-      {/* Shirt shape */}
-      <path
-        d="
-          M18 12
-          L10 18
-          C8 20 8 24 10 26
-          L16 32
-          L16 52
-          C16 54 18 56 20 56
-          L44 56
-          C46 56 48 54 48 52
-          L48 32
-          L54 26
-          C56 24 56 20 54 18
-          L46 12
-          Z
-        "
-        fill={hasStripes && stripeColor ? `url(#${patternId})` : shirtColor}
-      />
-      
-      {/* White pill background for striped kits */}
-      {squadNumber !== undefined && hasStripes && (
-        <rect
-          x="18"
-          y="28"
-          width="28"
-          height="18"
-          rx="4"
-          fill="white"
-        />
-      )}
-      
-      {/* Squad number on shirt */}
-      {squadNumber !== undefined && (
-        <text
-          x="32"
-          y="40"
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill={hasStripes ? '#000000' : textColor}
-          fontSize="16"
-          fontWeight="bold"
-          fontFamily="Arial, sans-serif"
-        >
-          {squadNumber}
-        </text>
-      )}
-    </svg>
+      primary={shirtColor}
+      secondary={stripeColor || sleeveColor}
+      collar={collarColor}
+      pattern={resolvedPattern}
+      squadNumber={squadNumber}
+      size={size ?? 64}
+    />
   );
 };

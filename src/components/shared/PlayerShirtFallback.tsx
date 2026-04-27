@@ -1,5 +1,6 @@
 import React from 'react';
 import { KitDesign } from '@/types/team';
+import { KitShirt } from './KitShirt';
 
 interface PlayerShirtFallbackProps {
   kitDesign?: KitDesign;
@@ -9,117 +10,40 @@ interface PlayerShirtFallbackProps {
   squadNumber?: number | string;
 }
 
-export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({ 
+const SIZE_MAP: Record<NonNullable<PlayerShirtFallbackProps['size']>, number> = {
+  sm: 44,
+  md: 60,
+};
+
+/**
+ * Fallback shirt rendered when a player has no photo.
+ * Always picks the goalkeeper kit when isGoalkeeper is true and a GK kit exists.
+ */
+export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({
   kitDesign,
   goalkeeperKitDesign,
   isGoalkeeper = false,
   size = 'sm',
-  squadNumber
+  squadNumber,
 }) => {
-  const sizes = {
-    sm: { width: 40, height: 44 },
-    md: { width: 52, height: 56 }
-  };
+  const activeKit = isGoalkeeper ? (goalkeeperKitDesign || kitDesign) : kitDesign;
 
-  const { width, height } = sizes[size];
-  
-  // Use goalkeeper kit if player is GK, with fallback to main kit
-  const activeKit = isGoalkeeper 
-    ? (goalkeeperKitDesign || kitDesign) 
-    : kitDesign;
-  
-  // Default colors - goalkeeper defaults to yellow/black if no kit configured
-  const defaultShirtColor = isGoalkeeper ? '#facc15' : '#ffffff';
-  const defaultAccentColor = isGoalkeeper ? '#1a1a1a' : '#dc2626';
-  
-  const shirtColor = activeKit?.shirtColor || defaultShirtColor;
-  const accentColor = activeKit?.sleeveColor || activeKit?.stripeColor || defaultAccentColor;
-  const stripeColor = activeKit?.stripeColor || '#1a1a1a';
-  const hasStripes = activeKit?.hasStripes || false;
-
-  // Determine text color based on shirt brightness
-  const getContrastColor = (hexColor: string) => {
-    const hex = hexColor.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 128 ? '#1a1a1a' : '#ffffff';
-  };
-
-  const numberColor = getContrastColor(shirtColor);
+  // Sensible goalkeeper default when no kit is configured.
+  const fallbackPrimary = isGoalkeeper ? '#facc15' : '#ffffff';
+  const fallbackAccent = isGoalkeeper ? '#1a1a1a' : '#dc2626';
 
   return (
     <div className="flex items-center justify-center w-full h-full">
-      <svg
-        width={width}
-        height={height}
-        viewBox="0 0 100 90"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Shirt body - back view silhouette */}
-        <path
-          d="M15 25 L15 15 Q15 8 25 8 L35 8 L38 3 Q42 0 50 0 Q58 0 62 3 L65 8 L75 8 Q85 8 85 15 L85 25 L95 30 L95 42 L85 37 L85 85 Q85 88 82 88 L18 88 Q15 88 15 85 L15 37 L5 42 L5 30 L15 25 Z"
-          fill={shirtColor}
-          stroke="#1a1a1a"
-          strokeWidth="3"
-          strokeLinejoin="round"
+      {activeKit ? (
+        <KitShirt design={activeKit} squadNumber={squadNumber} size={SIZE_MAP[size]} />
+      ) : (
+        <KitShirt
+          primary={fallbackPrimary}
+          secondary={fallbackAccent}
+          squadNumber={squadNumber}
+          size={SIZE_MAP[size]}
         />
-        
-        {/* Collar accent */}
-        <path
-          d="M38 3 Q42 0 50 0 Q58 0 62 3"
-          fill="none"
-          stroke={accentColor}
-          strokeWidth="4"
-          strokeLinecap="round"
-        />
-        
-        {/* Left sleeve cuff */}
-        <rect
-          x="5"
-          y="30"
-          width="12"
-          height="5"
-          fill={accentColor}
-        />
-        
-        {/* Right sleeve cuff */}
-        <rect
-          x="83"
-          y="30"
-          width="12"
-          height="5"
-          fill={accentColor}
-        />
-        
-        {/* Vertical stripes on bottom portion */}
-        {hasStripes && (
-          <>
-            <rect x="25" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
-            <rect x="37" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
-            <rect x="57" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
-            <rect x="69" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
-          </>
-        )}
-
-        {/* Squad Number */}
-        {squadNumber && (
-          <text
-            x="50"
-            y="48"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill={numberColor}
-            fontSize="34"
-            fontWeight="bold"
-            fontFamily="Arial, sans-serif"
-          >
-            {squadNumber}
-          </text>
-        )}
-      </svg>
+      )}
     </div>
   );
 };
