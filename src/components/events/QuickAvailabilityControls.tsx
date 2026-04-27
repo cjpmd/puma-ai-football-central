@@ -28,13 +28,22 @@ interface QuickAvailabilityControlsProps {
   currentStatus?: 'pending' | 'available' | 'unavailable' | null;
   size?: 'sm' | 'md';
   onStatusChange?: (status: 'available' | 'unavailable') => void;
+  /**
+   * When the caller already knows the user has an availability record for
+   * this event in one or more roles (e.g. via `event_availability`), pass
+   * those roles here to bypass the strict `event_invitations` gate.
+   * Used by the Home dashboard to ensure buttons render even if the
+   * invitation row is missing.
+   */
+  assumedRoles?: Array<'player' | 'staff'>;
 }
 
 export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps> = ({
   eventId,
   currentStatus,
   size = 'md',
-  onStatusChange
+  onStatusChange,
+  assumedRoles
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
