@@ -70,42 +70,46 @@ export default function StaffManagementMobile() {
         setLoading(false);
         return;
       }
-      
-      const { data, error } = await supabase
-        .from('team_staff')
-        .select(`
-          id,
-          name,
-          role,
-          email,
-          phone,
-          qualifications,
-          user_id,
-          team_id,
-          pvg_checked,
-          pvg_checked_at,
-          teams:team_id(name)
-        `)
-        .in('team_id', teams.map(t => t.id))
-        .order('name');
 
-      if (error) throw error;
-      
-      const transformedStaff: StaffMember[] = (data || []).map((member: any) => ({
-        id: member.id,
-        name: member.name,
-        role: member.role || 'Staff',
-        email: member.email,
-        phone: member.phone,
-        qualifications: member.qualifications || [],
-        team_name: member.teams?.name || 'Unknown Team',
-        team_id: member.team_id,
-        user_id: member.user_id,
-        pvg_checked: member.pvg_checked || false,
-        pvg_checked_at: member.pvg_checked_at
-      }));
-      
-      setStaff(transformedStaff);
+      // Fetch consolidated staff (team_staff ∪ user_teams, suspended excluded)
+      // for each team, then merge and deduplicate.
+      const results = await Promise.all(
+        teams.map(team =>
+          supabase
+            .rpc('get_consolidated_team_staff', { p_team_id: team.id })
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map((member: any) => ({
+                id: member.id,
+                name: member.name,
+                role: member.role || 'Staff',
+                email: member.email,
+                phone: undefined as string | undefined,
+                qualifications: [],
+                team_name: team.name,
+                team_id: team.id,
+                user_id: member.user_id,
+                pvg_checked: member.pvg_checked || false,
+                pvg_checked_at: undefined as string | undefined,
+              }));
+            })
+        )
+      );
+
+      // Deduplicate across teams by id
+      const seen = new Set<string>();
+      const merged: StaffMember[] = [];
+      for (const teamResults of results) {
+        for (const member of teamResults) {
+          if (!seen.has(member.id)) {
+            seen.add(member.id);
+            merged.push(member);
+          }
+        }
+      }
+
+      merged.sort((a, b) => a.name.localeCompare(b.name));
+      setStaff(merged);
     } catch (error: any) {
       toast({
         title: 'Error',
