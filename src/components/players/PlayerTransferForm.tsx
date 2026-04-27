@@ -17,8 +17,9 @@ const transferSchema = z.object({
     comments: z.boolean(),
     objectives: z.boolean(),
     events: z.boolean(),
+    performanceHistory: z.boolean(),
   }).refine(
-    opts => opts.full || opts.attributes || opts.comments || opts.objectives || opts.events,
+    opts => opts.full || opts.attributes || opts.comments || opts.objectives || opts.events || opts.performanceHistory,
     { message: 'Please select at least one data option to transfer', path: ['_root'] }
   ),
 });
@@ -28,15 +29,16 @@ type TransferFormErrors = { toTeamId?: string; dataTransferOptions?: string };
 interface PlayerTransferFormProps {
   player: Player;
   currentTeamId: string;
-  onSubmit: (data: { 
-    toTeamId: string; 
+  onSubmit: (data: {
+    toTeamId: string;
     dataTransferOptions: {
       full: boolean;
       attributes: boolean;
       comments: boolean;
       objectives: boolean;
       events: boolean;
-    }
+      performanceHistory: boolean;
+    };
   }) => void;
   onCancel: () => void;
 }
@@ -54,7 +56,8 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
     attributes: false,
     comments: false,
     objectives: false,
-    events: false
+    events: false,
+    performanceHistory: false,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [formErrors, setFormErrors] = useState<TransferFormErrors>({});
@@ -111,39 +114,20 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
   };
 
   const handleFullToggle = (checked: boolean) => {
-    if (checked) {
-      setDataTransferOptions({
-        full: true,
-        attributes: true,
-        comments: true,
-        objectives: true,
-        events: true
-      });
-    } else {
-      setDataTransferOptions({
-        full: false,
-        attributes: false,
-        comments: false,
-        objectives: false,
-        events: false
-      });
-    }
+    setDataTransferOptions({
+      full: checked,
+      attributes: checked,
+      comments: checked,
+      objectives: checked,
+      events: checked,
+      performanceHistory: checked,
+    });
   };
 
   const handleOptionToggle = (option: keyof typeof dataTransferOptions, checked: boolean) => {
     setDataTransferOptions(prev => {
       const newOptions = { ...prev, [option]: checked };
-      // If all individual options are selected, set full to true
-      if (
-        newOptions.attributes &&
-        newOptions.comments &&
-        newOptions.objectives &&
-        newOptions.events
-      ) {
-        newOptions.full = true;
-      } else {
-        newOptions.full = false;
-      }
+      newOptions.full = newOptions.attributes && newOptions.comments && newOptions.objectives && newOptions.events && newOptions.performanceHistory;
       return newOptions;
     });
   };
@@ -230,12 +214,21 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
           </div>
           
           <div className="flex items-center space-x-2">
-            <Checkbox 
+            <Checkbox
               id="eventsTransfer"
               checked={dataTransferOptions.events}
               onCheckedChange={(checked) => handleOptionToggle('events', !!checked)}
             />
             <Label htmlFor="eventsTransfer">Match stats & events</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="performanceHistoryTransfer"
+              checked={dataTransferOptions.performanceHistory}
+              onCheckedChange={(checked) => handleOptionToggle('performanceHistory', !!checked)}
+            />
+            <Label htmlFor="performanceHistoryTransfer">Performance history (season-by-season)</Label>
           </div>
         </div>
       </div>

@@ -1,12 +1,18 @@
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Users, Trophy, Target, Calendar, BarChart3, Shield, AlertTriangle, Layers } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  TrendingUp, Users, Trophy, Target, Calendar, BarChart3,
+  Shield, AlertTriangle, Layers, ChevronLeft, ChevronRight, Info,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useClubContext } from '@/contexts/ClubContext';
+import { useTeamContext } from '@/contexts/TeamContext';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useSeasonContext, Season } from '@/hooks/useSeasonContext';
 
 interface CategoryStats {
   categoryId: string | null;
@@ -41,92 +47,58 @@ interface AnalyticsData {
   categoryStats: CategoryStats[];
 }
 
+const EMPTY_ANALYTICS: AnalyticsData = {
+  totalWins: 0, totalDraws: 0, totalLosses: 0, totalGames: 0,
+  winRate: 0, goalsScored: 0, goalsConceded: 0, goalDifference: 0,
+  avgGoalsPerGame: 0, recentResults: [], topPerformers: [],
+  totalGoals: 0, totalAssists: 0, totalSaves: 0,
+  yellowCards: 0, redCards: 0, topScorers: [], topAssisters: [], categoryStats: [],
+};
+
 export default function MyTeamMobile() {
-  const { filteredTeams } = useClubContext();
+  const { currentTeam, isLoading: teamLoading } = useTeamContext();
   const { toast } = useToast();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
-    totalWins: 0,
-    totalDraws: 0,
-    totalLosses: 0,
-    totalGames: 0,
-    winRate: 0,
-    goalsScored: 0,
-    goalsConceded: 0,
-    goalDifference: 0,
-    avgGoalsPerGame: 0,
-    recentResults: [],
-    topPerformers: [],
-    totalGoals: 0,
-    totalAssists: 0,
-    totalSaves: 0,
-    yellowCards: 0,
-    redCards: 0,
-    topScorers: [],
-    topAssisters: [],
-    categoryStats: []
-  });
-  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<AnalyticsData>(EMPTY_ANALYTICS);
+  const [loading, setLoading] = useState(false);
+  const [showSeasonList, setShowSeasonList] = useState(false);
 
-  useEffect(() => {
-    if (filteredTeams.length > 0) {
-      const isCurrentValid = filteredTeams.some(t => t.id === selectedTeamId);
-      if (!isCurrentValid) {
-        setSelectedTeamId(filteredTeams[0].id);
-      }
-    } else {
-      setSelectedTeamId('');
-    }
-  }, [filteredTeams]);
+  const {
+    allSeasons,
+    seasonState,
+    selectedSeason,
+    setSelectedSeason,
+    nextSeasonStart,
+  } = useSeasonContext(currentTeam?.seasonStart, currentTeam?.seasonEnd);
 
-  const currentTeam = filteredTeams.find(t => t.id === selectedTeamId);
+  // Season navigator helpers
+  const selectedIndex = allSeasons.findIndex(s => s.label === selectedSeason?.label);
+  const canGoPrev = selectedIndex > 0;
+  const canGoNext = selectedIndex < allSeasons.length - 1;
 
-  useEffect(() => {
-    if (currentTeam) {
-      loadAnalyticsData();
-    }
-  }, [currentTeam]);
-
-  const loadAnalyticsData = async () => {
-    if (!currentTeam) return;
+  const loadAnalyticsData = useCallback(async () => {
+    if (!currentTeam || !selectedSeason) return;
+    setLoading(true);
 
     try {
-      // Build query with season filter if available
       let eventsQuery = supabase
         .from('events')
         .select('*')
         .eq('team_id', currentTeam.id)
         .not('scores', 'is', null)
-        .lt('date', new Date().toISOString().split('T')[0]);
-      
-      // Filter by season if available
-      if (currentTeam.season_start) {
-        eventsQuery = eventsQuery.gte('date', currentTeam.season_start);
-      }
-      if (currentTeam.season_end) {
-        eventsQuery = eventsQuery.lte('date', currentTeam.season_end);
-      }
-      
+        .lt('date', new Date().toISOString().split('T')[0])
+        .gte('date', selectedSeason.start)
+        .lte('date', selectedSeason.end);
+
       const { data: events } = await eventsQuery.order('date', { ascending: false });
 
-      if (!events) {
-        setLoading(false);
-        return;
-      }
+      if (!events) { setLoading(false); return; }
 
-      // Fetch performance categories for this team's events
       const eventIds = events.map(e => e.id);
       const { data: eventSelections } = await supabase
         .from('event_selections')
-        .select(`
-          event_id,
-          team_number,
-          performance_category_id,
-          performance_categories(id, name)
-        `)
-        .in('event_id', eventIds);
+        .select('event_id, team_number, performance_category_id, performance_categories(id, name)')
+        .in('event_id', eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000']);
 
-      // Build a map of event_id -> category info
       const eventCategoryMap = new Map<string, { categoryId: string | null; categoryName: string; teamNumber: number }[]>();
       eventSelections?.forEach(sel => {
         const existing = eventCategoryMap.get(sel.event_id) || [];
@@ -134,41 +106,25 @@ export default function MyTeamMobile() {
         existing.push({
           categoryId: sel.performance_category_id,
           categoryName: cat?.name || 'Team ' + sel.team_number,
-          teamNumber: sel.team_number || 1
+          teamNumber: sel.team_number || 1,
         });
         eventCategoryMap.set(sel.event_id, existing);
       });
 
-      let wins = 0;
-      let draws = 0;
-      let losses = 0;
-      let goalsFor = 0;
-      let goalsAgainst = 0;
-      
-      // Category stats tracking
+      let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
       const categoryStatsMap = new Map<string, CategoryStats>();
 
       events.forEach(event => {
         const scores = event.scores as any;
         if (!scores) return;
-
-        // Get categories for this event
         const categories = eventCategoryMap.get(event.id) || [{ categoryId: null, categoryName: 'Default', teamNumber: 1 }];
-        
-        // Process each team/category in the event
         const processedTeamNumbers = new Set<number>();
-        
         categories.forEach(cat => {
           if (processedTeamNumbers.has(cat.teamNumber)) return;
           processedTeamNumbers.add(cat.teamNumber);
-          
-          let ourScore = 0;
-          let opponentScore = 0;
-          
-          // Parse scores as integers (FIX: was concatenating strings!)
+          let ourScore = 0, opponentScore = 0;
           const teamKey = `team_${cat.teamNumber}`;
           const opponentKey = `opponent_${cat.teamNumber}`;
-          
           if (scores[teamKey] !== undefined && scores[opponentKey] !== undefined) {
             ourScore = parseInt(String(scores[teamKey]), 10) || 0;
             opponentScore = parseInt(String(scores[opponentKey]), 10) || 0;
@@ -176,32 +132,17 @@ export default function MyTeamMobile() {
             ourScore = parseInt(String(event.is_home ? scores.home : scores.away), 10) || 0;
             opponentScore = parseInt(String(event.is_home ? scores.away : scores.home), 10) || 0;
           }
-
           goalsFor += ourScore;
           goalsAgainst += opponentScore;
-
           if (ourScore > opponentScore) wins++;
           else if (ourScore < opponentScore) losses++;
           else draws++;
-          
-          // Track by category
           const catKey = cat.categoryId || cat.categoryName;
           if (!categoryStatsMap.has(catKey)) {
-            categoryStatsMap.set(catKey, {
-              categoryId: cat.categoryId,
-              categoryName: cat.categoryName,
-              wins: 0,
-              draws: 0,
-              losses: 0,
-              goalsFor: 0,
-              goalsAgainst: 0,
-              totalGames: 0
-            });
+            categoryStatsMap.set(catKey, { categoryId: cat.categoryId, categoryName: cat.categoryName, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, totalGames: 0 });
           }
           const catStats = categoryStatsMap.get(catKey)!;
-          catStats.goalsFor += ourScore;
-          catStats.goalsAgainst += opponentScore;
-          catStats.totalGames++;
+          catStats.goalsFor += ourScore; catStats.goalsAgainst += opponentScore; catStats.totalGames++;
           if (ourScore > opponentScore) catStats.wins++;
           else if (ourScore < opponentScore) catStats.losses++;
           else catStats.draws++;
@@ -210,41 +151,23 @@ export default function MyTeamMobile() {
 
       const totalGames = wins + draws + losses;
       const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-      const goalDifference = goalsFor - goalsAgainst;
-      const avgGoalsPerGame = totalGames > 0 ? Math.round((goalsFor / totalGames) * 10) / 10 : 0;
 
       const { data: playerStats } = await supabase
         .from('event_player_stats')
-        .select(`
-          player_id,
-          players!inner(name),
-          event_id,
-          minutes_played,
-          is_captain
-        `)
+        .select('player_id, players!inner(name), event_id, minutes_played, is_captain')
         .eq('players.team_id', currentTeam.id)
         .gt('minutes_played', 0);
 
-      const playerMap = new Map();
+      const playerMap = new Map<string, { name: string; appearances: number; totalMinutes: number; captainGames: number }>();
       playerStats?.forEach(stat => {
-        const playerId = stat.player_id;
-        if (!playerMap.has(playerId)) {
-          playerMap.set(playerId, {
-            name: (stat.players as any).name,
-            appearances: 0,
-            totalMinutes: 0,
-            captainGames: 0
-          });
+        const pid = stat.player_id;
+        if (!playerMap.has(pid)) {
+          playerMap.set(pid, { name: (stat.players as any).name, appearances: 0, totalMinutes: 0, captainGames: 0 });
         }
-        const player = playerMap.get(playerId);
-        player.appearances++;
-        player.totalMinutes += stat.minutes_played;
-        if (stat.is_captain) player.captainGames++;
+        const p = playerMap.get(pid)!;
+        p.appearances++; p.totalMinutes += stat.minutes_played;
+        if (stat.is_captain) p.captainGames++;
       });
-
-      const topPerformers = Array.from(playerMap.values())
-        .sort((a, b) => b.appearances - a.appearances)
-        .slice(0, 3);
 
       const { data: players } = await supabase
         .from('players')
@@ -252,116 +175,62 @@ export default function MyTeamMobile() {
         .eq('team_id', currentTeam.id)
         .eq('status', 'active');
 
-      const totalGoals = players?.reduce((sum, p) => {
-        const stats = p.match_stats as any;
-        return sum + (stats?.totalGoals || 0);
-      }, 0) || 0;
-      
-      const totalAssists = players?.reduce((sum, p) => {
-        const stats = p.match_stats as any;
-        return sum + (stats?.totalAssists || 0);
-      }, 0) || 0;
-      
-      const totalSaves = players?.reduce((sum, p) => {
-        const stats = p.match_stats as any;
-        return sum + (stats?.totalSaves || 0);
-      }, 0) || 0;
-      
-      const yellowCards = players?.reduce((sum, p) => {
-        const stats = p.match_stats as any;
-        return sum + (stats?.yellowCards || 0);
-      }, 0) || 0;
-      
-      const redCards = players?.reduce((sum, p) => {
-        const stats = p.match_stats as any;
-        return sum + (stats?.redCards || 0);
-      }, 0) || 0;
-
-      const topScorers = [...(players || [])]
-        .filter(p => {
-          const stats = p.match_stats as any;
-          return (stats?.totalGoals || 0) > 0;
-        })
-        .sort((a, b) => {
-          const aStats = a.match_stats as any;
-          const bStats = b.match_stats as any;
-          return (bStats?.totalGoals || 0) - (aStats?.totalGoals || 0);
-        })
-        .slice(0, 3);
-
-      const topAssisters = [...(players || [])]
-        .filter(p => {
-          const stats = p.match_stats as any;
-          return (stats?.totalAssists || 0) > 0;
-        })
-        .sort((a, b) => {
-          const aStats = a.match_stats as any;
-          const bStats = b.match_stats as any;
-          return (bStats?.totalAssists || 0) - (aStats?.totalAssists || 0);
-        })
-        .slice(0, 3);
-
-      // Convert category stats map to array
-      const categoryStats = Array.from(categoryStatsMap.values())
-        .filter(c => c.totalGames > 0)
-        .sort((a, b) => b.totalGames - a.totalGames);
+      const sumStat = (key: string) => players?.reduce((s, p) => s + ((p.match_stats as any)?.[key] || 0), 0) || 0;
 
       setAnalytics({
-        totalWins: wins,
-        totalDraws: draws,
-        totalLosses: losses,
-        totalGames,
+        totalWins: wins, totalDraws: draws, totalLosses: losses, totalGames,
         winRate,
-        goalsScored: goalsFor,
-        goalsConceded: goalsAgainst,
-        goalDifference,
-        avgGoalsPerGame,
+        goalsScored: goalsFor, goalsConceded: goalsAgainst,
+        goalDifference: goalsFor - goalsAgainst,
+        avgGoalsPerGame: totalGames > 0 ? Math.round((goalsFor / totalGames) * 10) / 10 : 0,
         recentResults: events.slice(0, 5),
-        topPerformers,
-        totalGoals,
-        totalAssists,
-        totalSaves,
-        yellowCards,
-        redCards,
-        topScorers,
-        topAssisters,
-        categoryStats
+        topPerformers: Array.from(playerMap.values()).sort((a, b) => b.appearances - a.appearances).slice(0, 3),
+        totalGoals: sumStat('totalGoals'),
+        totalAssists: sumStat('totalAssists'),
+        totalSaves: sumStat('totalSaves'),
+        yellowCards: sumStat('yellowCards'),
+        redCards: sumStat('redCards'),
+        topScorers: [...(players || [])]
+          .filter(p => (p.match_stats as any)?.totalGoals > 0)
+          .sort((a, b) => ((b.match_stats as any)?.totalGoals || 0) - ((a.match_stats as any)?.totalGoals || 0))
+          .slice(0, 3),
+        topAssisters: [...(players || [])]
+          .filter(p => (p.match_stats as any)?.totalAssists > 0)
+          .sort((a, b) => ((b.match_stats as any)?.totalAssists || 0) - ((a.match_stats as any)?.totalAssists || 0))
+          .slice(0, 3),
+        categoryStats: Array.from(categoryStatsMap.values()).filter(c => c.totalGames > 0).sort((a, b) => b.totalGames - a.totalGames),
       });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load analytics data',
-        variant: 'destructive',
-      });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to load analytics data', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTeam?.id, selectedSeason?.start, selectedSeason?.end]);
 
-  const getResultBadge = (event: any, teamNumber: number = 1) => {
+  useEffect(() => {
+    if (currentTeam && selectedSeason) {
+      loadAnalyticsData();
+    }
+  }, [loadAnalyticsData]);
+
+  const getResultBadge = (event: any, teamNumber = 1) => {
     const scores = event.scores as any;
     if (!scores) return null;
-
-    let ourScore = 0;
-    let opponentScore = 0;
-    
-    const teamKey = `team_${teamNumber}`;
-    const opponentKey = `opponent_${teamNumber}`;
-
-    if (scores[teamKey] !== undefined && scores[opponentKey] !== undefined) {
-      ourScore = parseInt(String(scores[teamKey]), 10) || 0;
-      opponentScore = parseInt(String(scores[opponentKey]), 10) || 0;
+    let ourScore = 0, opponentScore = 0;
+    const tk = `team_${teamNumber}`, ok = `opponent_${teamNumber}`;
+    if (scores[tk] !== undefined && scores[ok] !== undefined) {
+      ourScore = parseInt(String(scores[tk]), 10) || 0;
+      opponentScore = parseInt(String(scores[ok]), 10) || 0;
     } else if (scores.home !== undefined && scores.away !== undefined) {
       ourScore = parseInt(String(event.is_home ? scores.home : scores.away), 10) || 0;
       opponentScore = parseInt(String(event.is_home ? scores.away : scores.home), 10) || 0;
     }
-
     if (ourScore > opponentScore) return { text: 'Win', color: 'bg-green-500', ourScore, opponentScore };
     if (ourScore < opponentScore) return { text: 'Loss', color: 'bg-destructive', ourScore, opponentScore };
     return { text: 'Draw', color: 'bg-muted-foreground', ourScore, opponentScore };
   };
 
-  if (loading) {
+  if (teamLoading) {
     return (
       <MobileLayout>
         <div className="flex items-center justify-center h-64">
@@ -371,303 +240,376 @@ export default function MyTeamMobile() {
     );
   }
 
+  if (!currentTeam) {
+    return (
+      <MobileLayout>
+        <div className="flex items-center justify-center h-64 text-white/60">
+          No team selected
+        </div>
+      </MobileLayout>
+    );
+  }
+
   return (
     <MobileLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center gap-2">
           <BarChart3 className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-bold">Team Analytics</h1>
         </div>
 
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="touch-manipulation">
-            <CardContent className="p-3 text-center">
-              <Calendar className="h-6 w-6 mx-auto mb-1 text-primary" />
-              <div className="text-2xl font-bold">{analytics.totalGames}</div>
-              <div className="text-xs text-white/60">Games</div>
-            </CardContent>
-          </Card>
-          <Card className="touch-manipulation">
-            <CardContent className="p-3 text-center">
-              <Trophy className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
-              <div className="text-2xl font-bold">{analytics.totalWins}</div>
-              <div className="text-xs text-white/60">Wins</div>
-            </CardContent>
-          </Card>
-          <Card className="touch-manipulation">
-            <CardContent className="p-3 text-center">
-              <Target className="h-6 w-6 mx-auto mb-1 text-green-600" />
-              <div className="text-2xl font-bold">{analytics.winRate}%</div>
-              <div className="text-xs text-white/60">Win Rate</div>
-            </CardContent>
-          </Card>
-          <Card className="touch-manipulation">
-            <CardContent className="p-3 text-center">
-              <TrendingUp className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-              <div className="text-2xl font-bold">{analytics.goalDifference >= 0 ? '+' : ''}{analytics.goalDifference}</div>
-              <div className="text-xs text-white/60">Goal Diff</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* W-D-L Record */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">Season Record</div>
-              <div className="flex gap-2 text-sm">
-                <span className="text-green-600 font-semibold">W{analytics.totalWins}</span>
-                <span className="text-white/60 font-semibold">D{analytics.totalDraws}</span>
-                <span className="text-destructive font-semibold">L{analytics.totalLosses}</span>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center justify-between text-sm text-white/60">
-              <span>Avg Goals/Game: {analytics.avgGoalsPerGame}</span>
-              <span>Points: {analytics.totalWins * 3 + analytics.totalDraws}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Performance Category Breakdown */}
-        {analytics.categoryStats.length > 1 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Layers className="h-5 w-5 mr-2" />
-                By Performance Category
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {analytics.categoryStats.map((cat, index) => (
-                <div key={index} className="p-3 bg-muted/50 rounded-lg">
-                  <div className="font-medium mb-2">{cat.categoryName}</div>
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex gap-2">
-                      <span className="text-green-600 font-semibold">W{cat.wins}</span>
-                      <span className="text-white/60 font-semibold">D{cat.draws}</span>
-                      <span className="text-destructive font-semibold">L{cat.losses}</span>
-                    </div>
-                    <div className="flex gap-3 text-white/60">
-                      <span>GF: {cat.goalsFor}</span>
-                      <span>GA: {cat.goalsAgainst}</span>
-                      <span className={cat.goalsFor - cat.goalsAgainst >= 0 ? 'text-green-600' : 'text-destructive'}>
-                        {cat.goalsFor - cat.goalsAgainst >= 0 ? '+' : ''}{cat.goalsFor - cat.goalsAgainst}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+        {/* Off-season banner */}
+        {seasonState === 'OFF_SEASON' && nextSeasonStart && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 text-sm text-white/50"
+               style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <Info className="h-4 w-4 shrink-0" />
+            <span>
+              Off Season — next season starts {format(new Date(nextSeasonStart), 'd MMM yyyy')}
+            </span>
+          </div>
         )}
 
-        {/* Match Events Stats */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <Target className="h-5 w-5 mr-2" />
-              Match Events
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Season selector */}
+        {allSeasons.length > 0 && (
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={() => setSelectedSeason(allSeasons[selectedIndex - 1])}
+              disabled={!canGoPrev}
+              className="p-1.5 rounded-full transition-opacity disabled:opacity-25"
+              style={{ color: '#b89fff' }}
+              aria-label="Previous season"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={() => setShowSeasonList(true)}
+              className="px-4 py-1.5 rounded-full text-sm font-semibold transition-colors"
+              style={{
+                background: 'rgba(184,159,255,0.15)',
+                border: '1px solid rgba(184,159,255,0.35)',
+                color: '#b89fff',
+              }}
+            >
+              {selectedSeason?.label ?? '—'}
+            </button>
+
+            <button
+              onClick={() => setSelectedSeason(allSeasons[selectedIndex + 1])}
+              disabled={!canGoNext}
+              className="p-1.5 rounded-full transition-opacity disabled:opacity-25"
+              style={{ color: '#b89fff' }}
+              aria-label="Next season"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center h-48">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : (
+          <>
+            {/* Key Metrics Grid */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                <Target className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-                <div className="text-xl font-bold">{analytics.totalGoals}</div>
-                <div className="text-xs text-white/60">Goals</div>
-              </div>
-              <div className="text-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-                <Target className="h-6 w-6 mx-auto mb-1 text-green-600" />
-                <div className="text-xl font-bold">{analytics.totalAssists}</div>
-                <div className="text-xs text-white/60">Assists</div>
-              </div>
-              <div className="text-center p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                <Shield className="h-6 w-6 mx-auto mb-1 text-purple-600" />
-                <div className="text-xl font-bold">{analytics.totalSaves}</div>
-                <div className="text-xs text-white/60">Saves</div>
-              </div>
-              <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-                <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
-                <div className="text-xl font-bold">{analytics.yellowCards}</div>
-                <div className="text-xs text-white/60">Yellow Cards</div>
-              </div>
+              {[
+                { icon: <Calendar className="h-6 w-6 text-[#b89fff]" />, value: analytics.totalGames, label: 'Games' },
+                { icon: <Trophy className="h-6 w-6 text-amber-400" />, value: analytics.totalWins, label: 'Wins' },
+                { icon: <Target className="h-6 w-6 text-teal-400" />, value: `${analytics.winRate}%`, label: 'Win Rate' },
+                { icon: <TrendingUp className="h-6 w-6 text-[#b89fff]" />, value: `${analytics.goalDifference >= 0 ? '+' : ''}${analytics.goalDifference}`, label: 'Goal Diff' },
+              ].map(({ icon, value, label }) => (
+                <div
+                  key={label}
+                  className="rounded-xl p-3 text-center"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.12)' }}
+                >
+                  <div className="flex justify-center mb-1">{icon}</div>
+                  <div className="text-2xl font-bold">{value}</div>
+                  <div className="text-xs text-white/50">{label}</div>
+                </div>
+              ))}
             </div>
-            {analytics.redCards > 0 && (
-              <div className="mt-3 text-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
-                <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-red-600" />
-                <div className="text-xl font-bold text-red-600">{analytics.redCards}</div>
-                <div className="text-xs text-white/60">Red Cards</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Team Performance */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <BarChart3 className="h-5 w-5 mr-2" />
-              Team Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Goals Scored</span>
-                <Badge className="bg-green-500">{analytics.goalsScored}</Badge>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-green-500 h-2 rounded-full" 
-                  style={{ width: analytics.goalsScored > 0 ? `${Math.min((analytics.goalsScored / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
-                ></div>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Goals Conceded</span>
-                <Badge variant="destructive">{analytics.goalsConceded}</Badge>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-red-500 h-2 rounded-full" 
-                  style={{ width: analytics.goalsConceded > 0 ? `${Math.min((analytics.goalsConceded / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
-                ></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {/* W-D-L Record */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">Season Record</div>
+                  <div className="flex gap-2 text-sm">
+                    <span className="text-green-400 font-semibold">W{analytics.totalWins}</span>
+                    <span className="text-white/50 font-semibold">D{analytics.totalDraws}</span>
+                    <span className="text-red-400 font-semibold">L{analytics.totalLosses}</span>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-sm text-white/50">
+                  <span>Avg Goals/Game: {analytics.avgGoalsPerGame}</span>
+                  <span>Points: {analytics.totalWins * 3 + analytics.totalDraws}</span>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Recent Results */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Recent Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {analytics.recentResults.length > 0 ? (
-              analytics.recentResults.map((event) => {
-                const result = getResultBadge(event, 1);
-
-                return (
-                  <div key={event.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <div className="font-medium">vs {event.opponent || 'Unknown'}</div>
-                      <div className="text-sm text-white/60">
-                        {new Date(event.date).toLocaleDateString()}
+            {/* Performance Category Breakdown */}
+            {analytics.categoryStats.length > 1 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center">
+                    <Layers className="h-5 w-5 mr-2" />
+                    By Performance Category
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analytics.categoryStats.map((cat, i) => (
+                    <div key={i} className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                      <div className="font-medium mb-2">{cat.categoryName}</div>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex gap-2">
+                          <span className="text-green-400 font-semibold">W{cat.wins}</span>
+                          <span className="text-white/50 font-semibold">D{cat.draws}</span>
+                          <span className="text-red-400 font-semibold">L{cat.losses}</span>
+                        </div>
+                        <div className="flex gap-3 text-white/50">
+                          <span>GF: {cat.goalsFor}</span>
+                          <span>GA: {cat.goalsAgainst}</span>
+                          <span className={cat.goalsFor - cat.goalsAgainst >= 0 ? 'text-green-400' : 'text-red-400'}>
+                            {cat.goalsFor - cat.goalsAgainst >= 0 ? '+' : ''}{cat.goalsFor - cat.goalsAgainst}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Match Events */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center">
+                  <Target className="h-5 w-5 mr-2" />
+                  Match Events
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { icon: <Target className="h-6 w-6 text-[#b89fff]" />, value: analytics.totalGoals, label: 'Goals' },
+                    { icon: <Target className="h-6 w-6 text-teal-400" />, value: analytics.totalAssists, label: 'Assists' },
+                    { icon: <Shield className="h-6 w-6 text-[#b89fff]" />, value: analytics.totalSaves, label: 'Saves' },
+                    { icon: <AlertTriangle className="h-6 w-6 text-amber-400" />, value: analytics.yellowCards, label: 'Yellow Cards' },
+                  ].map(({ icon, value, label }) => (
+                    <div
+                      key={label}
+                      className="text-center p-3 rounded-lg"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <div className="flex justify-center mb-1">{icon}</div>
+                      <div className="text-xl font-bold">{value}</div>
+                      <div className="text-xs text-white/50">{label}</div>
+                    </div>
+                  ))}
+                </div>
+                {analytics.redCards > 0 && (
+                  <div
+                    className="mt-3 text-center p-3 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}
+                  >
+                    <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-red-400" />
+                    <div className="text-xl font-bold text-red-400">{analytics.redCards}</div>
+                    <div className="text-xs text-white/50">Red Cards</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Team Performance */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2" />
+                  Team Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Goals Scored</span>
+                    <Badge className="bg-green-500">{analytics.goalsScored}</Badge>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ width: analytics.goalsScored > 0 ? `${Math.min((analytics.goalsScored / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Goals Conceded</span>
+                    <Badge variant="destructive">{analytics.goalsConceded}</Badge>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-2">
+                    <div
+                      className="bg-red-500 h-2 rounded-full"
+                      style={{ width: analytics.goalsConceded > 0 ? `${Math.min((analytics.goalsConceded / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Results */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Recent Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {analytics.recentResults.length > 0 ? analytics.recentResults.map((event) => {
+                  const result = getResultBadge(event, 1);
+                  return (
+                    <div key={event.id} className="flex items-center justify-between p-3 rounded-lg"
+                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                      <div>
+                        <div className="font-medium">vs {event.opponent || 'Unknown'}</div>
+                        <div className="text-sm text-white/50">
+                          {new Date(event.date).toLocaleDateString()}
+                        </div>
+                      </div>
                       {result && (
-                        <>
+                        <div className="text-right">
                           <div className="font-bold">{result.ourScore}-{result.opponentScore}</div>
-                          <Badge className={`text-white text-xs ${result.color}`}>
-                            {result.text}
-                          </Badge>
-                        </>
+                          <Badge className={`text-white text-xs ${result.color}`}>{result.text}</Badge>
+                        </div>
                       )}
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-white/60 text-center py-4">No recent results</p>
+                  );
+                }) : (
+                  <p className="text-white/50 text-center py-4">No results in this period</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Scorers */}
+            {analytics.topScorers.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center">
+                    <Target className="h-5 w-5 mr-2" />
+                    Top Scorers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analytics.topScorers.map((player, i) => {
+                    const stats = player.match_stats as any;
+                    return (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg"
+                           style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                        <div>
+                          <div className="font-medium">{player.name}</div>
+                          <div className="text-sm text-white/50">{stats?.totalGames || 0} games</div>
+                        </div>
+                        <Badge style={{ background: 'rgba(184,159,255,0.2)', color: '#b89fff', border: '1px solid rgba(184,159,255,0.4)' }}>
+                          {stats?.totalGoals || 0} goals
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Top Scorers */}
-        {analytics.topScorers.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Target className="h-5 w-5 mr-2" />
-                Top Scorers
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {analytics.topScorers.map((player, index) => {
-                const stats = player.match_stats as any;
-                return (
-                  <div key={index} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                    <div>
-                      <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-white/60">
-                        {stats?.totalGames || 0} games
+            {/* Top Assisters */}
+            {analytics.topAssisters.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center">
+                    <Target className="h-5 w-5 mr-2" />
+                    Top Assisters
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analytics.topAssisters.map((player, i) => {
+                    const stats = player.match_stats as any;
+                    return (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg"
+                           style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                        <div>
+                          <div className="font-medium">{player.name}</div>
+                          <div className="text-sm text-white/50">{stats?.totalGames || 0} games</div>
+                        </div>
+                        <Badge style={{ background: 'rgba(45,212,191,0.15)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.35)' }}>
+                          {stats?.totalAssists || 0} assists
+                        </Badge>
                       </div>
-                    </div>
-                    <Badge className="bg-blue-500">
-                      {stats?.totalGoals || 0} goals
-                    </Badge>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Top Assisters */}
-        {analytics.topAssisters.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Target className="h-5 w-5 mr-2" />
-                Top Assisters
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {analytics.topAssisters.map((player, index) => {
-                const stats = player.match_stats as any;
-                return (
-                  <div key={index} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-                    <div>
-                      <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-white/60">
-                        {stats?.totalGames || 0} games
+            {/* Most Appearances */}
+            {analytics.topPerformers.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    Most Appearances
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analytics.topPerformers.map((player, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg"
+                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                      <div>
+                        <div className="font-medium">{player.name}</div>
+                        <div className="text-sm text-white/50">{player.totalMinutes} minutes played</div>
                       </div>
+                      <Badge variant="secondary">{player.appearances} games</Badge>
                     </div>
-                    <Badge className="bg-green-500">
-                      {stats?.totalAssists || 0} assists
-                    </Badge>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Top Performers */}
-        {analytics.topPerformers.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Users className="h-5 w-5 mr-2" />
-                Most Appearances
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {analytics.topPerformers.map((player, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-white/60">
-                      {player.totalMinutes} minutes played
-                    </div>
-                  </div>
-                  <Badge variant="secondary">
-                    {player.appearances} games
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
+
+      {/* Season history bottom sheet */}
+      <Dialog open={showSeasonList} onOpenChange={setShowSeasonList}>
+        <DialogContent className="max-sm:bottom-0 max-sm:top-auto max-sm:translate-y-0 max-sm:left-0 max-sm:translate-x-0 max-sm:w-screen max-sm:max-w-none max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:pb-[max(env(safe-area-inset-bottom),1.5rem)]">
+          <DialogHeader>
+            <DialogTitle>Season History</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-2">
+            {[...allSeasons].reverse().map((season) => {
+              const isSelected = season.label === selectedSeason?.label;
+              return (
+                <button
+                  key={season.label}
+                  onClick={() => { setSelectedSeason(season); setShowSeasonList(false); }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-colors"
+                  style={{
+                    background: isSelected ? 'rgba(184,159,255,0.15)' : 'rgba(255,255,255,0.05)',
+                    border: isSelected ? '1px solid rgba(184,159,255,0.4)' : '0.5px solid rgba(255,255,255,0.08)',
+                    color: isSelected ? '#b89fff' : 'inherit',
+                  }}
+                >
+                  <span className="font-medium">{season.label}</span>
+                  {isSelected && <span className="text-xs opacity-70">Selected</span>}
+                  {season.type === 'off_season' && !isSelected && (
+                    <span className="text-xs text-white/40">Off Season</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </MobileLayout>
   );
 }
