@@ -36,16 +36,18 @@ interface EventFormProps {
   teamId?: string;
   onSubmit?: (eventData: any) => void;
   onCancel?: () => void;
+  onFormChange?: () => void;
 }
 
-export const EventForm: React.FC<EventFormProps> = ({ 
-  onEventCreated, 
-  initialData, 
+export const EventForm: React.FC<EventFormProps> = ({
+  onEventCreated,
+  initialData,
   isEditing = false,
   event,
   teamId,
   onSubmit,
-  onCancel 
+  onCancel,
+  onFormChange,
 }) => {
   const { teams, user } = useAuth();
   
@@ -154,7 +156,7 @@ export const EventForm: React.FC<EventFormProps> = ({
   useEffect(() => {
     if (eventData) {
       const eventDate = eventData.date || '';
-      setFormData({
+      const populated = {
         title: eventData.title || '',
         date: eventDate,
         start_time: eventData.startTime || eventData.start_time || '',
@@ -172,15 +174,16 @@ export const EventForm: React.FC<EventFormProps> = ({
         facility_id: eventData.facilityId || eventData.facility_id || '',
         num_teams: eventData.num_teams || 1,
         meeting_time: eventData.meetingTime || eventData.meeting_time || '',
-        // Recurring fields (these don't load from existing events since recurring creates separate events)
         is_recurring: false,
-        recurrence_pattern: 'weekly',
+        recurrence_pattern: 'weekly' as 'weekly' | 'biweekly' | 'monthly',
         recurrence_day_of_week: eventDate ? getDay(new Date(eventDate)) : 0,
-        recurrence_end_type: 'occurrences',
+        recurrence_end_type: 'occurrences' as 'occurrences' | 'date',
         recurrence_occurrences: 10,
         recurrence_end_date: '',
-      });
-      
+      };
+      loadedSnapshotRef.current = JSON.stringify(populated);
+      setFormData(populated);
+
       // Load team-specific times if editing
       if (eventData?.id && actualIsEditing) {
         loadTeamTimes(eventData.id);
@@ -194,6 +197,18 @@ export const EventForm: React.FC<EventFormProps> = ({
       loadFacilities();
     }
   }, [formData.team_id]);
+
+  // Track user-driven formData changes. We snapshot the data loaded from eventData so we
+  // can ignore that initial population and only fire onFormChange for real user edits.
+  const loadedSnapshotRef = React.useRef<string>('');
+  useEffect(() => {
+    if (!onFormChange) return;
+    const current = JSON.stringify(formData);
+    if (current === loadedSnapshotRef.current) return;
+    // Skip if no snapshot yet (form not yet populated)
+    if (!loadedSnapshotRef.current) return;
+    onFormChange();
+  }, [formData]);
 
   const loadPerformanceCategories = async () => {
     try {

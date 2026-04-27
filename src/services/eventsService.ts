@@ -515,16 +515,65 @@ export const eventsService = {
         training_notes: eventData.trainingNotes
       };
       
+      console.log('[eventsService.updateEvent] Saving event id:', eventData.id, 'payload:', formattedData);
+
       const { data, error } = await supabase
         .from('events')
         .update(formattedData)
         .eq('id', eventData.id)
         .select()
         .single();
-        
-      if (error) throw error;
-      
+
+      if (error) {
+        console.error('[eventsService.updateEvent] Supabase error:', error);
+        throw error;
+      }
+
       logger.log('Event updated successfully:', data);
+      console.log('[eventsService.updateEvent] events table update OK:', data?.id);
+
+      // Sync event_teams for per-team KO and meeting times.
+      // The EventTeamTimesDisplay reads from event_teams, so this must stay in sync.
+      if (Array.isArray(eventData.teams) && eventData.teams.length > 0) {
+        // Multi-team: replace all rows
+        await supabase.from('event_teams').delete().eq('event_id', eventData.id);
+        const teamRows = (eventData.teams as any[]).map((team: any, idx: number) => ({
+          event_id: eventData.id,
+          team_id: team.id || eventData.teamId,
+          team_number: idx + 1,
+          start_time: team.start_time || null,
+          meeting_time: team.meeting_time || null,
+        }));
+        const { error: etError } = await supabase.from('event_teams').insert(teamRows);
+        if (etError) console.error('[eventsService.updateEvent] event_teams insert error:', etError);
+        else console.log('[eventsService.updateEvent] event_teams synced for', teamRows.length, 'teams');
+      } else {
+        // Single-team: upsert one row
+        const { data: existing } = await supabase
+          .from('event_teams')
+          .select('id')
+          .eq('event_id', eventData.id)
+          .eq('team_number', 1)
+          .maybeSingle();
+        if (existing) {
+          const { error: etError } = await supabase
+            .from('event_teams')
+            .update({ start_time: formattedData.start_time, meeting_time: formattedData.meeting_time })
+            .eq('event_id', eventData.id)
+            .eq('team_number', 1);
+          if (etError) console.error('[eventsService.updateEvent] event_teams update error:', etError);
+        } else if (eventData.teamId) {
+          const { error: etError } = await supabase.from('event_teams').insert({
+            event_id: eventData.id,
+            team_id: eventData.teamId,
+            team_number: 1,
+            start_time: formattedData.start_time,
+            meeting_time: formattedData.meeting_time,
+          });
+          if (etError) console.error('[eventsService.updateEvent] event_teams insert error:', etError);
+        }
+        console.log('[eventsService.updateEvent] event_teams single-team synced');
+      }
 
       // Handle invitations update if provided
       if (invitations) {
