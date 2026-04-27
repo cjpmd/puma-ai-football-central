@@ -18,9 +18,11 @@ export interface SeasonContextResult {
   nextSeasonStart: string | null;
 }
 
-function formatSeasonLabel(startDateStr: string): string {
+function formatSeasonLabel(startDateStr: string, endDateStr: string): string {
   const startYear = new Date(startDateStr).getFullYear();
-  return `${startYear}/${String(startYear + 1).slice(-2)} Season`;
+  const endYear = new Date(endDateStr).getFullYear();
+  if (startYear === endYear) return `${startYear} Season`;
+  return `${startYear}/${String(endYear).slice(-2)} Season`;
 }
 
 function shiftYears(dateStr: string, years: number): string {
@@ -42,7 +44,7 @@ function buildAllSeasons(baseStart: string, baseEnd: string, today: string): Sea
   for (let i = YEARS_BACK; i >= 1; i--) {
     const start = shiftYears(baseStart, -i);
     const end = shiftYears(baseEnd, -i);
-    result.push({ label: formatSeasonLabel(start), start, end, type: 'season' });
+    result.push({ label: formatSeasonLabel(start, end), start, end, type: 'season' });
 
     // Off-season between this season and the next one
     const nextStart = shiftYears(baseStart, -(i - 1)); // baseStart when i===1
@@ -59,7 +61,7 @@ function buildAllSeasons(baseStart: string, baseEnd: string, today: string): Sea
   }
 
   // Current defined season
-  result.push({ label: formatSeasonLabel(baseStart), start: baseStart, end: baseEnd, type: 'season' });
+  result.push({ label: formatSeasonLabel(baseStart, baseEnd), start: baseStart, end: baseEnd, type: 'season' });
 
   // If today is after the current season, add the current off-season period
   if (today > baseEnd) {
