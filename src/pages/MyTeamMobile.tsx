@@ -61,6 +61,7 @@ export default function MyTeamMobile() {
   const [analytics, setAnalytics] = useState<AnalyticsData>(EMPTY_ANALYTICS);
   const [loading, setLoading] = useState(false);
   const [showSeasonList, setShowSeasonList] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const {
     allSeasons,
@@ -250,6 +251,24 @@ export default function MyTeamMobile() {
     );
   }
 
+  const categoryKeys = analytics.categoryStats.map(c => c.categoryName);
+
+  const activeCat = selectedCategory !== 'all'
+    ? analytics.categoryStats.find(c => c.categoryName === selectedCategory) ?? null
+    : null;
+
+  const displayStats = activeCat ? {
+    ...analytics,
+    totalWins: activeCat.wins,
+    totalDraws: activeCat.draws,
+    totalLosses: activeCat.losses,
+    totalGames: activeCat.totalGames,
+    winRate: activeCat.totalGames > 0 ? Math.round((activeCat.wins / activeCat.totalGames) * 100) : 0,
+    goalsScored: activeCat.goalsFor,
+    goalsConceded: activeCat.goalsAgainst,
+    goalDifference: activeCat.goalsFor - activeCat.goalsAgainst,
+  } : analytics;
+
   return (
     <MobileLayout>
       <div className="space-y-4">
@@ -307,6 +326,30 @@ export default function MyTeamMobile() {
           </div>
         )}
 
+        {/* Performance category filter */}
+        {categoryKeys.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {['all', ...categoryKeys].map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                style={selectedCategory === cat ? {
+                  background: 'rgba(184,159,255,0.15)',
+                  border: '1px solid rgba(184,159,255,0.35)',
+                  color: '#b89fff',
+                } : {
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '0.5px solid rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.6)',
+                }}
+              >
+                {cat === 'all' ? 'All' : cat}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center h-48">
             <LoadingSpinner size="lg" />
@@ -316,10 +359,10 @@ export default function MyTeamMobile() {
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: <Calendar className="h-6 w-6 text-[#b89fff]" />, value: analytics.totalGames, label: 'Games' },
-                { icon: <Trophy className="h-6 w-6 text-amber-400" />, value: analytics.totalWins, label: 'Wins' },
-                { icon: <Target className="h-6 w-6 text-teal-400" />, value: `${analytics.winRate}%`, label: 'Win Rate' },
-                { icon: <TrendingUp className="h-6 w-6 text-[#b89fff]" />, value: `${analytics.goalDifference >= 0 ? '+' : ''}${analytics.goalDifference}`, label: 'Goal Diff' },
+                { icon: <Calendar className="h-6 w-6 text-[#b89fff]" />, value: displayStats.totalGames, label: 'Games' },
+                { icon: <Trophy className="h-6 w-6 text-amber-400" />, value: displayStats.totalWins, label: 'Wins' },
+                { icon: <Target className="h-6 w-6 text-teal-400" />, value: `${displayStats.winRate}%`, label: 'Win Rate' },
+                { icon: <TrendingUp className="h-6 w-6 text-[#b89fff]" />, value: `${displayStats.goalDifference >= 0 ? '+' : ''}${displayStats.goalDifference}`, label: 'Goal Diff' },
               ].map(({ icon, value, label }) => (
                 <div
                   key={label}
@@ -339,9 +382,9 @@ export default function MyTeamMobile() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium">Season Record</div>
                   <div className="flex gap-2 text-sm">
-                    <span className="text-green-400 font-semibold">W{analytics.totalWins}</span>
-                    <span className="text-white/50 font-semibold">D{analytics.totalDraws}</span>
-                    <span className="text-red-400 font-semibold">L{analytics.totalLosses}</span>
+                    <span className="text-green-400 font-semibold">W{displayStats.totalWins}</span>
+                    <span className="text-white/50 font-semibold">D{displayStats.totalDraws}</span>
+                    <span className="text-red-400 font-semibold">L{displayStats.totalLosses}</span>
                   </div>
                 </div>
               </CardContent>
@@ -432,24 +475,24 @@ export default function MyTeamMobile() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Goals Scored</span>
-                    <Badge className="bg-green-500">{analytics.goalsScored}</Badge>
+                    <Badge className="bg-green-500">{displayStats.goalsScored}</Badge>
                   </div>
                   <div className="w-full bg-white/10 rounded-full h-2">
                     <div
                       className="bg-green-500 h-2 rounded-full"
-                      style={{ width: analytics.goalsScored > 0 ? `${Math.min((analytics.goalsScored / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
+                      style={{ width: displayStats.goalsScored > 0 ? `${Math.min((displayStats.goalsScored / (displayStats.goalsScored + displayStats.goalsConceded)) * 100, 100)}%` : '0%' }}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Goals Conceded</span>
-                    <Badge variant="destructive">{analytics.goalsConceded}</Badge>
+                    <Badge variant="destructive">{displayStats.goalsConceded}</Badge>
                   </div>
                   <div className="w-full bg-white/10 rounded-full h-2">
                     <div
                       className="bg-red-500 h-2 rounded-full"
-                      style={{ width: analytics.goalsConceded > 0 ? `${Math.min((analytics.goalsConceded / (analytics.goalsScored + analytics.goalsConceded)) * 100, 100)}%` : '0%' }}
+                      style={{ width: displayStats.goalsConceded > 0 ? `${Math.min((displayStats.goalsConceded / (displayStats.goalsScored + displayStats.goalsConceded)) * 100, 100)}%` : '0%' }}
                     />
                   </div>
                 </div>
