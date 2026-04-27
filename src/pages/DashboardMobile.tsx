@@ -349,11 +349,24 @@ export default function DashboardMobile() {
   const handleViewHistory = () => setHistoryModalOpen(true);
 
   useEffect(() => {
+    // Reset team-scoped stats immediately on team/view change so previously
+    // loaded data from another team can't be visible while the new request
+    // is still in flight.
+    setStats(prev => ({
+      ...prev,
+      upcomingEvents: [],
+      recentResults: [],
+      pendingAvailability: [],
+    }));
     loadLiveData();
   }, [allTeams, connectedPlayers, currentTeam?.id, viewMode, availableTeams]);
 
   const loadLiveData = async () => {
     if (!user) return;
+
+    // Sequence guard: each invocation gets a unique id; only the latest may
+    // commit results to state.
+    const seq = ++loadSeqRef.current;
 
     try {
       // In single-team mode require a concrete currentTeam (no fallback to all teams).
@@ -364,7 +377,9 @@ export default function DashboardMobile() {
         : (currentTeam ? [currentTeam] : []);
 
       if (!teamsToUse.length) {
-        setLoading(false);
+        if (seq === loadSeqRef.current) {
+          setLoading(false);
+        }
         return;
       }
 
