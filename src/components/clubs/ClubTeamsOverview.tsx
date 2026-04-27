@@ -52,27 +52,23 @@ export const ClubTeamsOverview: React.FC<ClubTeamsOverviewProps> = ({
       setLoading(true);
       logger.log('Loading club teams overview for club:', clubId);
 
-      // Get all teams linked to this club
-      const { data: clubTeams, error: clubTeamsError } = await supabase
-        .from('club_teams')
-        .select(`
-          team_id,
-          teams!inner(*)
-        `)
+      // Get all teams linked to this club via club_id (source of truth)
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('*')
         .eq('club_id', clubId);
 
-      if (clubTeamsError) {
-        logger.error('Error fetching club teams:', clubTeamsError);
-        throw clubTeamsError;
+      if (teamsError) {
+        logger.error('Error fetching club teams:', teamsError);
+        throw teamsError;
       }
 
-      if (!clubTeams || clubTeams.length === 0) {
+      if (!teamsData || teamsData.length === 0) {
         setTeams([]);
         return;
       }
 
-      const teamIds = clubTeams.map(ct => ct.team_id);
-      const teamsData = clubTeams.map(ct => ct.teams);
+      const teamIds = teamsData.map(t => t.id);
 
       // Get player counts for each team
       const { data: playersData, error: playersError } = await supabase
