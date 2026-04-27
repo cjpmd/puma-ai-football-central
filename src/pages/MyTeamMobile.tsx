@@ -344,10 +344,6 @@ export default function MyTeamMobile() {
                     <span className="text-red-400 font-semibold">L{analytics.totalLosses}</span>
                   </div>
                 </div>
-                <div className="mt-2 flex items-center justify-between text-sm text-white/50">
-                  <span>Avg Goals/Game: {analytics.avgGoalsPerGame}</span>
-                  <span>Points: {analytics.totalWins * 3 + analytics.totalDraws}</span>
-                </div>
               </CardContent>
             </Card>
 
