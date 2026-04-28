@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLongPress } from '@/hooks/useLongPress';
 import { GameDayPlayerEventMenu } from './GameDayPlayerEventMenu';
 import { FPLPlayerToken } from './FPLPlayerToken';
+import { KitDesign } from '@/types/team';
 import { MatchEvent, MatchEventType, PlayerCardStatus } from '@/types/matchEvent';
 import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
