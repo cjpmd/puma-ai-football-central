@@ -139,6 +139,10 @@ interface GameDayFormationCardProps {
   onEventCreated: (event: MatchEvent) => void;
   onSubstitution?: (playerOffId: string, playerOnId: string) => void;
   currentMinute?: number;
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
+  gameFormat?: string;
+  isMobile?: boolean;
 }
 
 export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
@@ -153,6 +157,10 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
   onEventCreated,
   onSubstitution,
   currentMinute = 0,
+  kitDesign,
+  goalkeeperKitDesign,
+  gameFormat,
+  isMobile,
 }) => {
   const [playerCardStatuses, setPlayerCardStatuses] = useState<Record<string, PlayerCardStatus>>({});
 
