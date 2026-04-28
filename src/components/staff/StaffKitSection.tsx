@@ -317,85 +317,100 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {staffRecords.map(record => (
-          <div key={record.id} className="border rounded-lg p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">{record.team_name}</h4>
-                <p className="text-sm text-muted-foreground">{record.role}</p>
-              </div>
-            </div>
-
-            {/* Kit Sizes Input */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">My Kit Sizes</Label>
-              {kitItems[record.team_id]?.length > 0 ? (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    {kitItems[record.team_id].map(item => (
-                      <div key={item.id} className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">{item.name}</Label>
-                        <Select 
-                          value={record.kit_sizes[item.name] || ''} 
-                          onValueChange={(v) => handleSizeChange(record.id, item.name, v)}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {item.available_sizes.map(size => (
-                              <SelectItem key={size} value={size}>{size}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                  <Button 
-                    size="sm" 
-                    onClick={() => handleSaveKitSizes(record.id)}
-                    disabled={saving === record.id}
-                  >
-                    {saving === record.id ? 'Saving...' : 'Save Sizes'}
-                  </Button>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No coaching kit items configured for this team.
-                </p>
-              )}
-            </div>
-
-            {/* Issued Kit */}
-            {kitIssues[record.id]?.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Kit Issued to You</Label>
-                <div className="space-y-2">
-                  {kitIssues[record.id].map(issue => (
-                    <div key={issue.id} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        <span>{issue.kit_item_name}</span>
-                        {issue.kit_size && (
-                          <Badge variant="outline" className="text-xs">
-                            Size: {issue.kit_size}
-                          </Badge>
-                        )}
-                        <Badge variant="secondary" className="text-xs">
-                          Qty: {issue.quantity}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(issue.date_issued).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
+        {staffRecords.map(record => {
+          const isOpen = openMap[record.id] ?? false;
+          return (
+            <Collapsible
+              key={record.id}
+              open={isOpen}
+              onOpenChange={(o) => setOpenMap(s => ({ ...s, [record.id]: o }))}
+              className="border rounded-lg"
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between p-4 text-left">
+                <div className="min-w-0">
+                  <h4 className="font-medium truncate">{record.team_name}</h4>
+                  <p className="text-sm text-muted-foreground">{record.role}</p>
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 text-muted-foreground transition-transform shrink-0 ml-2',
+                    isOpen && 'rotate-180'
+                  )}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-4 pb-4 space-y-4">
+                {/* Kit Sizes Input */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">My Kit Sizes</Label>
+                  {kitItems[record.team_id]?.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        {kitItems[record.team_id].map(item => (
+                          <div key={item.id} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{item.name}</Label>
+                            <Select
+                              value={record.kit_sizes[item.name] || ''}
+                              onValueChange={(v) => handleSizeChange(record.id, item.name, v)}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select size" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {item.available_sizes.map(size => (
+                                  <SelectItem key={size} value={size}>{size}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveKitSizes(record.id)}
+                        disabled={saving === record.id}
+                      >
+                        {saving === record.id ? 'Saving...' : 'Save Sizes'}
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No coaching kit items configured for this team.
+                    </p>
+                  )}
+                </div>
+
+                {/* Issued Kit */}
+                {kitIssues[record.id]?.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Kit Issued to You</Label>
+                    <div className="space-y-2">
+                      {kitIssues[record.id].map(issue => (
+                        <div key={issue.id} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            <span>{issue.kit_item_name}</span>
+                            {issue.kit_size && (
+                              <Badge variant="outline" className="text-xs">
+                                Size: {issue.kit_size}
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              Qty: {issue.quantity}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(issue.date_issued).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
       </CardContent>
     </Card>
   );
