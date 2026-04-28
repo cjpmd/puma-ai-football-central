@@ -47,22 +47,45 @@ export const ClubSummaryReport: React.FC<ClubSummaryReportProps> = ({ clubId, cl
     try {
       setLoading(true);
 
-      // Get all teams linked to this club
-      const { data: clubTeams, error: teamsError } = await supabase
-        .from('club_teams')
-        .select(`
-          team_id,
-          teams!inner (
-            id,
-            name,
-            age_group
-          )
-        `)
-        .eq('club_id', clubId);
+      // Unify team membership: teams.club_id + club_teams legacy link
+      const [{ data: teamsByColumn, error: teamsByColumnError }, { data: clubTeamsLink, error: teamsError }] = await Promise.all([
+        supabase
+          .from('teams')
+          .select('id, name, age_group')
+          .eq('club_id', clubId),
+        supabase
+          .from('club_teams')
+          .select(`team_id, teams!inner(id, name, age_group)`)
+          .eq('club_id', clubId),
+      ]);
 
+      if (teamsByColumnError) throw teamsByColumnError;
       if (teamsError) throw teamsError;
 
-      const teamIds = clubTeams?.map((ct: any) => ct.team_id) || [];
+      const teamMap = new Map<string, { id: string; name: string; age_group: string }>();
+      (teamsByColumn || []).forEach((t: any) => teamMap.set(t.id, t));
+      (clubTeamsLink || []).forEach((row: any) => {
+        if (row.teams) teamMap.set(row.teams.id, row.teams);
+      });
+
+      // Self-heal: backfill missing club_teams rows
+      const linkedIds = new Set((clubTeamsLink || []).map((r: any) => r.team_id));
+      const missingLinks = [...teamMap.keys()].filter(id => !linkedIds.has(id));
+      if (missingLinks.length > 0) {
+        try {
+          await supabase
+            .from('club_teams')
+            .upsert(
+              missingLinks.map(team_id => ({ club_id: clubId, team_id })),
+              { onConflict: 'club_id,team_id', ignoreDuplicates: true }
+            );
+        } catch (e) {
+          logger.warn('club_teams backfill skipped', e);
+        }
+      }
+
+      const clubTeams = [...teamMap.values()].map(t => ({ team_id: t.id, teams: t }));
+      const teamIds = clubTeams.map(ct => ct.team_id);
       const totalTeams = teamIds.length;
 
       // Get player counts per team
