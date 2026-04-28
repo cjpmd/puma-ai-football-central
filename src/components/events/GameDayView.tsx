@@ -545,17 +545,11 @@ export const GameDayView: React.FC = () => {
             <ArrowLeft className="h-4 w-4" />
           </button>
 
-          {/* Centre: title */}
+          {/* Centre: opponent name only */}
           <div className="flex-1 text-center min-w-0 px-2">
-            <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.55)', letterSpacing: '0.5px', fontWeight: 500, textTransform: 'uppercase' }}>
-              GAME DAY
-            </div>
             <div style={{ fontSize: 17, fontWeight: 600, color: '#fff', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {event.title}
+              {event.opponent || event.title}
             </div>
-            {event.opponent && (
-              <div style={{ fontSize: 12, color: 'rgba(235,235,245,0.55)' }}>vs {event.opponent}</div>
-            )}
           </div>
 
           {/* Play / Pause */}
