@@ -60,7 +60,7 @@ export function useGameDayRealtime(eventId: string | undefined) {
         }
       )
 
-      // Event itself changed (score, status, notes)
+      // Event itself changed (score, status, notes, shared timer)
       .on(
         'postgres_changes',
         {
@@ -71,6 +71,22 @@ export function useGameDayRealtime(eventId: string | undefined) {
         },
         () => {
           logger.log('[useGameDayRealtime] event updated, invalidating cache');
+          queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+        }
+      )
+
+      // Match events (goals, cards, subs) — keep timeline live for everyone
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'match_events',
+          filter: `event_id=eq.${eventId}`,
+        },
+        () => {
+          logger.log('[useGameDayRealtime] match_events changed, invalidating cache');
+          queryClient.invalidateQueries({ queryKey: ['event-match-events', eventId] });
           queryClient.invalidateQueries({ queryKey: ['event', eventId] });
         }
       )

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLongPress } from '@/hooks/useLongPress';
 import { GameDayPlayerEventMenu } from './GameDayPlayerEventMenu';
 import { FPLPlayerToken } from './FPLPlayerToken';
+import { KitDesign } from '@/types/team';
 import { MatchEvent, MatchEventType, PlayerCardStatus } from '@/types/matchEvent';
 import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
@@ -44,6 +45,10 @@ interface PitchPlayerProps {
   onEventSelect: (playerId: string, eventType: MatchEventType) => void;
   onEventDelete: () => void;
   onSubstitution: (playerOffId: string, playerOnId: string, playerOffName: string, playerOnName: string) => void;
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
+  gameFormat?: string;
+  isMobile?: boolean;
 }
 
 // Separate component to properly use hooks for each player
@@ -57,6 +62,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   onEventSelect,
   onEventDelete,
   onSubstitution,
+  kitDesign,
+  goalkeeperKitDesign,
+  gameFormat,
+  isMobile,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isGoalkeeper = pos.positionGroup === 'goalkeeper';
@@ -107,6 +116,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
             positionGroup={pos.positionGroup}
             isCaptain={pos.isCaptain}
             size="pitch"
+            kitDesign={kitDesign}
+            goalkeeperKitDesign={goalkeeperKitDesign}
+            gameFormat={gameFormat}
+            isMobile={isMobile}
           />
         </div>
       </div>
@@ -126,6 +139,10 @@ interface GameDayFormationCardProps {
   onEventCreated: (event: MatchEvent) => void;
   onSubstitution?: (playerOffId: string, playerOnId: string) => void;
   currentMinute?: number;
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
+  gameFormat?: string;
+  isMobile?: boolean;
 }
 
 export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
@@ -140,6 +157,10 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
   onEventCreated,
   onSubstitution,
   currentMinute = 0,
+  kitDesign,
+  goalkeeperKitDesign,
+  gameFormat,
+  isMobile,
 }) => {
   const [playerCardStatuses, setPlayerCardStatuses] = useState<Record<string, PlayerCardStatus>>({});
 
@@ -294,6 +315,10 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                 onEventSelect={handleEventSelect}
                 onEventDelete={handleEventDelete}
                 onSubstitution={handleSubstitution}
+                kitDesign={kitDesign}
+                goalkeeperKitDesign={goalkeeperKitDesign}
+                gameFormat={gameFormat}
+                isMobile={isMobile}
               />
             );
           })}

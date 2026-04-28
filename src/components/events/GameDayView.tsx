@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { GameDayFormationCard } from './GameDayFormationCard';
 import { GameDayTimeline } from './GameDayTimeline';
 import { GameDaySubstituteBench } from './GameDaySubstituteBench';
-import { useMatchTimer } from '@/hooks/useMatchTimer';
+import { useSharedMatchTimer } from '@/hooks/useSharedMatchTimer';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useGameDayRealtime } from '@/hooks/useGameDayRealtime';
 import { matchEventService } from '@/services/matchEventService';
 import { MatchEvent } from '@/types/matchEvent';
@@ -156,7 +157,12 @@ export const GameDayView: React.FC = () => {
     setCurrentPeriodIndex(0);
   }, [selectedTeamNumber]);
 
-  const gameDuration = event?.game_duration || 50;
+  const isMobile = useIsMobile();
+  const timerSnapshot = event ? {
+    startedAt: (event as any).match_timer_started_at ?? null,
+    pausedElapsedSeconds: (event as any).match_timer_paused_elapsed_seconds ?? 0,
+    isRunning: (event as any).match_timer_is_running ?? false,
+  } : null;
   const {
     currentMinute,
     isRunning,
@@ -164,7 +170,7 @@ export const GameDayView: React.FC = () => {
     pause,
     reset,
     displayTime
-  } = useMatchTimer(gameDuration);
+  } = useSharedMatchTimer(eventId, timerSnapshot);
 
   useEffect(() => {
     if (eventId) {
@@ -539,17 +545,11 @@ export const GameDayView: React.FC = () => {
             <ArrowLeft className="h-4 w-4" />
           </button>
 
-          {/* Centre: title */}
+          {/* Centre: opponent name only */}
           <div className="flex-1 text-center min-w-0 px-2">
-            <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.55)', letterSpacing: '0.5px', fontWeight: 500, textTransform: 'uppercase' }}>
-              GAME DAY
-            </div>
             <div style={{ fontSize: 17, fontWeight: 600, color: '#fff', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {event.title}
+              {event.opponent || event.title}
             </div>
-            {event.opponent && (
-              <div style={{ fontSize: 12, color: 'rgba(235,235,245,0.55)' }}>vs {event.opponent}</div>
-            )}
           </div>
 
           {/* Play / Pause */}
@@ -767,6 +767,10 @@ export const GameDayView: React.FC = () => {
                 onEventCreated={handleEventCreated}
                 onSubstitution={handleSubstitution}
                 currentMinute={currentMinute}
+                kitDesign={kitDesign}
+                goalkeeperKitDesign={goalkeeperKitDesign}
+                gameFormat={(event as any).game_format}
+                isMobile={isMobile}
               />
             </div>
 
@@ -774,6 +778,8 @@ export const GameDayView: React.FC = () => {
               <GameDaySubstituteBench
                 substitutes={substitutes}
                 onPlayerLongPress={handlePlayerLongPress}
+                kitDesign={kitDesign}
+                goalkeeperKitDesign={goalkeeperKitDesign}
               />
             )}
           </>
