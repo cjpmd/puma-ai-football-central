@@ -44,6 +44,7 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
   const [kitItems, setKitItems] = useState<Record<string, KitItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   useEffect(() => {
