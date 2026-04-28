@@ -87,6 +87,7 @@ export default function MyTeamMobile() {
   const [showSeasonList, setShowSeasonList] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
+  const [teamCategories, setTeamCategories] = useState<string[]>([]);
 
   const {
     allSeasons,
