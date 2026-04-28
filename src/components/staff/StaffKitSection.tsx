@@ -79,6 +79,34 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
         };
       });
 
+      // Also include teams the user is staff on via user_teams (management roles).
+      // These don't yet have a team_staff row — use a synthetic id; on save we'll
+      // create the team_staff row and link it via user_staff.
+      const STAFF_ROLES = [
+        'team_manager','team_assistant_manager','team_coach','team_helper',
+        'manager','coach','staff','helper'
+      ];
+      const { data: userTeamsData, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select('team_id, role, teams!inner(id, name)')
+        .eq('user_id', userId)
+        .in('role', STAFF_ROLES);
+
+      if (userTeamsError) throw userTeamsError;
+
+      const coveredTeamIds = new Set(records.map(r => r.team_id));
+      for (const ut of (userTeamsData || []) as any[]) {
+        if (coveredTeamIds.has(ut.team_id)) continue;
+        records.push({
+          id: `user-team:${ut.team_id}`,
+          team_id: ut.team_id,
+          team_name: ut.teams?.name || 'Unknown Team',
+          role: ut.role,
+          kit_sizes: {}
+        });
+        coveredTeamIds.add(ut.team_id);
+      }
+
       setStaffRecords(records);
 
       // Load kit issues and items for each team
