@@ -589,6 +589,33 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
           )}
         </div>
       )}
+
+      <AlertDialog open={!!unlinkTarget} onOpenChange={(open) => !open && setUnlinkTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unlink team from club?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {unlinkTarget
+                ? `Unlink ${unlinkTarget.name} from ${clubName}? The team will not be deleted, but it will no longer appear under this club.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (unlinkTarget) {
+                  unlinkTeam(unlinkTarget.id);
+                  setUnlinkTarget(null);
+                }
+              }}
+            >
+              Unlink team
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
