@@ -323,7 +323,7 @@ export default function MyTeamMobile() {
     );
   }
 
-  const categoryKeys = analytics.categoryStats.map(c => c.categoryName);
+  const categoryKeys = teamCategories;
   const isTrainingMode = selectedEventType === 'training';
 
   const displayStats = (() => {
