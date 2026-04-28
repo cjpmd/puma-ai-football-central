@@ -62,6 +62,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
   onEventSelect,
   onEventDelete,
   onSubstitution,
+  kitDesign,
+  goalkeeperKitDesign,
+  gameFormat,
+  isMobile,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isGoalkeeper = pos.positionGroup === 'goalkeeper';
@@ -112,6 +116,10 @@ const PitchPlayer: React.FC<PitchPlayerProps> = ({
             positionGroup={pos.positionGroup}
             isCaptain={pos.isCaptain}
             size="pitch"
+            kitDesign={kitDesign}
+            goalkeeperKitDesign={goalkeeperKitDesign}
+            gameFormat={gameFormat}
+            isMobile={isMobile}
           />
         </div>
       </div>
