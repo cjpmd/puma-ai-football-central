@@ -157,7 +157,12 @@ export const GameDayView: React.FC = () => {
     setCurrentPeriodIndex(0);
   }, [selectedTeamNumber]);
 
-  const gameDuration = event?.game_duration || 50;
+  const isMobile = useIsMobile();
+  const timerSnapshot = event ? {
+    startedAt: (event as any).match_timer_started_at ?? null,
+    pausedElapsedSeconds: (event as any).match_timer_paused_elapsed_seconds ?? 0,
+    isRunning: (event as any).match_timer_is_running ?? false,
+  } : null;
   const {
     currentMinute,
     isRunning,
@@ -165,7 +170,7 @@ export const GameDayView: React.FC = () => {
     pause,
     reset,
     displayTime
-  } = useMatchTimer(gameDuration);
+  } = useSharedMatchTimer(eventId, timerSnapshot);
 
   useEffect(() => {
     if (eventId) {
