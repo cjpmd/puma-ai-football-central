@@ -315,6 +315,10 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                 onEventSelect={handleEventSelect}
                 onEventDelete={handleEventDelete}
                 onSubstitution={handleSubstitution}
+                kitDesign={kitDesign}
+                goalkeeperKitDesign={goalkeeperKitDesign}
+                gameFormat={gameFormat}
+                isMobile={isMobile}
               />
             );
           })}
