@@ -161,8 +161,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     try {
       logger.log('Loading team selections for event:', eventId);
 
-      // Load event (for scores + team_id) in parallel with selections
-      const [{ data: selections, error }, { data: eventRow }] = await Promise.all([
+      // Load event (for scores + team_id) in parallel with selections + squads
+      const [{ data: selections, error }, { data: eventRow }, { data: squadRows }] = await Promise.all([
         supabase
           .from('event_selections')
           .select(`
@@ -180,79 +180,88 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
           .select('team_id, scores')
           .eq('id', eventId)
           .single(),
+        supabase
+          .from('team_squads')
+          .select('player_id, team_number')
+          .eq('event_id', eventId),
       ]);
 
       if (error) throw error;
 
       logger.log('Raw selections:', selections);
 
-      // Create unique teams map to avoid duplicates based on performance category
-      const uniqueTeamsMap = new Map();
+      // Build playersByTeamNumber from team_squads (authoritative) with fallback
+      // to event_selections.player_positions.
+      const playerIdsByTeamNum = new Map<number, Set<string>>();
+      (squadRows || []).forEach(row => {
+        const n = row.team_number || 1;
+        if (!playerIdsByTeamNum.has(n)) playerIdsByTeamNum.set(n, new Set());
+        if (row.player_id) playerIdsByTeamNum.get(n)!.add(row.player_id);
+      });
+      // Fallback from event_selections for any team_number missing from team_squads
+      (selections || []).forEach(s => {
+        const n = s.team_number || 1;
+        if (playerIdsByTeamNum.has(n) && playerIdsByTeamNum.get(n)!.size > 0) return;
+        if (!playerIdsByTeamNum.has(n)) playerIdsByTeamNum.set(n, new Set());
+        const positions = (s.player_positions as any[]) || [];
+        positions.forEach(pp => {
+          const pid = pp.playerId || pp.player_id;
+          if (pid && typeof pid === 'string') playerIdsByTeamNum.get(n)!.add(pid);
+        });
+      });
+
+      // Bulk-fetch all referenced players in one query
+      const allPlayerIds = new Set<string>();
+      playerIdsByTeamNum.forEach(set => set.forEach(id => allPlayerIds.add(id)));
+      const playerById = new Map<string, Player>();
+      if (allPlayerIds.size > 0) {
+        const { data: playersData } = await supabase
+          .from('players')
+          .select('id, name, squad_number')
+          .in('id', Array.from(allPlayerIds));
+        (playersData || []).forEach(p => {
+          playerById.set(p.id, { id: p.id, name: p.name, squadNumber: p.squad_number || 0 });
+        });
+      }
+
+      const buildPlayerList = (teamNum: number): Player[] => {
+        const ids = playerIdsByTeamNum.get(teamNum);
+        if (!ids) return [];
+        return Array.from(ids)
+          .map(id => playerById.get(id))
+          .filter((p): p is Player => !!p)
+          .sort((a, b) => a.squadNumber - b.squadNumber);
+      };
+
+      // Create unique teams map (one entry per team_number)
+      const uniqueTeamsMap = new Map<number, TeamSelection>();
 
       for (const selection of selections || []) {
-        // Use performance_category_id as the key for uniqueness
-        const teamKey = selection.performance_category_id || `team_${selection.team_number}`;
+        const teamNum = selection.team_number || 1;
+        if (uniqueTeamsMap.has(teamNum)) continue;
 
-        if (!uniqueTeamsMap.has(teamKey)) {
-          let performanceCategoryName = `Team ${selection.team_number}`;
-
-          // Get performance category name if set
-          if (selection.performance_categories) {
-            const category = selection.performance_categories as any;
-            performanceCategoryName = category.name;
-          }
-
-          // Get all players for this performance category across all periods
-          const allPlayerIds = new Set<string>();
-          selections
-            .filter(s => (s.performance_category_id || `team_${s.team_number}`) === teamKey)
-            .forEach(s => {
-              const playerPositions = (s.player_positions as any[] || []);
-              playerPositions.forEach(pp => {
-                const playerId = pp.playerId || pp.player_id;
-                if (playerId && typeof playerId === 'string') {
-                  allPlayerIds.add(playerId);
-                }
-              });
-            });
-
-          const players: Player[] = [];
-
-          if (allPlayerIds.size > 0) {
-            const { data: playersData } = await supabase
-              .from('players')
-              .select('id, name, squad_number')
-              .in('id', Array.from(allPlayerIds));
-
-            if (playersData) {
-              players.push(...playersData.map(p => ({
-                id: p.id,
-                name: p.name,
-                squadNumber: p.squad_number || 0
-              })));
-            }
-          }
-
-          uniqueTeamsMap.set(teamKey, {
-            teamNumber: selection.team_number,
-            performanceCategoryName,
-            players: players.sort((a, b) => a.squadNumber - b.squadNumber)
-          });
+        let performanceCategoryName = `Team ${teamNum}`;
+        if (selection.performance_categories) {
+          const category = selection.performance_categories as any;
+          performanceCategoryName = category.name;
         }
+
+        uniqueTeamsMap.set(teamNum, {
+          teamNumber: teamNum,
+          performanceCategoryName,
+          players: buildPlayerList(teamNum),
+        });
       }
 
       // Synthesize entries for team_N values that have a score recorded but
       // no event_selections row.
       const scores = (eventRow?.scores as Record<string, any>) || {};
-      const haveTeamNumbers = new Set<number>(
-        Array.from(uniqueTeamsMap.values()).map((t: any) => t.teamNumber)
-      );
       const missingTeamNumbers: number[] = [];
       Object.keys(scores).forEach(key => {
         const m = /^team_(\d+)$/.exec(key);
         if (!m) return;
         const n = parseInt(m[1], 10);
-        if (!haveTeamNumbers.has(n)) missingTeamNumbers.push(n);
+        if (!uniqueTeamsMap.has(n)) missingTeamNumbers.push(n);
       });
 
       if (missingTeamNumbers.length > 0 && eventRow?.team_id) {
@@ -265,10 +274,10 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
         missingTeamNumbers.forEach(n => {
           const cat = orderedCategories[n - 1];
-          uniqueTeamsMap.set(`synth_${n}`, {
+          uniqueTeamsMap.set(n, {
             teamNumber: n,
             performanceCategoryName: cat?.name || `Team ${n}`,
-            players: [],
+            players: buildPlayerList(n),
           });
         });
       }
