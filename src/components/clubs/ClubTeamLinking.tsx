@@ -70,6 +70,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
   const [newTeamAgeGroup, setNewTeamAgeGroup] = useState('');
   const [newTeamFormat, setNewTeamFormat] = useState<GameFormat>('7-a-side');
   const [isCreating, setIsCreating] = useState(false);
+  const [unlinkTarget, setUnlinkTarget] = useState<Team | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
