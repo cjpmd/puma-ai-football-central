@@ -88,19 +88,37 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       ];
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
-        .select('team_id, role, teams!inner(id, name)')
+        .select('team_id, role')
         .eq('user_id', userId)
         .in('role', STAFF_ROLES);
 
       if (userTeamsError) throw userTeamsError;
 
       const coveredTeamIds = new Set(records.map(r => r.team_id));
+      const missingTeamIds = Array.from(
+        new Set(
+          (userTeamsData || [])
+            .map((ut: any) => ut.team_id)
+            .filter((tid: string) => !coveredTeamIds.has(tid))
+        )
+      );
+
+      let teamNamesById = new Map<string, string>();
+      if (missingTeamIds.length > 0) {
+        const { data: teamsData, error: teamsError } = await supabase
+          .from('teams')
+          .select('id, name')
+          .in('id', missingTeamIds);
+        if (teamsError) throw teamsError;
+        teamNamesById = new Map((teamsData || []).map((t: any) => [t.id, t.name]));
+      }
+
       for (const ut of (userTeamsData || []) as any[]) {
         if (coveredTeamIds.has(ut.team_id)) continue;
         records.push({
           id: `user-team:${ut.team_id}`,
           team_id: ut.team_id,
-          team_name: ut.teams?.name || 'Unknown Team',
+          team_name: teamNamesById.get(ut.team_id) || 'Unknown Team',
           role: ut.role,
           kit_sizes: {}
         });
