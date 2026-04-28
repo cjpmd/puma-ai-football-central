@@ -161,7 +161,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
     const loadTeamSelections = async () => {
       try {
         // Run all independent queries in parallel
-        const [selectionsResult, squadResult, availabilityResult] = await Promise.all([
+        const [selectionsResult, squadResult, availabilityResult, categoriesResult] = await Promise.all([
           supabase
             .from('event_selections')
             .select('*, performance_categories(name)')
@@ -181,10 +181,17 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
             .select('status')
             .eq('event_id', event.id)
             .eq('role', 'player'),
+          // Performance categories for synthesizing teams that only have scores
+          supabase
+            .from('performance_categories')
+            .select('id, name')
+            .eq('team_id', teamId)
+            .order('name', { ascending: true }),
         ]);
 
         if (selectionsResult.error) throw selectionsResult.error;
         const selections = selectionsResult.data || [];
+        const orderedCategories = (categoriesResult.data || []) as Array<{ id: string; name: string }>;
 
         // Build squad-count map from team_squads (accurate even if formation not yet set)
         const squadByTeamNum: Record<number, number> = {};
@@ -251,7 +258,29 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
           }
         });
 
-        const teamsArray = Object.values(groupedSelections);
+        // Synthesize entries for team_N values that appear in event.scores but
+        // have no event_selections row yet (e.g. score recorded for Team 2 but
+        // squad not picked).
+        const scores = (event.scores as Record<string, any>) || {};
+        const haveTeamNumbers = new Set<number>(Object.values(groupedSelections).map(t => t.teamNumber));
+        Object.keys(scores).forEach(key => {
+          const m = /^team_(\d+)$/.exec(key);
+          if (!m) return;
+          const n = parseInt(m[1], 10);
+          if (haveTeamNumbers.has(n)) return;
+          const cat = orderedCategories[n - 1];
+          groupedSelections[n] = {
+            teamNumber: n,
+            performanceCategory: cat?.name || `Team ${n}`,
+            periods: [],
+            squadPlayers: squadByTeamNum[n] || 0,
+            formation: undefined,
+            staffIds: [],
+          };
+          haveTeamNumbers.add(n);
+        });
+
+        const teamsArray = Object.values(groupedSelections).sort((a, b) => a.teamNumber - b.teamNumber);
         setTeamSelections(teamsArray);
 
         // Captain name resolution deferred to the teamPlayers+teamSelections effect below
