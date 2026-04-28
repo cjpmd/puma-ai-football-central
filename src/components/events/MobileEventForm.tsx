@@ -140,8 +140,16 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
 
     setLoading(true);
     try {
+      const fallbackTitle = (() => {
+        const t = (formData.type || '').toLowerCase();
+        if (t === 'training') return 'Training';
+        if (t === 'fixture' || t === 'friendly' || t === 'tournament' || t === 'festival') {
+          return formData.opponent ? `vs ${formData.opponent}` : 'Match';
+        }
+        return 'Event';
+      })();
       const eventData: any = {
-        title: formData.title,
+        title: (formData.title || '').trim() || fallbackTitle,
         description: formData.description,
         date: formData.date,
         startTime: formData.startTime || undefined,
