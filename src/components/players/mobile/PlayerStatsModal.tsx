@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { availabilityService } from '@/services/availabilityService';
 import { format as formatDate } from 'date-fns';
+import { useSeasonContext } from '@/hooks/useSeasonContext';
 
 interface PlayerStatsModalProps {
   player: Player;
@@ -35,10 +36,15 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const [availabilityHistory, setAvailabilityHistory] = useState<any[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
 
-  // History tab state
-  const [histFilter, setHistFilter] = useState<'current' | 'all'>('current');
+  // Filter states
+  const [statSeason, setStatSeason] = useState<string>('current');
+  const [statClub, setStatClub] = useState<string>('current');
+  const [teamSeasonDates, setTeamSeasonDates] = useState<{ start: string; end: string } | null>(null);
   const [transfers, setTransfers] = useState<any[]>([]);
   const [transferTeamNames, setTransferTeamNames] = useState<Record<string, string>>({});
+
+  const today = new Date().toISOString().split('T')[0];
+  const { allSeasons } = useSeasonContext(teamSeasonDates?.start ?? null, teamSeasonDates?.end ?? null);
 
   const topPositions = Object.entries(minutesByPosition)
     .filter(([pos]) => pos !== 'SUB' && pos !== 'TBD')
@@ -91,6 +97,16 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       });
   }, [isOpen, player.id]);
 
+  useEffect(() => {
+    if (!isOpen || !player.team_id) return;
+    supabase.from('teams').select('season_start, season_end').eq('id', player.team_id).single()
+      .then(({ data }) => {
+        if (data?.season_start && data?.season_end) {
+          setTeamSeasonDates({ start: data.season_start, end: data.season_end });
+        }
+      });
+  }, [isOpen, player.team_id]);
+
   type TeamPeriod = { teamId: string; teamName: string; from: string; to: string | null };
 
   const teamPeriods = useMemo((): TeamPeriod[] => {
@@ -118,6 +134,81 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     .reverse()
     .map(period => ({ period, games: recentGames.filter((game: any) => getGamePeriod(game)?.teamId === period.teamId) }))
     .filter(({ games }) => games.length > 0);
+
+  const currentSeasonDates = useMemo(() => {
+    const active = allSeasons.find(s => s.type === 'season' && today >= s.start && today <= s.end);
+    const lastCompleted = [...allSeasons].reverse().find(s => s.type === 'season' && s.end <= today);
+    return active || lastCompleted || null;
+  }, [allSeasons, today]);
+
+  const availableSeasons = useMemo(() =>
+    allSeasons.filter(s => s.type === 'season' && recentGames.some((g: any) => g.date >= s.start && g.date <= s.end)),
+  [allSeasons, recentGames]);
+
+  const selectedSeasonDates = useMemo(() => {
+    if (statSeason === 'current') return currentSeasonDates;
+    return allSeasons.find(s => s.label === statSeason) ?? null;
+  }, [statSeason, allSeasons, currentSeasonDates]);
+
+  const filteredGames = useMemo(() =>
+    recentGames.filter((game: any) => {
+      const inSeason = !selectedSeasonDates || (game.date >= selectedSeasonDates.start && game.date <= selectedSeasonDates.end);
+      const inClub = statClub === 'all' || getGamePeriod(game)?.teamId === currentPeriod?.teamId;
+      return inSeason && inClub;
+    }),
+  [recentGames, selectedSeasonDates, statClub, teamPeriods]);
+
+  const filteredStats = useMemo(() => {
+    const n = filteredGames.length;
+    const mins = filteredGames.reduce((s: number, g: any) => s + (g.minutes || 0), 0);
+    const pos = filteredGames.reduce((acc: Record<string, number>, g: any) => {
+      if (g.minutesByPosition) Object.entries(g.minutesByPosition).forEach(([p, m]) => { acc[p] = (acc[p] || 0) + Number(m); });
+      return acc;
+    }, {} as Record<string, number>);
+    const perf = filteredGames.reduce((acc: Record<string, any>, g: any) => {
+      if (g.performanceCategory) {
+        if (!acc[g.performanceCategory]) acc[g.performanceCategory] = { games: 0, minutes: 0, captainGames: 0, averageMinutes: 0 };
+        acc[g.performanceCategory].games++;
+        acc[g.performanceCategory].minutes += g.minutes || 0;
+        if (g.captain) acc[g.performanceCategory].captainGames++;
+      }
+      return acc;
+    }, {} as Record<string, any>);
+    Object.values(perf).forEach((c: any) => { c.averageMinutes = c.games > 0 ? Math.round(c.minutes / c.games) : 0; });
+    return {
+      totalGames: n,
+      totalMinutes: mins,
+      captainGames: filteredGames.filter((g: any) => g.captain).length,
+      potmCount: filteredGames.filter((g: any) => g.playerOfTheMatch).length,
+      minutesByPosition: pos,
+      performanceCategoryStats: perf,
+      averageMinutes: n > 0 ? Math.round(mins / n) : 0,
+    };
+  }, [filteredGames]);
+
+  const filteredTopPositions = Object.entries(filteredStats.minutesByPosition)
+    .filter(([pos]) => pos !== 'SUB' && pos !== 'TBD')
+    .sort(([,a], [,b]) => (b as number) - (a as number))
+    .slice(0, 3);
+
+  const filteredAllPositions = Object.entries(filteredStats.minutesByPosition)
+    .filter(([pos]) => pos !== 'SUB' && pos !== 'TBD')
+    .sort(([,a], [,b]) => (b as number) - (a as number));
+
+  const filteredGamesByPeriod = useMemo(() =>
+    [...teamPeriods].reverse()
+      .map(period => ({ period, games: filteredGames.filter((game: any) => getGamePeriod(game)?.teamId === period.teamId) }))
+      .filter(({ games }) => games.length > 0),
+  [teamPeriods, filteredGames]);
+
+  const filteredAvailabilityHistory = useMemo(() => {
+    if (!selectedSeasonDates) return availabilityHistory;
+    return availabilityHistory.filter((item: any) => {
+      const dateStr = item.eventDate ? new Date(item.eventDate).toISOString().split('T')[0] : null;
+      if (!dateStr) return true;
+      return dateStr >= selectedSeasonDates.start && dateStr <= selectedSeasonDates.end;
+    });
+  }, [availabilityHistory, selectedSeasonDates]);
 
   const renderGameRow = (game: any, i: number) => (
     <div key={i} className="p-3 bg-muted/30 rounded-lg">
@@ -159,6 +250,50 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           <p className="text-sm text-white/60">{player.name}</p>
         </SheetHeader>
         
+        {/* Season and club filter bar */}
+        <div className="px-6 pt-3 pb-2 space-y-2 border-b">
+          {allSeasons.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {(['current', ...availableSeasons.map(s => s.label)] as string[]).map(s => (
+                <button key={s} onClick={() => setStatSeason(s)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                  style={statSeason === s ? {
+                    background: 'rgba(184,159,255,0.15)',
+                    border: '1px solid rgba(184,159,255,0.35)',
+                    color: '#b89fff',
+                  } : {
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '0.5px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.6)',
+                  }}
+                >
+                  {s === 'current' ? 'Current' : s}
+                </button>
+              ))}
+            </div>
+          )}
+          {teamPeriods.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {(['current', 'all'] as const).map(c => (
+                <button key={c} onClick={() => setStatClub(c)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                  style={statClub === c ? {
+                    background: 'rgba(184,159,255,0.15)',
+                    border: '1px solid rgba(184,159,255,0.35)',
+                    color: '#b89fff',
+                  } : {
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '0.5px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.6)',
+                  }}
+                >
+                  {c === 'current' ? 'Current Club' : 'All Clubs'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Tabs defaultValue="summary" className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-5 mt-4 h-12 text-xs w-[calc(100%-2rem)] mx-auto">
             <TabsTrigger value="summary" className="flex flex-col items-center gap-0.5 px-1">
@@ -197,7 +332,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{totalGames}</div>
+                    <div className="text-2xl font-bold">{filteredStats.totalGames}</div>
                     <p className="text-xs text-white/60">Total matches</p>
                   </CardContent>
                 </Card>
@@ -210,8 +345,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{totalMinutes}</div>
-                    <p className="text-xs text-white/60">Avg: {averageMinutes} per game</p>
+                    <div className="text-2xl font-bold">{filteredStats.totalMinutes}</div>
+                    <p className="text-xs text-white/60">Avg: {filteredStats.averageMinutes} per game</p>
                   </CardContent>
                 </Card>
 
@@ -223,7 +358,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{captainGames}</div>
+                    <div className="text-2xl font-bold">{filteredStats.captainGames}</div>
                     <p className="text-xs text-white/60">Times as captain</p>
                   </CardContent>
                 </Card>
@@ -236,7 +371,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{potmCount}</div>
+                    <div className="text-2xl font-bold">{filteredStats.potmCount}</div>
                     <p className="text-xs text-white/60">Player of the Match</p>
                   </CardContent>
                 </Card>
@@ -311,7 +446,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               </div>
 
               {/* Top Positions */}
-              {topPositions.length > 0 && (
+              {filteredTopPositions.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -321,7 +456,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {topPositions.map(([position, minutes], index) => (
+                      {filteredTopPositions.map(([position, minutes], index) => (
                         <div key={position} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="text-xs">
@@ -339,7 +474,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 </Card>
               )}
 
-                  {totalGames === 0 && (
+                  {filteredStats.totalGames === 0 && (
                     <Card>
                       <CardContent className="py-8 text-center">
                         <p className="text-white/60">No match statistics available</p>
@@ -361,9 +496,9 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {allPositions.length > 0 ? (
+                  {filteredAllPositions.length > 0 ? (
                     <div className="space-y-3">
-                      {allPositions.map(([position, minutes], index) => (
+                      {filteredAllPositions.map(([position, minutes], index) => (
                         <div key={position} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="text-xs">
@@ -374,7 +509,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           <div className="text-right">
                             <div className="text-sm font-medium">{Number(minutes)} min</div>
                             <div className="text-xs text-white/60">
-                              {totalMinutes > 0 ? Math.round((Number(minutes) / totalMinutes) * 100) : 0}% of total
+                              {filteredStats.totalMinutes > 0 ? Math.round((Number(minutes) / filteredStats.totalMinutes) * 100) : 0}% of total
                             </div>
                           </div>
                         </div>
@@ -400,9 +535,9 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {Object.keys(performanceCategoryStats).length > 0 ? (
+                  {Object.keys(filteredStats.performanceCategoryStats).length > 0 ? (
                     <div className="space-y-3">
-                      {Object.entries(performanceCategoryStats).map(([category, stats]: [string, any]) => (
+                      {Object.entries(filteredStats.performanceCategoryStats).map(([category, stats]: [string, any]) => (
                         <div key={category} className="p-3 bg-muted/30 rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-medium text-sm">{category}</h4>
@@ -446,7 +581,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         <p className="mt-2 text-sm text-white/60">Loading availability...</p>
                       </CardContent>
                     </Card>
-                  ) : availabilityHistory.length > 0 ? (
+                  ) : filteredAvailabilityHistory.length > 0 ? (
                     <>
                       {/* Summary Stats */}
                       <Card>
@@ -458,7 +593,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         </CardHeader>
                         <CardContent>
                           {(() => {
-                            const eventTypeStats = availabilityHistory.reduce((acc, item) => {
+                            const eventTypeStats = filteredAvailabilityHistory.reduce((acc, item) => {
                               const eventType = item.eventType || 'Unknown';
                               if (!acc[eventType]) {
                                 acc[eventType] = { total: 0, available: 0, unavailable: 0, pending: 0 };
@@ -519,7 +654,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3">
-                            {availabilityHistory.slice(0, 8).map((item, index) => (
+                            {filteredAvailabilityHistory.slice(0, 8).map((item, index) => (
                               <div key={`${item.id}-${index}`} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
@@ -569,40 +704,18 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             <TabsContent value="history" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
               <ScrollArea className="flex-1 px-6 h-[60vh]">
                 <div className="space-y-4 py-4">
-                  {/* Current Team / All Clubs toggle */}
-                  <div className="flex gap-2">
-                    {(['current', 'all'] as const).map(f => (
-                      <button
-                        key={f}
-                        onClick={() => setHistFilter(f)}
-                        className="flex-1 py-1.5 rounded-full text-sm font-medium transition-colors"
-                        style={histFilter === f ? {
-                          background: 'rgba(184,159,255,0.15)',
-                          border: '1px solid rgba(184,159,255,0.35)',
-                          color: '#b89fff',
-                        } : {
-                          background: 'rgba(255,255,255,0.06)',
-                          border: '0.5px solid rgba(255,255,255,0.1)',
-                          color: 'rgba(255,255,255,0.6)',
-                        }}
-                      >
-                        {f === 'current' ? 'Current Team' : 'All Clubs'}
-                      </button>
-                    ))}
-                  </div>
-
-                  {histFilter === 'current' ? (
+                  {statClub === 'current' ? (
                     <Card>
                       <CardContent className="pt-4">
-                        {currentTeamGames.length > 0 ? (
-                          <div className="space-y-3">{currentTeamGames.map(renderGameRow)}</div>
+                        {filteredGames.length > 0 ? (
+                          <div className="space-y-3">{filteredGames.map(renderGameRow)}</div>
                         ) : (
                           <p className="text-white/60 text-center py-8">No match history for current team</p>
                         )}
                       </CardContent>
                     </Card>
-                  ) : gamesByPeriod.length > 0 ? (
-                    gamesByPeriod.map(({ period, games }) => (
+                  ) : filteredGamesByPeriod.length > 0 ? (
+                    filteredGamesByPeriod.map(({ period, games }) => (
                       <Card key={`${period.teamId}-${period.from}`}>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm">
@@ -629,6 +742,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       </CardContent>
                     </Card>
                   )}
+
                 </div>
               </ScrollArea>
             </TabsContent>
