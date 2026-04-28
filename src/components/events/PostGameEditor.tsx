@@ -595,11 +595,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
                 )}
 
                 {/* Player of the Match for this team */}
-                {team.players.length > 0 && (
-                  <div className="overflow-hidden">
-                    <Label className="text-xs truncate block">POTM - {team.performanceCategoryName}</Label>
-                    <Select 
-                      value={playerOfMatchByTeam[team.teamNumber] || 'none'} 
+                <div className="overflow-hidden">
+                  <Label className="text-xs truncate block">POTM - {team.performanceCategoryName}</Label>
+                  {team.players.length > 0 ? (
+                    <Select
+                      value={playerOfMatchByTeam[team.teamNumber] || 'none'}
                       onValueChange={(value) => handlePOTMChange(team.teamNumber, value)}
                     >
                       <SelectTrigger>
@@ -614,8 +614,12 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      No squad players found for this team yet.
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
