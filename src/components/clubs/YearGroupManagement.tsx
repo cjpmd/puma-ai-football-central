@@ -429,21 +429,21 @@ const TeamManagementContent = ({
   const otherAssignedTeams = teams.filter(team => team.year_group_id && team.year_group_id !== yearGroup.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 min-w-0">
       {/* Year Group Info */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            {yearGroup.name}
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base min-w-0">
+            <Users className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{yearGroup.name}</span>
             {yearGroup.playingFormat && (
-              <Badge variant="secondary">{yearGroup.playingFormat}</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 flex-shrink-0">{yearGroup.playingFormat}</Badge>
             )}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs break-words">
             {yearGroup.description || 'No description provided'}
             {yearGroup.ageYear && ` • Born ${yearGroup.ageYear}`}
-            {yearGroup.softPlayerLimit && ` • Target: ${yearGroup.softPlayerLimit} players per team`}
+            {yearGroup.softPlayerLimit && ` • Target: ${yearGroup.softPlayerLimit} players`}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -468,40 +468,63 @@ const TeamManagementContent = ({
               {assignedTeams.map((team) => (
                 <div
                   key={team.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg"
+                  className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg min-w-0"
                 >
-                  <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-                    <span className="font-medium text-sm truncate">{team.name}</span>
-                    <span className="text-muted-foreground text-xs flex-shrink-0">· {team.age_group}</span>
+                  <div className="min-w-0 flex-1 truncate text-sm">
+                    <span className="font-medium">{team.name}</span>
+                    <span className="text-muted-foreground text-xs"> · {team.age_group}</span>
                   </div>
                   <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0 h-5 flex-shrink-0">
                     <Link2 className="h-3 w-3" />
-                    Linked
+                    <span className="hidden sm:inline">Linked</span>
                   </Badge>
-                  <Select
-                    onValueChange={(yearGroupId) => {
-                      if (yearGroupId === 'remove') {
-                        onRemoveTeam(team.id);
-                      } else {
-                        onAssignTeam(team.id, yearGroupId);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-32 h-7 text-xs flex-shrink-0">
-                      <SelectValue placeholder="Move to..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="remove" className="text-destructive">
-                        Remove from Year Group
-                      </SelectItem>
-                      <Separator />
-                      {yearGroups.filter(yg => yg.id !== yearGroup.id).map((yg) => (
-                        <SelectItem key={yg.id} value={yg.id}>
-                          {yg.name} {yg.playingFormat && `(${yg.playingFormat})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+                        aria-label="Team actions"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="text-xs text-muted-foreground">
+                        Manage team
+                      </DropdownMenuLabel>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <ArrowRightLeft className="h-4 w-4 mr-2" />
+                          Move to year group
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          {yearGroups.filter(yg => yg.id !== yearGroup.id).length === 0 ? (
+                            <DropdownMenuItem disabled>No other year groups</DropdownMenuItem>
+                          ) : (
+                            yearGroups
+                              .filter(yg => yg.id !== yearGroup.id)
+                              .map((yg) => (
+                                <DropdownMenuItem
+                                  key={yg.id}
+                                  onClick={() => onAssignTeam(team.id, yg.id)}
+                                >
+                                  {yg.name} {yg.playingFormat && `(${yg.playingFormat})`}
+                                </DropdownMenuItem>
+                              ))
+                          )}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => onRemoveTeam(team.id)}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Remove from year group
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))}
             </div>
@@ -514,7 +537,7 @@ const TeamManagementContent = ({
         <Card className="border-amber-400/30 bg-amber-500/5">
           <CardHeader className="p-3 pb-2">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />
               Unassigned Teams
             </CardTitle>
             <CardDescription className="text-xs">
@@ -526,22 +549,23 @@ const TeamManagementContent = ({
               {unassignedTeams.map((team) => (
                 <div
                   key={team.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg"
+                  className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg min-w-0"
                 >
-                  <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-                    <span className="font-medium text-sm truncate">{team.name}</span>
-                    <span className="text-muted-foreground text-xs flex-shrink-0">· {team.age_group}</span>
+                  <div className="min-w-0 flex-1 truncate text-sm">
+                    <span className="font-medium">{team.name}</span>
+                    <span className="text-muted-foreground text-xs"> · {team.age_group}</span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-amber-400/40 text-amber-300 flex-shrink-0">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-amber-400/40 text-amber-300 flex-shrink-0 hidden sm:inline-flex">
                     Unassigned
                   </Badge>
                   <Button
                     size="sm"
                     onClick={() => onAssignTeam(team.id, yearGroup.id)}
                     className="h-7 px-2 text-xs flex-shrink-0"
+                    aria-label="Assign to this year group"
                   >
-                    <Users className="h-3 w-3 mr-1" />
-                    Assign
+                    <Users className="h-3 w-3 sm:mr-1" />
+                    <span className="hidden sm:inline">Assign</span>
                   </Button>
                 </div>
               ))}
@@ -566,23 +590,25 @@ const TeamManagementContent = ({
                 return (
                   <div
                     key={team.id}
-                    className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg"
+                    className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg min-w-0"
                   >
-                    <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-                      <span className="font-medium text-sm truncate">{team.name}</span>
-                      <span className="text-muted-foreground text-xs flex-shrink-0">· {team.age_group}</span>
+                    <div className="min-w-0 flex-1 truncate text-sm">
+                      <span className="font-medium">{team.name}</span>
+                      <span className="text-muted-foreground text-xs"> · {team.age_group}</span>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0 h-5 flex-shrink-0">
-                      <Users className="h-3 w-3" />
-                      {assignedYearGroup?.name}
+                    <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0 h-5 flex-shrink-0 max-w-[80px] sm:max-w-none">
+                      <Users className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{assignedYearGroup?.name}</span>
                     </Badge>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onAssignTeam(team.id, yearGroup.id)}
                       className="h-7 px-2 text-xs flex-shrink-0"
+                      aria-label="Move team here"
                     >
-                      Move here
+                      <ArrowRightLeft className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Move here</span>
                     </Button>
                   </div>
                 );
