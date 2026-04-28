@@ -129,6 +129,13 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       }
 
       setStaffRecords(records);
+      setOpenMap(prev => {
+        const next: Record<string, boolean> = {};
+        records.forEach((r, i) => {
+          next[r.id] = prev[r.id] ?? i === 0;
+        });
+        return next;
+      });
 
       // Load kit issues and items for each team
       const issuesMap: Record<string, KitIssue[]> = {};
