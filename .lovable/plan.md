@@ -1,78 +1,54 @@
-# Club Management Mobile — Fixes & UX Refinement
+## Club Management — Teams & Year Group UI Refinement
 
-## Problem Summary
+Two files are in scope:
+- `src/components/clubs/ClubTeamLinking.tsx` — Club Management → Teams tab
+- `src/components/clubs/YearGroupManagement.tsx` — Year Groups → Manage Teams modal
 
-On the Club Details mobile view (`/clubs/:id`):
+### 1. Club Management → Teams tab (`ClubTeamLinking.tsx`)
 
-1. **Teams tab** lists all 3 club teams (Panthers, Pumas, Jags).
-2. **Summary tab** shows only "2 Teams / 38 Players" — Jags missing.
-3. **Players tab** shows "29 players from 2 teams" — Jags missing.
-4. **Teams tab** exposes a "Move to…" dropdown and an unlink button inline on every team row, making accidental year-group changes / unlinking too easy.
+**Add a "Linked" indicator pill on each team row**
+- Add a small pill next to the team name on every linked team row (both in the Unassigned and per-year-group sections).
+- Pill: `Badge` variant `secondary` with a `Link2` (lucide) icon + label "Linked", using existing semantic tokens (no hard-coded greens). Subtle, informational only.
 
-### Root cause of #2 and #3
+**Condense the team row boxes**
+- Reduce row padding from `p-2 sm:p-3` → `px-2.5 py-1.5`.
+- Drop the `flex-col sm:flex-row` stack — keep a single horizontal row at all breakpoints (name+meta on left, action button on right). Year group/age group already short enough.
+- Collapse the two-line team name + age group into a single line: `Team Name · U12` (smaller muted suffix).
+- Action `MoreVertical` button: `h-7 w-7` instead of `h-8 w-8`.
+- Reduce inter-row gap `space-y-2` → `space-y-1.5`.
 
-There are two sources of truth for "teams in a club":
-- `teams.club_id` column (used by the Teams tab).
-- `club_teams` link table (used by Summary and Players tabs).
+**Collapsible year-group sections**
+- Wrap each year-group `Card` (the `assignedTeams.map` loop) in a Radix `Collapsible` (`@/components/ui/collapsible` — already used elsewhere).
+- Header (`CardHeader`) becomes the `CollapsibleTrigger`: clickable row showing year-group name, format badge, team count, and a `ChevronDown` that rotates 180° when open.
+- `CardContent` becomes `CollapsibleContent`.
+- Default state: **expanded** when ≤3 year groups total, **collapsed** when >3 (so heavy clubs see a clean overview).
+- Persist open/closed per year-group in component state (`Record<string, boolean>`).
+- Apply the same collapsible pattern to the "Unassigned Teams" warning card so it can also be folded away.
 
-For this club, **Jags** has `teams.club_id` set correctly but no row in `club_teams`. So tabs that query through `club_teams` miss it. Confirmed via DB: 3 teams have `club_id` matching the club, but only 2 appear in `club_teams`.
+**Tighten card chrome**
+- Reduce `CardHeader` from `p-3 sm:p-4 pb-2` → `p-3 pb-2` (already mobile-tight; remove the desktop bump that adds visual weight on phones).
+- Reduce gap between year-group cards `space-y-6` → `space-y-3`.
 
-## Plan
+### 2. Year Groups → Manage Teams modal (`YearGroupManagement.tsx`)
 
-### 1. Make `teams.club_id` the single source of truth for club membership
+This is the screen in the user's second screenshot with off-scheme green/yellow tinted boxes.
 
-Update both components so they discover club teams the same way the Teams tab does — a union of:
-- `teams` rows where `club_id = clubId`, plus
-- `club_teams.team_id` rows (legacy link table) — kept as fallback for any teams that only exist in the link table.
+**Replace off-scheme backgrounds with the app design tokens**
+- "Currently Assigned Teams" rows (line 468): remove `bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800`. Use the standard glass row style consistent with `ClubTeamLinking`: `border border-white/10 bg-white/[0.04] rounded-lg`. Replace the green "Assigned" badge with the same `Linked` pill (Badge `secondary` + `Link2` icon).
+- "Unassigned Teams" rows (line 521): remove yellow tint. Use the same neutral row style; keep the `Unassigned` badge but switch to `variant="outline"` with `text-amber-300/border-amber-400/30` tokens (semantic warning, no flat color block) — or simply `variant="secondary"` with an `AlertTriangle` icon to stay fully on-scheme.
+- "Teams in Other Year Groups" rows already neutral — leave structure, only condense.
+- "Assign" button (line 534): drop `bg-green-600 hover:bg-green-700`; use default primary button so it follows theme.
 
-Files:
+**Condense rows (same recipe as section 1)**
+- Row padding `p-3` → `px-2.5 py-1.5`.
+- Single-line name + muted age group suffix; no stacked layout on mobile.
+- "Move to..." `Select` shrinks to `h-7 w-32 text-xs`; only renders on rows that need the move action (use a `MoreVertical` dropdown with "Move to year group" submenu + "Remove" item — matches the pattern already established in `ClubTeamLinking.tsx` for consistency).
+- `Card` headers tighter: `p-3 pb-2`; outer `space-y-*` between cards reduced.
 
-- **`src/components/clubs/ClubSummaryReport.tsx`** — `loadSummary()`
-  - Query `teams` by `club_id` AND `club_teams` by `club_id`, then dedupe team IDs.
-  - Continue to compute totals + age-group breakdown from the unified set.
-- **`src/components/clubs/ClubPlayerManagement.tsx`** — team-loading effect (~line 67–95)
-  - Same union approach. All downstream player queries, team-summary cards, and the team filter dropdown then include every team.
+### Out of scope
+- No data-model changes; all teams shown here are already linked (filtered by `team.club_id === clubId`), so the "Linked" pill is purely a visual affordance the user requested.
+- No changes to dialogs/forms (Edit year group, Create team) — only list rows and card chrome.
 
-### 2. Self-heal `club_teams` on view load (light backfill)
-
-When the unified loader detects a team that's in `teams.club_id` but missing from `club_teams`, insert the missing `club_teams` row (`{ club_id, team_id }`). This keeps the two stores aligned over time without requiring a one-off migration. Wrapped in try/catch so RLS denials don't break rendering.
-
-### 3. Teams tab — safer management UI (`ClubTeamLinking.tsx`, ~line 458–500)
-
-Replace the always-visible "Move to…" Select + Unlink button with a single discreet action menu per team:
-
-- Each team row shows only the team name + age group + a small `MoreVertical` (⋮) icon button (ghost, muted).
-- Tapping ⋮ opens a `DropdownMenu` with:
-  - **Move to year group ▸** (submenu listing other year groups)
-  - **Remove from year group** (muted)
-  - separator
-  - **Unlink team from club** (red/destructive, with `AlertDialog` confirmation: "Unlink {team name} from {club name}? This will not delete the team.")
-- Use the existing `dropdown-menu`, `alert-dialog` components from `@/components/ui`.
-
-Result: destructive actions require an explicit two-step gesture, the row is visually cleaner, and accidental dropdown taps are no longer possible.
-
-### 4. No changes required
-
-- `ClubDetailsMobile.tsx` wiring is fine.
-- Year-group reassignment / unlink server logic in `ClubTeamLinking` is reused; only the trigger UI changes.
-
-## Technical Notes
-
-- Union query pattern (pseudo):
-  ```ts
-  const [{ data: byColumn }, { data: byLink }] = await Promise.all([
-    supabase.from('teams').select('id, name, age_group').eq('club_id', clubId),
-    supabase.from('club_teams').select('team_id, teams!inner(id, name, age_group)').eq('club_id', clubId),
-  ]);
-  const map = new Map<string, {id:string;name:string;age_group:string}>();
-  byColumn?.forEach(t => map.set(t.id, t));
-  byLink?.forEach(r => r.teams && map.set(r.teams.id, r.teams));
-  const teams = [...map.values()];
-  ```
-- Backfill insert uses `.upsert({ club_id, team_id }, { onConflict: 'club_id,team_id', ignoreDuplicates: true })` to avoid duplicate errors.
-- Dropdown trigger: `Button variant="ghost" size="icon" className="h-8 w-8"` with `MoreVertical` from `lucide-react`.
-
-## Out of Scope
-
-- No schema migration. No deletion of `club_teams` table.
-- No changes to desktop `ClubDetailsModal` (request is mobile-focused). If desired later, the same dropdown pattern can be ported.
+### Files to edit
+- `src/components/clubs/ClubTeamLinking.tsx`
+- `src/components/clubs/YearGroupManagement.tsx`

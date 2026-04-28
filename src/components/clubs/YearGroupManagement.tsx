@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Users, ArrowLeft } from "lucide-react";
+import { Plus, Users, ArrowLeft, Link2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { YearGroupForm } from "./YearGroupForm";
@@ -449,33 +449,35 @@ const TeamManagementContent = ({
 
       {/* Currently Assigned Teams */}
       <Card>
-        <CardHeader>
-          <CardTitle>Teams in {yearGroup.name}</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm sm:text-base">Teams in {yearGroup.name}</CardTitle>
+          <CardDescription className="text-xs">
             {assignedTeams.length} team{assignedTeams.length !== 1 ? 's' : ''} currently assigned
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0">
           {assignedTeams.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No teams assigned to this year group yet.</p>
-              <p className="text-sm">Assign teams from the sections below.</p>
+            <div className="text-center py-6 text-muted-foreground">
+              <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No teams assigned to this year group yet.</p>
+              <p className="text-xs">Assign teams from the sections below.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-1.5">
               {assignedTeams.map((team) => (
-                <div key={team.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded-lg bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-medium text-sm truncate block">{team.name}</span>
-                      <span className="text-muted-foreground text-xs">({team.age_group})</span>
-                    </div>
-                    <Badge variant="outline" className="text-green-700 border-green-300 text-xs flex-shrink-0">
-                      Assigned
-                    </Badge>
+                <div
+                  key={team.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg"
+                >
+                  <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+                    <span className="font-medium text-sm truncate">{team.name}</span>
+                    <span className="text-muted-foreground text-xs flex-shrink-0">· {team.age_group}</span>
                   </div>
-                  <Select 
+                  <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0 h-5 flex-shrink-0">
+                    <Link2 className="h-3 w-3" />
+                    Linked
+                  </Badge>
+                  <Select
                     onValueChange={(yearGroupId) => {
                       if (yearGroupId === 'remove') {
                         onRemoveTeam(team.id);
@@ -484,11 +486,11 @@ const TeamManagementContent = ({
                       }
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-40 h-8 text-xs">
+                    <SelectTrigger className="w-32 h-7 text-xs flex-shrink-0">
                       <SelectValue placeholder="Move to..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="remove" className="text-red-600">
+                      <SelectItem value="remove" className="text-destructive">
                         Remove from Year Group
                       </SelectItem>
                       <Separator />
@@ -508,30 +510,34 @@ const TeamManagementContent = ({
 
       {/* Unassigned Teams */}
       {unassignedTeams.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-yellow-700 dark:text-yellow-300">Unassigned Teams</CardTitle>
-            <CardDescription>
+        <Card className="border-amber-400/30 bg-amber-500/5">
+          <CardHeader className="p-3 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              Unassigned Teams
+            </CardTitle>
+            <CardDescription className="text-xs">
               These teams need to be assigned to a year group
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-3 pt-0">
+            <div className="space-y-1.5">
               {unassignedTeams.map((team) => (
-                <div key={team.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded-lg bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-medium text-sm truncate block">{team.name}</span>
-                      <span className="text-muted-foreground text-xs">({team.age_group})</span>
-                    </div>
-                    <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs flex-shrink-0">
-                      Unassigned
-                    </Badge>
+                <div
+                  key={team.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg"
+                >
+                  <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+                    <span className="font-medium text-sm truncate">{team.name}</span>
+                    <span className="text-muted-foreground text-xs flex-shrink-0">· {team.age_group}</span>
                   </div>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-amber-400/40 text-amber-300 flex-shrink-0">
+                    Unassigned
+                  </Badge>
                   <Button
                     size="sm"
                     onClick={() => onAssignTeam(team.id, yearGroup.id)}
-                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700 h-8 text-xs"
+                    className="h-7 px-2 text-xs flex-shrink-0"
                   >
                     <Users className="h-3 w-3 mr-1" />
                     Assign
@@ -546,33 +552,34 @@ const TeamManagementContent = ({
       {/* Teams in Other Year Groups */}
       {otherAssignedTeams.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Teams in Other Year Groups</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-3 pb-2">
+            <CardTitle className="text-sm sm:text-base">Teams in Other Year Groups</CardTitle>
+            <CardDescription className="text-xs">
               Teams already assigned to other year groups
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-3 pt-0">
+            <div className="space-y-1.5">
               {otherAssignedTeams.map((team) => {
                 const assignedYearGroup = yearGroups.find(yg => yg.id === team.year_group_id);
                 return (
-                  <div key={team.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded-lg">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div className="min-w-0 flex-1">
-                        <span className="font-medium text-sm truncate block">{team.name}</span>
-                        <span className="text-muted-foreground text-xs">({team.age_group})</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs flex-shrink-0">
-                        <Users className="h-3 w-3 mr-1" />
-                        {assignedYearGroup?.name}
-                      </Badge>
+                  <div
+                    key={team.id}
+                    className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg"
+                  >
+                    <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+                      <span className="font-medium text-sm truncate">{team.name}</span>
+                      <span className="text-muted-foreground text-xs flex-shrink-0">· {team.age_group}</span>
                     </div>
+                    <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0 h-5 flex-shrink-0">
+                      <Users className="h-3 w-3" />
+                      {assignedYearGroup?.name}
+                    </Badge>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onAssignTeam(team.id, yearGroup.id)}
-                      className="w-full sm:w-auto h-8 text-xs"
+                      className="h-7 px-2 text-xs flex-shrink-0"
                     >
                       Move here
                     </Button>
