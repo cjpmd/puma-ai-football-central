@@ -421,190 +421,179 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       </Dialog>
 
       {/* Teams Grouped by Year Group */}
-      {linkedTeams.length > 0 && (
-        <div className="space-y-6">
-          {/* Unassigned Teams Warning */}
-          {unassignedTeams.length > 0 && (
-            <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
-              <CardHeader className="p-3 sm:p-4 pb-2">
-                <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 text-sm sm:text-base">
-                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                  Unassigned Teams
-                </CardTitle>
-                <CardDescription className="text-yellow-700 dark:text-yellow-300 text-xs sm:text-sm">
-                  Assign these teams to a year group for better organization.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 pt-0">
-                <div className="space-y-2 sm:space-y-3">
-                  {unassignedTeams.map((team) => (
-                    <div key={team.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 border border-yellow-200 dark:border-yellow-800 rounded-lg bg-white dark:bg-gray-900">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="min-w-0 flex-1">
-                          <span className="font-medium text-sm truncate block">{team.name}</span>
-                          <span className="text-muted-foreground text-xs">{team.age_group}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-end w-full sm:w-auto">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                              aria-label="Team actions"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">
-                              Manage team
-                            </DropdownMenuLabel>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <ArrowRightLeft className="h-4 w-4 mr-2" />
-                                Assign to year group
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent>
-                                {yearGroups.length === 0 ? (
-                                  <DropdownMenuItem disabled>
-                                    No year groups
-                                  </DropdownMenuItem>
-                                ) : (
-                                  yearGroups.map((yg) => (
-                                    <DropdownMenuItem
-                                      key={yg.id}
-                                      onClick={() => assignTeamToYearGroup(team.id, yg.id)}
-                                    >
-                                      {yg.name}
-                                    </DropdownMenuItem>
-                                  ))
-                                )}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setUnlinkTarget(team)}
-                            >
-                              <Unlink className="h-4 w-4 mr-2" />
-                              Unlink from club
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      {linkedTeams.length > 0 && (() => {
+        const renderTeamRow = (team: Team, isUnassigned: boolean) => (
+          <div
+            key={team.id}
+            className="flex items-center gap-2 px-2.5 py-1.5 border border-white/10 bg-white/[0.04] rounded-lg"
+          >
+            <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+              <span className="font-medium text-sm truncate">{team.name}</span>
+              <span className="text-muted-foreground text-xs flex-shrink-0">· {team.age_group}</span>
+            </div>
+            <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0 h-5 flex-shrink-0">
+              <Link2 className="h-3 w-3" />
+              Linked
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+                  aria-label="Team actions"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Manage team
+                </DropdownMenuLabel>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    {isUnassigned ? 'Assign to year group' : 'Move to year group'}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {(() => {
+                      const candidates = yearGroups.filter(yg => yg.id !== team.year_group_id);
+                      if (candidates.length === 0) {
+                        return (
+                          <DropdownMenuItem disabled>
+                            {isUnassigned ? 'No year groups' : 'No other year groups'}
+                          </DropdownMenuItem>
+                        );
+                      }
+                      return candidates.map((yg) => (
+                        <DropdownMenuItem
+                          key={yg.id}
+                          onClick={() => assignTeamToYearGroup(team.id, yg.id)}
+                        >
+                          {yg.name}
+                        </DropdownMenuItem>
+                      ));
+                    })()}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                {!isUnassigned && (
+                  <DropdownMenuItem onClick={() => removeTeamFromYearGroup(team.id)}>
+                    <X className="h-4 w-4 mr-2" />
+                    Remove from year group
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setUnlinkTarget(team)}
+                >
+                  <Unlink className="h-4 w-4 mr-2" />
+                  Unlink from club
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
 
-          {/* Teams by Year Group - Mobile Optimized */}
-          {assignedTeams.map(([yearGroupId, teams]) => {
-            const yearGroup = yearGroups.find(yg => yg.id === yearGroupId);
-            return (
-              <Card key={yearGroupId}>
-                <CardHeader className="p-3 sm:p-4 pb-2">
-                  <CardTitle className="flex flex-wrap items-center gap-2 text-sm sm:text-base">
-                    <Users className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                    <span className="truncate">{yearGroup?.name || 'Unknown Year Group'}</span>
-                    {yearGroup?.playing_format && (
-                      <Badge variant="secondary" className="text-xs">{yearGroup.playing_format}</Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    {teams.length} team{teams.length !== 1 ? 's' : ''}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-3 sm:p-4 pt-0">
-                  <div className="space-y-2">
-                    {teams.map((team) => (
-                      <div key={team.id} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 sm:p-3 border rounded-lg">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="min-w-0 flex-1">
-                            <span className="font-medium text-sm truncate block">{team.name}</span>
-                            <span className="text-muted-foreground text-xs">{team.age_group}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-end w-full sm:w-auto">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                aria-label="Team actions"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                Manage team
-                              </DropdownMenuLabel>
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>
-                                  <ArrowRightLeft className="h-4 w-4 mr-2" />
-                                  Move to year group
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent>
-                                  {yearGroups.filter(yg => yg.id !== team.year_group_id).length === 0 ? (
-                                    <DropdownMenuItem disabled>
-                                      No other year groups
-                                    </DropdownMenuItem>
-                                  ) : (
-                                    yearGroups
-                                      .filter(yg => yg.id !== team.year_group_id)
-                                      .map((yg) => (
-                                        <DropdownMenuItem
-                                          key={yg.id}
-                                          onClick={() => assignTeamToYearGroup(team.id, yg.id)}
-                                        >
-                                          {yg.name}
-                                        </DropdownMenuItem>
-                                      ))
-                                  )}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuSub>
-                              <DropdownMenuItem onClick={() => removeTeamFromYearGroup(team.id)}>
-                                <X className="h-4 w-4 mr-2" />
-                                Remove from year group
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => setUnlinkTarget(team)}
-                              >
-                                <Unlink className="h-4 w-4 mr-2" />
-                                Unlink from club
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+        return (
+          <div className="space-y-3">
+            {/* Unassigned Teams Warning - collapsible */}
+            {unassignedTeams.length > 0 && (
+              <Card className="border-amber-400/30 bg-amber-500/5">
+                <Collapsible open={unassignedOpen} onOpenChange={setUnassignedOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-2 p-3 text-left"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                        <span className="text-sm font-semibold truncate">
+                          Unassigned Teams
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                          {unassignedTeams.length}
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground transition-transform ${
+                          unassignedOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-3 pb-3 space-y-1.5">
+                      {unassignedTeams.map((team) => renderTeamRow(team, true))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            )}
+
+            {/* Teams by Year Group - collapsible */}
+            {assignedTeams.map(([yearGroupId, teams]) => {
+              const yearGroup = yearGroups.find(yg => yg.id === yearGroupId);
+              const isOpen = openGroups[yearGroupId] ?? true;
+              return (
+                <Card key={yearGroupId}>
+                  <Collapsible
+                    open={isOpen}
+                    onOpenChange={(open) =>
+                      setOpenGroups((prev) => ({ ...prev, [yearGroupId]: open }))
+                    }
+                  >
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between gap-2 p-3 text-left"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm font-semibold truncate">
+                            {yearGroup?.name || 'Unknown Year Group'}
+                          </span>
+                          {yearGroup?.playing_format && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                              {yearGroup.playing_format}
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            · {teams.length} team{teams.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <ChevronDown
+                          className={`h-4 w-4 text-muted-foreground transition-transform ${
+                            isOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-3 pb-3 space-y-1.5">
+                        {teams.map((team) => renderTeamRow(team, false))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              );
+            })}
+
+            {/* Empty State for All Teams Assigned */}
+            {linkedTeams.length > 0 && unassignedTeams.length === 0 && assignedTeams.length === 0 && (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">All teams organized!</h3>
+                  <p className="text-muted-foreground">
+                    All linked teams have been assigned to year groups.
+                  </p>
                 </CardContent>
               </Card>
-            );
-          })}
-
-          {/* Empty State for All Teams Assigned */}
-          {linkedTeams.length > 0 && unassignedTeams.length === 0 && assignedTeams.length === 0 && (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">All teams organized!</h3>
-                <p className="text-muted-foreground">
-                  All linked teams have been assigned to year groups.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
 
       <AlertDialog open={!!unlinkTarget} onOpenChange={(open) => !open && setUnlinkTarget(null)}>
         <AlertDialogContent>
