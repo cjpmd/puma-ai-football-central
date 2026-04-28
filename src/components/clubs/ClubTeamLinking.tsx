@@ -7,7 +7,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Link, Unlink, Users, AlertTriangle, Plus } from 'lucide-react';
+import { Link, Unlink, Users, AlertTriangle, Plus, MoreVertical, ArrowRightLeft, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -49,6 +70,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
   const [newTeamAgeGroup, setNewTeamAgeGroup] = useState('');
   const [newTeamFormat, setNewTeamFormat] = useState<GameFormat>('7-a-side');
   const [isCreating, setIsCreating] = useState(false);
+  const [unlinkTarget, setUnlinkTarget] = useState<Team | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -407,27 +429,54 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
                           <span className="text-muted-foreground text-xs">{team.age_group}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <Select onValueChange={(yearGroupId) => assignTeamToYearGroup(team.id, yearGroupId)}>
-                          <SelectTrigger className="flex-1 sm:w-36 h-8 text-xs">
-                            <SelectValue placeholder="Assign to..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {yearGroups.map((yg) => (
-                              <SelectItem key={yg.id} value={yg.id}>
-                                {yg.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="h-8 w-8 p-0 flex-shrink-0"
-                          onClick={() => unlinkTeam(team.id)}
-                        >
-                          <Unlink className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center justify-end w-full sm:w-auto">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                              aria-label="Team actions"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">
+                              Manage team
+                            </DropdownMenuLabel>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                                Assign to year group
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                {yearGroups.length === 0 ? (
+                                  <DropdownMenuItem disabled>
+                                    No year groups
+                                  </DropdownMenuItem>
+                                ) : (
+                                  yearGroups.map((yg) => (
+                                    <DropdownMenuItem
+                                      key={yg.id}
+                                      onClick={() => assignTeamToYearGroup(team.id, yg.id)}
+                                    >
+                                      {yg.name}
+                                    </DropdownMenuItem>
+                                  ))
+                                )}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setUnlinkTarget(team)}
+                            >
+                              <Unlink className="h-4 w-4 mr-2" />
+                              Unlink from club
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
@@ -463,40 +512,60 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
                             <span className="text-muted-foreground text-xs">{team.age_group}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <Select 
-                            value={team.year_group_id || ''} 
-                            onValueChange={(yearGroupId) => {
-                              if (yearGroupId === 'remove') {
-                                removeTeamFromYearGroup(team.id);
-                              } else {
-                                assignTeamToYearGroup(team.id, yearGroupId);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="flex-1 sm:w-36 h-8 text-xs">
-                              <SelectValue placeholder="Move to..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="remove" className="text-red-600">
-                                Remove
-                              </SelectItem>
-                              <Separator />
-                              {yearGroups.filter(yg => yg.id !== team.year_group_id).map((yg) => (
-                                <SelectItem key={yg.id} value={yg.id}>
-                                  {yg.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="h-8 w-8 p-0 flex-shrink-0"
-                            onClick={() => unlinkTeam(team.id)}
-                          >
-                            <Unlink className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center justify-end w-full sm:w-auto">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                aria-label="Team actions"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                Manage team
+                              </DropdownMenuLabel>
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                                  Move to year group
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                  {yearGroups.filter(yg => yg.id !== team.year_group_id).length === 0 ? (
+                                    <DropdownMenuItem disabled>
+                                      No other year groups
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    yearGroups
+                                      .filter(yg => yg.id !== team.year_group_id)
+                                      .map((yg) => (
+                                        <DropdownMenuItem
+                                          key={yg.id}
+                                          onClick={() => assignTeamToYearGroup(team.id, yg.id)}
+                                        >
+                                          {yg.name}
+                                        </DropdownMenuItem>
+                                      ))
+                                  )}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                              <DropdownMenuItem onClick={() => removeTeamFromYearGroup(team.id)}>
+                                <X className="h-4 w-4 mr-2" />
+                                Remove from year group
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setUnlinkTarget(team)}
+                              >
+                                <Unlink className="h-4 w-4 mr-2" />
+                                Unlink from club
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     ))}
@@ -520,6 +589,33 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
           )}
         </div>
       )}
+
+      <AlertDialog open={!!unlinkTarget} onOpenChange={(open) => !open && setUnlinkTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unlink team from club?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {unlinkTarget
+                ? `Unlink ${unlinkTarget.name} from ${clubName}? The team will not be deleted, but it will no longer appear under this club.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (unlinkTarget) {
+                  unlinkTeam(unlinkTarget.id);
+                  setUnlinkTarget(null);
+                }
+              }}
+            >
+              Unlink team
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
