@@ -25,7 +25,7 @@ interface UserRoleData {
 }
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) => {
-  const { profile, user, refreshUserData } = useAuth();
+  const { profile, user, refreshUserData, signOut } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -402,6 +402,24 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-3">Notifications</h4>
                   <PushNotificationSetup />
+                </div>
+
+                <div className="border-t pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-destructive hover:text-destructive"
+                    onClick={async () => {
+                      try {
+                        await signOut();
+                        onClose();
+                      } catch (e) {
+                        // signOut handles its own logging
+                      }
+                    }}
+                  >
+                    Sign Out
+                  </Button>
                 </div>
               </div>
             </div>
