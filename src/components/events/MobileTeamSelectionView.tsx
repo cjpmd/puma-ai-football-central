@@ -566,6 +566,11 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                     </span>
                   </div>
                 )}
+                {currentTeam.periods.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">
+                    No squad selected yet for this team.
+                  </p>
+                )}
               </>
             )}
 
