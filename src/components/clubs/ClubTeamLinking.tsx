@@ -310,6 +310,19 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
   const unassignedTeams = teamsGroupedByYearGroup['unassigned'] || [];
   const assignedTeams = Object.entries(teamsGroupedByYearGroup).filter(([key]) => key !== 'unassigned');
 
+  // Default expand-state: expanded if ≤3 year groups, collapsed otherwise
+  useEffect(() => {
+    if (assignedTeams.length === 0) return;
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      const shouldOpen = assignedTeams.length <= 3;
+      assignedTeams.forEach(([id]) => {
+        if (next[id] === undefined) next[id] = shouldOpen;
+      });
+      return next;
+    });
+  }, [linkedTeams.length, assignedTeams.length]);
+
   if (loading) {
     return <div>Loading team linking...</div>;
   }
