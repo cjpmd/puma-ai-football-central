@@ -72,6 +72,8 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
   const [newTeamFormat, setNewTeamFormat] = useState<GameFormat>('7-a-side');
   const [isCreating, setIsCreating] = useState(false);
   const [unlinkTarget, setUnlinkTarget] = useState<Team | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [unassignedOpen, setUnassignedOpen] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
