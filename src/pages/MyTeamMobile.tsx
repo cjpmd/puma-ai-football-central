@@ -139,6 +139,16 @@ export default function MyTeamMobile() {
         eventCategoryMap.set(sel.event_id, existing);
       });
 
+      // Load this team's configured performance categories so we can map
+      // team_N score keys (team_1, team_2…) to the correct category name
+      // when an event_selections row is missing for that team number.
+      const { data: teamCatsData } = await supabase
+        .from('performance_categories')
+        .select('id, name')
+        .eq('team_id', currentTeam.id)
+        .order('name');
+      const orderedTeamCats = (teamCatsData ?? []) as { id: string; name: string }[];
+
       let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
       const categoryStatsMap = new Map<string, CategoryStats>();
       const matchResults: MatchResult[] = [];
@@ -146,7 +156,34 @@ export default function MyTeamMobile() {
       matchEvents.forEach(event => {
         const scores = event.scores as any;
         if (!scores) return;
-        const categories = eventCategoryMap.get(event.id) || [{ categoryId: null, categoryName: 'Default', teamNumber: 1 }];
+        const fromSelections = eventCategoryMap.get(event.id) || [];
+
+        // Discover every team_N present in scores (team_1, team_2, …).
+        const teamNumbersInScores = new Set<number>();
+        Object.keys(scores).forEach(k => {
+          const m = /^team_(\d+)$/.exec(k);
+          if (m) teamNumbersInScores.add(parseInt(m[1], 10));
+        });
+
+        // Synthesize category entries for team numbers that have a score
+        // but no matching event_selections row. Map by ordinal to the
+        // team's configured performance categories.
+        const haveTeamNumbers = new Set(fromSelections.map(c => c.teamNumber));
+        const synthesized: { categoryId: string | null; categoryName: string; teamNumber: number }[] = [];
+        teamNumbersInScores.forEach(n => {
+          if (haveTeamNumbers.has(n)) return;
+          const cat = orderedTeamCats[n - 1];
+          synthesized.push({
+            categoryId: cat?.id ?? null,
+            categoryName: cat?.name ?? `Team ${n}`,
+            teamNumber: n,
+          });
+        });
+
+        const combined = [...fromSelections, ...synthesized];
+        const categories = combined.length > 0
+          ? combined
+          : [{ categoryId: null, categoryName: 'Default', teamNumber: 1 }];
         const processedTeamNumbers = new Set<number>();
         categories.forEach(cat => {
           if (processedTeamNumbers.has(cat.teamNumber)) return;

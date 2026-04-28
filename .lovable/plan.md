@@ -1,47 +1,46 @@
-# Restore Performance Category filter in Team Analytics
+# Restore missing performance category data in Team Analytics
 
 ## Problem
 
-On `/my-team` (mobile), only the Season selector chip is visible. The Performance Category filter row ("All / Messi / Ronaldo") that used to appear is gone.
+In the screenshot, the "Ronaldo" performance category shows 0 games / 0 stats even though the 26 Apr fixture vs Arbroath Blues has scores recorded for both teams:
 
-## Root cause
+- `team_1: 5, opponent_1: 2` → Messi
+- `team_2: 5, opponent_2: 8` → Ronaldo
 
-In `src/pages/MyTeamMobile.tsx`:
+Confirmed in the database: that event has scores for both `team_1` and `team_2`, but only the **Messi** row exists in `event_selections`. There is no `event_selections` row with `team_number = 2` for that match.
 
-```ts
-const categoryKeys = analytics.categoryStats.map(c => c.categoryName);
-...
-{categoryKeys.length > 1 && ( /* render chips */ )}
-```
-
-`categoryStats` is built only from played matches in the selected season. Broughty United Jags 2015s currently has just **one** match logged in 2026, so `categoryStats` returns a single entry and the chip row is hidden — even though the team has two configured categories ("Messi" and "Ronaldo", confirmed in `performance_categories`).
+The analytics loader in `src/pages/MyTeamMobile.tsx` builds its category map purely from `event_selections`. Any team-number score that doesn't have a matching selection row is silently dropped — so Ronaldo's 5–8 result is never counted, and the filter chip shows nothing.
 
 ## Fix
 
-Source the chip list from the team's configured `performance_categories` (always available), independent of how many matches have been played. Match-data still drives the breakdown card lower down.
+Update `loadAnalyticsData` in `src/pages/MyTeamMobile.tsx` so it processes every `team_N` score present on an event, even when there is no corresponding `event_selections` row for that team number.
 
-### Changes (single file: `src/pages/MyTeamMobile.tsx`)
+### Logic change
 
-1. **Load configured categories once per team**
-   - Add a `teamCategories: string[]` state.
-   - In a new effect keyed on `currentTeam?.id`, fetch `performance_categories` for the current team (`select('name').eq('team_id', currentTeam.id).order('name')`) and store the names.
+For each match event:
 
-2. **Use configured categories for the filter chips**
-   - Replace `const categoryKeys = analytics.categoryStats.map(c => c.categoryName);` with `const categoryKeys = teamCategories;`.
-   - Render the chip row whenever `categoryKeys.length > 1` (unchanged condition, now fed by team config).
+1. Build the existing list of categories from `event_selections` (unchanged).
+2. **Additionally** scan `event.scores` for every `team_N` / `opponent_N` pair.
+3. For any `team_N` that does not already have an entry from step 1, synthesize a category entry using:
+   - `categoryId: null`
+   - `categoryName`: look up the team's configured performance categories by ordinal — `team_1` → first configured category by `name`, `team_2` → second, etc. (matches how the squad is created when a team plays in two performance groups). Fall back to `"Team N"` if no category exists at that index.
+   - `teamNumber: N`
+4. Continue with the existing loop that adds wins/draws/losses, goalsFor/Against, and `matchResults` rows for each team number.
 
-3. **Reset selection on team switch**
-   - When `currentTeam.id` changes, reset `selectedCategory` to `'all'` so a stale category from a previous team doesn't filter to nothing.
+This guarantees that:
+- Filtering by **Ronaldo** on the 26 Apr match shows a 5–8 loss.
+- "All" totals reflect both team performances (today the Ronaldo result is missing entirely from goals/wins/losses).
+- Future matches with `team_3` etc. are also captured.
 
-4. **Keep the breakdown card behaviour**
-   - The "By Performance Category" card lower down continues to use `displayStats.categoryStats` (match-derived). No change needed there.
+### Secondary tidy
+
+The `Default` synthetic category (used when a match has no selections at all) currently reuses the literal string `"Default"`, which won't match any real chip. Leave the behaviour as-is for matches with no selection rows and no `team_N` keys, but make sure the new ordinal-based lookup runs first so it takes precedence whenever scores carry team numbers.
+
+## Files
+
+- `src/pages/MyTeamMobile.tsx` — extend the per-event loop in `loadAnalyticsData` as described. No schema or RLS changes required.
 
 ## Out of scope
 
-- Event-type filter logic (already correctly conditional on actual event types in season).
-- Analytics calculations and queries.
-- Desktop `Analytics.tsx`.
-
-## Files touched
-
-- `src/pages/MyTeamMobile.tsx` (one fetch effect, one state, one line swap, one reset)
+- Backfilling missing `event_selections` rows for historical matches (data fix, not a UI concern).
+- Changing how Game Day writes selections.
