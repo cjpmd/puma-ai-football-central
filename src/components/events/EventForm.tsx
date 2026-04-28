@@ -312,9 +312,17 @@ export const EventForm: React.FC<EventFormProps> = ({
 
     try {
       // Clean up the form data to ensure proper format
+      const fallbackTitle = (() => {
+        const t = (formData.event_type || '').toLowerCase();
+        if (t === 'training') return 'Training';
+        if (t === 'fixture' || t === 'friendly' || t === 'tournament' || t === 'festival' || t === 'match') {
+          return formData.opponent ? `vs ${formData.opponent}` : 'Match';
+        }
+        return 'Event';
+      })();
       const cleanEventData: any = {
         teamId: formData.team_id,
-        title: formData.title,
+        title: (formData.title || '').trim() || fallbackTitle,
         date: formData.date,
         startTime: formData.start_time,
         endTime: formData.end_time,
