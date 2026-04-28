@@ -131,8 +131,8 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       setStaffRecords(records);
       setOpenMap(prev => {
         const next: Record<string, boolean> = {};
-        records.forEach((r, i) => {
-          next[r.id] = prev[r.id] ?? i === 0;
+        records.forEach((r) => {
+          next[r.id] = prev[r.id] ?? false;
         });
         return next;
       });
