@@ -5159,6 +5159,18 @@ export type Database = {
         }[]
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_team_by_join_code: {
+        Args: { _code: string }
+        Returns: {
+          club_id: string
+          club_name: string
+          id: string
+          logo_url: string
+          name: string
+          team_join_code: string
+          team_join_code_expires_at: string
+        }[]
+      }
       get_user_event_roles: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: {
