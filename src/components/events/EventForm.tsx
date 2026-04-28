@@ -894,26 +894,26 @@ export const EventForm: React.FC<EventFormProps> = ({
             {/* Start Time Settings */}
             {formData.num_teams > 1 ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                <div className="grid grid-cols-2 gap-3 min-w-0">
                   <div className="min-w-0">
-                    <Label htmlFor="start_time">Default Start Time</Label>
+                    <Label htmlFor="start_time" className="text-xs">Default Start Time</Label>
                     <Input
                       id="start_time"
                       type="time"
-                      className="w-full min-w-0"
+                      className="w-full min-w-0 h-10 text-sm"
                       value={formData.start_time}
                       onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="hidden sm:block text-xs text-muted-foreground mt-1">
                       Used as default for all teams
                     </p>
                   </div>
                   <div className="min-w-0">
-                    <Label htmlFor="end_time">End Time</Label>
+                    <Label htmlFor="end_time" className="text-xs">End Time</Label>
                     <Input
                       id="end_time"
                       type="time"
-                      className="w-full min-w-0"
+                      className="w-full min-w-0 h-10 text-sm"
                       value={formData.end_time}
                       onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
                     />
