@@ -1221,6 +1221,9 @@ export type Database = {
           latitude: number | null
           location: string | null
           longitude: number | null
+          match_timer_is_running: boolean
+          match_timer_paused_elapsed_seconds: number
+          match_timer_started_at: string | null
           meeting_time: string | null
           notes: string | null
           opponent: string | null
@@ -1258,6 +1261,9 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          match_timer_is_running?: boolean
+          match_timer_paused_elapsed_seconds?: number
+          match_timer_started_at?: string | null
           meeting_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -1295,6 +1301,9 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          match_timer_is_running?: boolean
+          match_timer_paused_elapsed_seconds?: number
+          match_timer_started_at?: string | null
           meeting_time?: string | null
           notes?: string | null
           opponent?: string | null

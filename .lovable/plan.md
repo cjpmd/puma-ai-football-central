@@ -1,99 +1,74 @@
-## Plan: Staff duplication, signup audit, and join code fix
+# Game Day improvements + Create Event title fix
 
-### 1. Staff duplication — root cause
+## 1. Use the same kit design as the Formation tab
 
-In `StaffManagementModal.tsx`, the staff list is built from two sources:
-
-- `team_staff` rows for the team
-- Plus extra rows synthesized from `user_teams` for staff-role users not yet in `team_staff` (id prefixed `ut_…`)
-
-The sections "Linked Staff" vs "Not Yet Linked" are split purely on `s.user_id` (line 598-599).
-
-Looking at the DB for Broughty Jags 2015s, there are genuinely **two `team_staff` rows** for the same email (`chrisjpmcdonald@gmail.com`):
-
-- `a0427e24…` — created 2026-04-27, role `team_manager`, `user_id` set → "Linked"
-- `b45a1bb3…` — created 2026-04-28, role `team_manager`, `user_id` NULL → "Not Linked"
-
-The duplicate was created by `handleAddStaff` because it does not check whether a `team_staff` row with the same email already exists for the team before inserting.
-
-### Fixes for duplication
-
-1. **One-time cleanup** (migration): for each `team_id` + `lower(email)`, keep the row with `user_id` set (or the oldest), delete the rest. Add a partial unique index `unique (team_id, lower(email)) where email is not null` to prevent recurrence.
-2. **Frontend guard in `handleAddStaff`**: before insert, query `team_staff` for `team_id` + `email` (case-insensitive). If it exists:
-   - If existing row has no `user_id` and a matching profile is found, UPDATE it with `user_id` (auto-link) instead of inserting.
-   - Otherwise, show a toast: "A staff member with this email already exists" and abort.
-3. **De-dupe at render time** as a safety net: in the `staff` array, collapse rows sharing the same `lower(email)` keeping the linked one first.
-
-### 2. Staff signup form audit (Add Staff Member)
-
-Current behaviour in `StaffManagementModal.handleAddStaff`:
-
-- Name field uses a search dropdown of existing team members (parents/players from `user_teams`).
-- Email is always shown as required (`*`) in the UI but the validation only enforces it `if (!selectedUser && !newStaff.email.trim())`. So the **logic is already correct** — but the asterisk and "Used to automatically link…" helper text are misleading.
+Currently `GameDayView` fetches `team.kit_designs` and computes `kitDesign` / `goalkeeperKitDesign`, but it does **not** pass them down to `GameDayFormationCard` → `FPLPlayerToken`, so players render with default position-coloured shirts instead of the team's kit (the Formation tab passes them in via `DraggablePitchPlayer`).
 
 Changes:
+- `src/components/events/GameDayFormationCard.tsx`
+  - Add `kitDesign?: KitDesign` and `goalkeeperKitDesign?: KitDesign` props.
+  - Pass them through to each `<FPLPlayerToken>` (pitch + bench renders).
+  - Also forward `gameFormat` (from event) and `isMobile` so sizing matches Formation tab.
+- `src/components/events/GameDaySubstituteBench.tsx`
+  - Accept and forward the same kit props to its `FPLPlayerToken` instances.
+- `src/components/events/GameDayView.tsx`
+  - Pass `kitDesign`, `goalkeeperKitDesign`, `gameFormat={event.game_format}` into `GameDayFormationCard` and `GameDaySubstituteBench`.
 
-- When `selectedUser` is set (existing member chosen), drop the `*` on Email, make the field optional, pre-fill with their profile email (read-only), and change helper text to "Linked to existing account".
-- When no user is selected (typing a new name), keep Email required with current helper text.
-- Apply the same treatment in `StaffManagementMobile.tsx` (mirror logic).
+Result: Game Day shirts match Formation tab exactly (same KitShirt SVG, same sizing).
 
-### 3. Where do staff/notification emails come from? How are they branded?
+## 2. Header shows opponent name only
 
-Audit findings to surface in the response (no code change unless the user asks):
+In `GameDayView.tsx` the header currently shows: tiny "GAME DAY" eyebrow, `event.title`, then `vs {opponent}`. Replace the title block with just the opponent name (no eyebrow, no event title, no "vs" prefix). Fall back to `event.title` only when `opponent` is missing.
 
-- The project uses Supabase auth + several custom edge functions: `send-invitation-email`, `send-availability-notification`, `send-push-notification`, `auth-email-hook` is **not** present.
-- That means transactional emails (invites, availability) are sent via the existing edge functions (likely Resend or default Supabase SMTP — will confirm by reading `supabase/functions/send-invitation-email/index.ts` during implementation), and **auth emails (signup confirmation, password reset, magic link) currently use Supabase's default unbranded templates**.
+## 3. Persistent, shared match timer
 
-Recommendation (only act on this if approved): scaffold Lovable's auth email templates so password-reset / signup emails are branded with Puma AI colors and logo, and confirm the sender domain.
+Today `useMatchTimer` is in-memory only. If the user navigates away or locks the phone, the displayed time resets when they return (and is unique per device).
 
-### 4. "Invalid team code" for `BROUGH02`
+Approach: store the timer state on the event row so all viewers see the same clock and it survives navigation / app backgrounding.
 
-Root cause: the `teams` SELECT RLS policies require the user to already be a member of the team or its club:
+- Database migration: add columns to `events`
+  - `match_timer_started_at timestamptz`
+  - `match_timer_paused_elapsed_seconds int default 0`
+  - `match_timer_is_running boolean default false`
+  - `match_timer_period int default 1`
+- Rewrite `useMatchTimer` (or add a new `useSharedMatchTimer(eventId)`):
+  - Read timer fields from the event row (already fetched).
+  - Computed elapsed = `paused_elapsed + (is_running ? now - started_at : 0)`.
+  - Tick locally every second using `Date.now()` so backgrounded tabs catch up correctly when foregrounded.
+  - `start()` → update event: `is_running=true, started_at=now()`.
+  - `pause()` → update event: `is_running=false, paused_elapsed = paused_elapsed + (now - started_at)`.
+  - `reset()` → update event: `is_running=false, paused_elapsed=0, started_at=null`.
+  - Realtime: extend `useGameDayRealtime` (already subscribes to `events` UPDATE) so any user pressing play/pause updates everyone's timer.
+- RLS: add an UPDATE policy (or rely on existing event-update policy) so any user with team-staff/management access can write timer fields.
 
-```
-- Authenticated users can view teams: auth.uid() IS NOT NULL  ← (is enabled but combined with OR of others, currently restrictive)
-- Users can view teams they are members of (user_teams)
-- Club members can view club teams (user_clubs)
-```
+Backgrounding behaviour: because elapsed is derived from `now() - started_at`, the clock keeps "running" even when the tab is suspended or the phone is locked — when the user returns, the displayed time jumps forward to the correct value.
 
-When a user tries to join a team they're not yet in, `teamCodeService.getTeamByJoinCode` runs a plain `from('teams').select(...).eq('team_join_code', joinCode).single()`, RLS hides the row, PostgREST returns `PGRST116`, and the service returns `null` → "Invalid join code".
+## 4. Confirm multi-user Game Day recording
 
-The code `BROUGH02` is correctly stored on team `Broughty United Jags 2015s` and is not expired.
+Already true today and will continue to work after the above changes:
+- `useGameDayRealtime(eventId)` subscribes to `event_selections`, `event_player_stats`, and `events` updates. Goals/cards/subs logged by one user invalidate everyone's React Query cache and re-render in real time.
+- `match_events` are written through `matchEventService.createMatchEvent` → straight to Supabase, so any authorised staff member on any device can log events.
+- After this change, the timer also syncs across users via the same realtime channel.
 
-### Fix
+We will additionally extend the realtime subscription to invalidate on `match_events` inserts/deletes so timeline updates are instant for all viewers (currently relies on the stats/selection invalidation).
 
-Add a `SECURITY DEFINER` RPC and use it from the frontend:
+## 5. Create Event — Title no longer required
 
-```sql
-create or replace function public.get_team_by_join_code(_code text)
-returns table (
-  id uuid, name text, team_join_code text,
-  team_join_code_expires_at timestamptz, logo_url text,
-  club_id uuid, club_name text
-)
-language sql stable security definer set search_path = public as $$
-  select t.id, t.name, t.team_join_code, t.team_join_code_expires_at,
-         t.logo_url, t.club_id, c.name as club_name
-  from public.teams t
-  left join public.clubs c on c.id = t.club_id
-  where t.team_join_code = upper(_code)
-    and t.team_join_code_expires_at > now()
-  limit 1;
-$$;
-grant execute on function public.get_team_by_join_code(text) to authenticated, anon;
-```
+- `src/components/events/MobileEventForm.tsx`
+  - Label: "Title *" → "Title".
+  - Remove `required` on the title input.
+  - In submit handler, if `formData.title` is blank, fall back to a sensible default before insert: e.g. for fixtures `"vs {opponent}"` (or `"Match"` if no opponent), and for trainings `"Training"`. This keeps lists/calendars readable.
+- `src/components/events/EventForm.tsx` (desktop) — same change for parity.
 
-Update `teamCodeService.getTeamByJoinCode` to call `supabase.rpc('get_team_by_join_code', { _code: joinCode })` and return the first row.
+## Technical summary
 
-Also normalize the input: `.trim().toUpperCase()` already happens in the modal, but mirror it in the service for safety.
+Files edited:
+- `src/components/events/GameDayView.tsx` — header, pass kit/format props, use shared timer hook.
+- `src/components/events/GameDayFormationCard.tsx` — accept + forward kit props.
+- `src/components/events/GameDaySubstituteBench.tsx` — accept + forward kit props.
+- `src/hooks/useMatchTimer.ts` — switch to event-backed shared timer (or new hook).
+- `src/hooks/useGameDayRealtime.ts` — also invalidate on `match_events` changes.
+- `src/components/events/MobileEventForm.tsx`, `src/components/events/EventForm.tsx` — title optional + default.
 
-### Files to change
-
-- `supabase/migrations/<new>.sql` — cleanup duplicates + partial unique index + `get_team_by_join_code` RPC
-- `src/services/teamCodeService.ts` — use the new RPC
-- `src/components/teams/StaffManagementModal.tsx` — duplicate guard, email-required logic, render-time de-dup
-- `src/pages/StaffManagementMobile.tsx` — mirror email-required logic and de-dup
-
-### Out of scope (will mention in response, ask before doing)
-
-- Branding auth emails (would need `scaffold_auth_email_templates` + domain setup).
+Database:
+- New migration adding `match_timer_*` columns to `events` and an UPDATE policy permitting team staff to write them.
