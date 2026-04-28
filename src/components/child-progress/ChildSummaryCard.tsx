@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Trophy, Target, Calendar, TrendingUp, TrendingDown, Minus, Clock, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { ChildProgressData } from '@/services/childProgressService';
-import { playStylesService } from '@/types/playStyles';
+import { FIFA_PLAY_STYLES } from '@/data/fifaPlayStyles';
+import { PlayStyleIcon } from '@/components/icons/PlayStyleIcons';
 
 interface ChildSummaryCardProps {
   child: ChildProgressData;
@@ -60,22 +61,19 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
 
   const topPositions = getTopPositions();
 
-  // Load play style icons
-  const [playStyleIcons, setPlayStyleIcons] = React.useState<string[]>([]);
-
-  React.useEffect(() => {
-    if (!child.position) return;
-    
-    playStylesService.getAllPlayStyles().then(allPlayStyles => {
-      const playerStyleTexts = child.position!.split(',').map(s => s.trim());
-      const icons = playerStyleTexts
-        .map(styleText => {
-          const style = allPlayStyles.find(s => s.label.toLowerCase() === styleText.toLowerCase());
-          return style?.icon_emoji || '';
-        })
-        .filter(Boolean);
-      setPlayStyleIcons(icons);
-    });
+  const resolvedPlayStyleValues = React.useMemo(() => {
+    if (!child.position) return [];
+    return child.position
+      .split(',')
+      .map(s => s.trim())
+      .map(text => {
+        const match = FIFA_PLAY_STYLES.find(
+          ps => ps.value === text || ps.label.toLowerCase() === text.toLowerCase()
+        );
+        return match?.value ?? null;
+      })
+      .filter((v): v is string => v !== null)
+      .slice(0, 3);
   }, [child.position]);
 
   return (
@@ -93,8 +91,12 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-sm sm:text-base text-muted-foreground">
               <span>Age {child.age}</span>
               {child.squadNumber && <span>#{child.squadNumber}</span>}
-              {playStyleIcons && playStyleIcons.length > 0 && (
-                <span className="text-base sm:text-lg">{playStyleIcons.join(' ')}</span>
+              {resolvedPlayStyleValues.length > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  {resolvedPlayStyleValues.map(v => (
+                    <PlayStyleIcon key={v} value={v} size={20} />
+                  ))}
+                </span>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-2">

@@ -11,7 +11,14 @@ import { Settings, Camera, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users,
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
-import { playStylesService, PlayStyle } from '@/types/playStyles';
+import { PLAY_STYLE_ICON_MAP, PlayStyleIcon } from '@/components/icons/PlayStyleIcons';
+import {
+  FIFA_PLAY_STYLES,
+  FIFA_PLAY_STYLES_BY_CATEGORY,
+  FIFA_CATEGORY_ORDER,
+  FIFA_CATEGORY_LABELS,
+  FIFA_CATEGORY_COLORS,
+} from '@/data/fifaPlayStyles';
 import { MobileImageEditor } from '@/components/players/MobileImageEditor';
 import { formatFileSize, isHeicFormat, isSupportedImageFormat } from '@/utils/imageUtils';
 import { pickPhoto, isNativePlatform } from '@/utils/cameraUtils';
@@ -116,21 +123,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 }) => {
   const { toast } = useToast();
   const [flipped, setFlipped] = useState(false);
-  const [playStyles, setPlayStyles] = useState<PlayStyle[]>([]);
-  const [isLoadingStyles, setIsLoadingStyles] = useState(true);
-  
+
   const { user, profile, loading: authLoading } = useAuth();
   const { hasPermission, loading: authzLoading } = useAuthorization();
   const [canManageCard, setCanManageCard] = useState(false);
   const [isUserStaffContext, setIsUserStaffContext] = useState(false);
-
-  // Load play styles from database
-  useEffect(() => {
-    playStylesService.getAllPlayStyles().then(styles => {
-      setPlayStyles(styles);
-      setIsLoadingStyles(false);
-    });
-  }, []);
 
   // Image editing state
   const [showImageEditor, setShowImageEditor] = useState(false);
@@ -199,16 +196,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   );
   const [showPlayStylesManager, setShowPlayStylesManager] = useState(false);
 
-  // useEffect to synchronize state with player prop changes
-  // Re-runs when playStyles list loads so saved styles are displayed correctly
   useEffect(() => {
     const parsed = parsePlayStyles(player.playStyle);
-    // Only update if actually different to avoid infinite loops
     if (JSON.stringify(parsed) !== JSON.stringify(selectedPlayStyles)) {
       setSelectedPlayStyles(parsed);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player.playStyle, playStyles]); // Re-sync when playStyles list loads
+  }, [player.playStyle]);
   
   // Separate effect for funStats and design to avoid coupling
   useEffect(() => {
@@ -468,13 +462,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   };
 
   const getPlayStyleIcon = (styleValue: string): React.ReactNode => {
-    const style = playStyles.find(s => s.value === styleValue);
-    if (!style) return null;
-    
-    if (style.icon_type === 'image' && style.icon_image_url) {
-      return <img src={style.icon_image_url} alt={style.label} className="w-4 h-4 inline-block" />;
-    }
-    return style.icon_emoji || null;
+    const Icon = PLAY_STYLE_ICON_MAP[styleValue];
+    if (!Icon) return null;
+    return <Icon size={24} />;
   };
 
   const cardStyle = { 
@@ -690,7 +680,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
               <div className="flex justify-center gap-2 h-8 items-center">
                 {selectedPlayStyles.map((style, index) => (
-                  <div key={index} className="text-2xl drop-shadow-lg leading-none">
+                  <div key={index} className="drop-shadow-lg">
                     {getPlayStyleIcon(style)}
                   </div>
                 ))}
@@ -882,32 +872,53 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
             {/* Play Style Selector */}
             <div className="border-t border-white/20 pt-3">
-              <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
-              {isLoadingStyles ? (
-                <div className="text-white/60 text-xs">Loading...</div>
-              ) : (
-                <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
-                  {playStyles.map(style => (
-                    <Button
-                      key={style.value}
-                      variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => togglePlayStyle(style.value)}
-                      disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                      className="text-sm p-1 h-6 w-6"
-                      title={style.label}
-                    >
-                      {style.icon_type === 'image' && style.icon_image_url ? (
-                        <img src={style.icon_image_url} alt={style.label} className="w-4 h-4" />
-                      ) : (
-                        <span>{style.icon_emoji}</span>
-                      )}
-                    </Button>
-                  ))}
-                </div>
-              )}
-              <div className="text-xs text-gray-400 mt-1">
-                Selected: {selectedPlayStyles.length}/3
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-white">Play Styles</label>
+                <span className="text-xs text-gray-400">
+                  Selected: {selectedPlayStyles.length}/3
+                </span>
+              </div>
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-0.5">
+                {FIFA_CATEGORY_ORDER.map(cat => {
+                  const styles = FIFA_PLAY_STYLES_BY_CATEGORY[cat];
+                  const color = FIFA_CATEGORY_COLORS[cat];
+                  return (
+                    <div key={cat}>
+                      <div
+                        className="text-[10px] font-semibold uppercase tracking-wider mb-1 px-0.5"
+                        style={{ color }}
+                      >
+                        {FIFA_CATEGORY_LABELS[cat]}
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {styles.map(style => {
+                          const selected = selectedPlayStyles.includes(style.value);
+                          const disabled = !selected && selectedPlayStyles.length >= 3;
+                          return (
+                            <button
+                              key={style.value}
+                              type="button"
+                              title={style.label}
+                              onClick={() => !disabled && togglePlayStyle(style.value)}
+                              className={`rounded-full transition-all focus:outline-none ${
+                                selected
+                                  ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-900 scale-110'
+                                  : disabled
+                                  ? 'opacity-40 cursor-not-allowed'
+                                  : 'hover:scale-110 hover:ring-1 hover:ring-white/60 hover:ring-offset-1 hover:ring-offset-gray-900'
+                              }`}
+                            >
+                              <PlayStyleIcon value={style.value} size={32} />
+                              {selected && (
+                                <span className="sr-only">✓</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             
