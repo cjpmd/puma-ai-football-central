@@ -45,6 +45,10 @@ interface PitchPlayerProps {
   onEventSelect: (playerId: string, eventType: MatchEventType) => void;
   onEventDelete: () => void;
   onSubstitution: (playerOffId: string, playerOnId: string, playerOffName: string, playerOnName: string) => void;
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
+  gameFormat?: string;
+  isMobile?: boolean;
 }
 
 // Separate component to properly use hooks for each player
