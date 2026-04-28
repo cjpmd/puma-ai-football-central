@@ -1,37 +1,48 @@
-## Manage Teams modal — fit mobile screen
+# Fix FIFA Card Play Styles + Duplicate Close Button
 
-The Manage Teams dialog (`YearGroupManagement.tsx` → `TeamManagementContent`) overflows the 390px viewport because each row contains too many fixed-width children (team name + age + Linked badge + 128px "Move to..." Select), and the year-group info card title row doesn't constrain.
+## Problem 1 — Legacy play styles persist
+`player.play_style` in the DB still contains pre-migration values (e.g. `speedster`, `finisher`, `workhorse`, `maestro`, `interceptor`, `guardian`, `wall`, `clinical`, `commander`, `engine`, `reflexes`, `rock`, `sweeper`). Andrew McDonald has `["finisher","speedster","rapid"]`. Only `rapid` exists in the new `FIFA_PLAY_STYLES` list.
 
-### File: `src/components/clubs/YearGroupManagement.tsx`
+Result in `FifaStylePlayerCard.tsx`:
+- The picker grid only highlights values present in `FIFA_PLAY_STYLES`, so legacy values appear unselected in the UI.
+- However, `selectedPlayStyles` still contains them, so the counter shows `3/3` and the user can't add more.
+- On the front of the card, `getPlayStyleIcon()` returns `null` for legacy values, leaving phantom slots.
 
-**1. Outer container**
-- Change wrapper from `space-y-6` → `space-y-3 min-w-0` so flex children can shrink.
+## Problem 2 — Two close (X) buttons on the Dashboard
+On `DashboardMobile.tsx` (line 1176–1198) the card is wrapped in a shadcn `<Dialog>`. `DialogContent` (`src/components/ui/dialog.tsx` line 45) renders its own `DialogPrimitive.Close` X in the top-right. The card itself already has its own X (`FifaStylePlayerCard.tsx` line 557–566), so the user sees two — the outer one floating outside the card frame.
 
-**2. Year Group Info card (top card with name/format/description)**
-- Tighten `CardHeader`: `p-3 pb-2`.
-- Title row: add `min-w-0`, shrink icon to `h-4 w-4`, `truncate` the name, mark format badge `flex-shrink-0` and reduce to compact size (`text-[10px] px-1.5 py-0 h-5`).
-- Description: add `break-words`, drop "per team" to keep one line, smaller `text-xs`.
+## Fix
 
-**3. "Currently Assigned Teams" rows**
-- Replace the 128px-wide `Select` ("Move to...") with a compact `MoreVertical` `DropdownMenu` (h-7 w-7), matching the pattern already used in `ClubTeamLinking.tsx`. Items:
-  - Submenu "Move to year group" listing other year groups
-  - "Remove from year group" (destructive)
-- Make age suffix `hidden xs:inline` style — hide on very narrow widths via `hidden [@media(min-width:360px)]:inline` (or simpler: `truncate` parent + drop the separate flex item, append age to the same span).
-- Simplest fix: collapse name + age into one truncating span: `{team.name} <span className="text-muted-foreground">· {team.age_group}</span>` inside a single `truncate` block.
-- Keep "Linked" badge but make icon-only on narrow screens (text `hidden sm:inline`).
+### 1. Sanitize legacy play styles in `FifaStylePlayerCard.tsx`
+In `parsePlayStyles()` (lines 148–190), after building `rawStyles`, filter to keep only values that exist in the current `FIFA_PLAY_STYLES` list:
 
-**4. "Unassigned Teams" rows**
-- Same single-truncating-span treatment for name+age.
-- "Unassigned" badge: text `hidden sm:inline`, keep visual color hint.
-- Keep Assign button but icon-only on narrow screens (label `hidden sm:inline`).
+```ts
+const validValues = new Set(FIFA_PLAY_STYLES.map(s => s.value));
+return [...new Set(rawStyles)].filter(v => validValues.has(v)).slice(0, 3);
+```
 
-**5. "Teams in Other Year Groups" rows**
-- Same name-collapse + truncate.
-- Year-group badge: truncate, max-width.
-- "Move here" button label `hidden sm:inline`, icon-only otherwise.
+Effect: legacy values are dropped on load, so:
+- Counter shows the correct number (e.g. `1/3` for Andrew after dropping `finisher`/`speedster`).
+- Front-of-card no longer has phantom empty icon slots.
+- The next time the user changes their selection, `onSavePlayStyle` writes only the cleaned array back to the DB, naturally migrating the record.
 
-### Out of scope
-- No data/logic changes.
-- No changes to the parent `ClubTeamLinking.tsx` view.
+No DB migration required — sanitization happens client-side and self-heals on next save. (Optionally we could run a one-off cleanup query later, but it's not needed for the bug fix.)
 
-Single file edited: `src/components/clubs/YearGroupManagement.tsx`.
+### 2. Hide the duplicate X on `DashboardMobile.tsx`
+Two equally simple options — picking the cleanest one:
+
+Replace the wrapping `DialogContent` with a custom variant that omits the built-in close button. The simplest in-place change is to override the close button via CSS on this single Dialog instance:
+
+```tsx
+<DialogContent className="max-w-md p-0 bg-transparent border-none shadow-none [&>button]:hidden">
+```
+
+The `[&>button]:hidden` arbitrary selector hides the auto-rendered `DialogPrimitive.Close` (the only direct `<button>` child of `DialogContent`), leaving the card's own X intact and inside the frame.
+
+## Files to edit
+- `src/components/players/FifaStylePlayerCard.tsx` — add legacy-value filter inside `parsePlayStyles`.
+- `src/pages/DashboardMobile.tsx` — add `[&>button]:hidden` to the `DialogContent` className on line 1177.
+
+## Out of scope
+- One-off DB cleanup of legacy values across all players (not required; handled lazily on next save). Happy to add a migration if you want a single sweep.
+- Changes to how positional labels (`Midfielder Right+++` etc.) are computed — those come from match minutes, not from `play_style`, and are working as designed.

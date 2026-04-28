@@ -185,8 +185,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       }
     }
     
-    // Return unique values, limit to 3
-    return [...new Set(rawStyles)].slice(0, 3);
+    // Filter out legacy values no longer present in the current FIFA play styles list,
+    // de-duplicate, and limit to 3. Legacy values self-heal on next save.
+    const validValues = new Set(FIFA_PLAY_STYLES.map(s => s.value));
+    return [...new Set(rawStyles)].filter(v => validValues.has(v)).slice(0, 3);
   };
 
   const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldBallon");
