@@ -87,6 +87,7 @@ export default function MyTeamMobile() {
   const [showSeasonList, setShowSeasonList] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
+  const [teamCategories, setTeamCategories] = useState<string[]>([]);
 
   const {
     allSeasons,
@@ -263,6 +264,28 @@ export default function MyTeamMobile() {
     }
   }, [loadAnalyticsData]);
 
+  // Load configured performance categories for the current team so the
+  // filter chips appear regardless of how many matches have been played.
+  useEffect(() => {
+    if (!currentTeam?.id) {
+      setTeamCategories([]);
+      return;
+    }
+    setSelectedCategory('all');
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('performance_categories')
+        .select('name')
+        .eq('team_id', currentTeam.id)
+        .order('name');
+      if (!cancelled) {
+        setTeamCategories((data ?? []).map(r => r.name as string));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentTeam?.id]);
+
   const getResultBadge = (event: any, teamNumber = 1) => {
     const scores = event.scores as any;
     if (!scores) return null;
@@ -300,7 +323,7 @@ export default function MyTeamMobile() {
     );
   }
 
-  const categoryKeys = analytics.categoryStats.map(c => c.categoryName);
+  const categoryKeys = teamCategories;
   const isTrainingMode = selectedEventType === 'training';
 
   const displayStats = (() => {
