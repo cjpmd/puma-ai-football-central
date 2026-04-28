@@ -44,33 +44,26 @@ export const teamCodeService = {
     return data;
   },
 
-  // Get team by join code
+  // Get team by join code (uses SECURITY DEFINER RPC so it works for users
+  // who are not yet members of the team — RLS would otherwise hide it)
   async getTeamByJoinCode(joinCode: string): Promise<TeamWithCode | null> {
-    const { data, error } = await supabase
-      .from('teams')
-      .select(`
-        id,
-        name,
-        team_join_code,
-        team_join_code_expires_at,
-        logo_url,
-        club_id,
-        clubs!teams_club_id_fkey (
-          name
-        )
-      `)
-      .eq('team_join_code', joinCode)
-      .single();
-    
-    if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
-    }
-    
+    const code = (joinCode || '').trim().toUpperCase();
+    if (!code) return null;
+
+    const { data, error } = await supabase.rpc('get_team_by_join_code', { _code: code });
+
+    if (error) throw error;
+    if (!data || (Array.isArray(data) && data.length === 0)) return null;
+
+    const row: any = Array.isArray(data) ? data[0] : data;
     return {
-      ...data,
-      club_name: data.clubs?.name || null
-    };
+      id: row.id,
+      name: row.name,
+      team_join_code: row.team_join_code,
+      team_join_code_expires_at: row.team_join_code_expires_at,
+      logo_url: row.logo_url,
+      club_name: row.club_name || null,
+    } as TeamWithCode;
   },
 
   // Join team using code
