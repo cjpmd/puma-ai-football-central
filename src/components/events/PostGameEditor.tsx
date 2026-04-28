@@ -160,20 +160,27 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const loadTeamSelections = async () => {
     try {
       logger.log('Loading team selections for event:', eventId);
-      
-      // Get unique team selections with performance categories
-      const { data: selections, error } = await supabase
-        .from('event_selections')
-        .select(`
-          team_number,
-          performance_category_id,
-          player_positions,
-          performance_categories (
-            id,
-            name
-          )
-        `)
-        .eq('event_id', eventId);
+
+      // Load event (for scores + team_id) in parallel with selections
+      const [{ data: selections, error }, { data: eventRow }] = await Promise.all([
+        supabase
+          .from('event_selections')
+          .select(`
+            team_number,
+            performance_category_id,
+            player_positions,
+            performance_categories (
+              id,
+              name
+            )
+          `)
+          .eq('event_id', eventId),
+        supabase
+          .from('events')
+          .select('team_id, scores')
+          .eq('id', eventId)
+          .single(),
+      ]);
 
       if (error) throw error;
 
@@ -181,11 +188,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
       // Create unique teams map to avoid duplicates based on performance category
       const uniqueTeamsMap = new Map();
-      
+
       for (const selection of selections || []) {
         // Use performance_category_id as the key for uniqueness
         const teamKey = selection.performance_category_id || `team_${selection.team_number}`;
-        
+
         if (!uniqueTeamsMap.has(teamKey)) {
           let performanceCategoryName = `Team ${selection.team_number}`;
 
@@ -234,10 +241,42 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         }
       }
 
+      // Synthesize entries for team_N values that have a score recorded but
+      // no event_selections row.
+      const scores = (eventRow?.scores as Record<string, any>) || {};
+      const haveTeamNumbers = new Set<number>(
+        Array.from(uniqueTeamsMap.values()).map((t: any) => t.teamNumber)
+      );
+      const missingTeamNumbers: number[] = [];
+      Object.keys(scores).forEach(key => {
+        const m = /^team_(\d+)$/.exec(key);
+        if (!m) return;
+        const n = parseInt(m[1], 10);
+        if (!haveTeamNumbers.has(n)) missingTeamNumbers.push(n);
+      });
+
+      if (missingTeamNumbers.length > 0 && eventRow?.team_id) {
+        const { data: cats } = await supabase
+          .from('performance_categories')
+          .select('id, name')
+          .eq('team_id', eventRow.team_id)
+          .order('name', { ascending: true });
+        const orderedCategories = (cats || []) as Array<{ id: string; name: string }>;
+
+        missingTeamNumbers.forEach(n => {
+          const cat = orderedCategories[n - 1];
+          uniqueTeamsMap.set(`synth_${n}`, {
+            teamNumber: n,
+            performanceCategoryName: cat?.name || `Team ${n}`,
+            players: [],
+          });
+        });
+      }
+
       const teamData = Array.from(uniqueTeamsMap.values()).sort((a, b) => a.teamNumber - b.teamNumber);
       logger.log('Processed team selections:', teamData);
       setTeamSelections(teamData);
-      
+
     } catch (error) {
       logger.error('Error loading team selections:', error);
     }
