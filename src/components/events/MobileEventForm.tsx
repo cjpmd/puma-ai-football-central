@@ -258,13 +258,12 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
 
             {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Enter event title"
-                required
+                placeholder="Optional — defaults to opponent or event type"
               />
             </div>
 
