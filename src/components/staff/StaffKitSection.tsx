@@ -194,12 +194,47 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
     try {
       setSaving(staffId);
 
-      const { error } = await supabase
-        .from('team_staff')
-        .update({ kit_sizes: record.kit_sizes })
-        .eq('id', staffId);
+      let realStaffId = staffId;
 
-      if (error) throw error;
+      // Synthetic record from user_teams — materialize a team_staff row and
+      // link it to the user via user_staff before saving kit sizes.
+      if (staffId.startsWith('user-team:')) {
+        const { data: authData } = await supabase.auth.getUser();
+        const authUser = authData?.user;
+        const fullName =
+          (authUser?.user_metadata as any)?.name ||
+          (authUser?.user_metadata as any)?.full_name ||
+          authUser?.email ||
+          'Staff Member';
+        const email = authUser?.email || null;
+
+        const { data: insertedStaff, error: insertStaffError } = await supabase
+          .from('team_staff')
+          .insert({
+            team_id: record.team_id,
+            role: record.role,
+            name: fullName,
+            email,
+            kit_sizes: record.kit_sizes,
+          } as any)
+          .select('id')
+          .single();
+
+        if (insertStaffError) throw insertStaffError;
+        realStaffId = insertedStaff.id;
+
+        const { error: linkError } = await supabase
+          .from('user_staff')
+          .insert({ user_id: userId, staff_id: realStaffId } as any);
+        if (linkError) throw linkError;
+      } else {
+        const { error } = await supabase
+          .from('team_staff')
+          .update({ kit_sizes: record.kit_sizes })
+          .eq('id', staffId);
+
+        if (error) throw error;
+      }
 
       toast({
         title: 'Success',
@@ -207,6 +242,9 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       });
 
       onUpdate?.();
+      // Refresh so synthetic ids are replaced and issues for the new staff
+      // record are loaded.
+      await loadStaffData();
     } catch (error: any) {
       logger.error('Error saving kit sizes:', error);
       toast({
