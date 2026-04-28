@@ -429,27 +429,54 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
                           <span className="text-muted-foreground text-xs">{team.age_group}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <Select onValueChange={(yearGroupId) => assignTeamToYearGroup(team.id, yearGroupId)}>
-                          <SelectTrigger className="flex-1 sm:w-36 h-8 text-xs">
-                            <SelectValue placeholder="Assign to..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {yearGroups.map((yg) => (
-                              <SelectItem key={yg.id} value={yg.id}>
-                                {yg.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="h-8 w-8 p-0 flex-shrink-0"
-                          onClick={() => unlinkTeam(team.id)}
-                        >
-                          <Unlink className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center justify-end w-full sm:w-auto">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                              aria-label="Team actions"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">
+                              Manage team
+                            </DropdownMenuLabel>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                                Assign to year group
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                {yearGroups.length === 0 ? (
+                                  <DropdownMenuItem disabled>
+                                    No year groups
+                                  </DropdownMenuItem>
+                                ) : (
+                                  yearGroups.map((yg) => (
+                                    <DropdownMenuItem
+                                      key={yg.id}
+                                      onClick={() => assignTeamToYearGroup(team.id, yg.id)}
+                                    >
+                                      {yg.name}
+                                    </DropdownMenuItem>
+                                  ))
+                                )}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setUnlinkTarget(team)}
+                            >
+                              <Unlink className="h-4 w-4 mr-2" />
+                              Unlink from club
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
