@@ -1,40 +1,59 @@
-# Show all linked teams in Coaching Kit
+# Fix "failed to load coaching kit data" + collapsible team sections
 
-## Problem
+## Root cause
 
-In Edit Profile → Coaching Kit, only one team appears (e.g. "Broughty United Pumas 2015s") even when the user is staff on multiple teams. `StaffKitSection` only queries the `user_staff` linking table, so teams the user manages via `user_teams` (team_manager, team_coach, team_assistant_manager, team_helper, manager, coach, staff, helper) are missing.
+`user_teams.team_id` has **two foreign keys** pointing at `teams.id` (`fk_user_teams_team_id` and `user_teams_team_id_fkey`). PostgREST can't resolve `teams!inner(id, name)` and throws an "ambiguous relationship" error, which surfaces as the toast "Failed to load coaching kit data".
 
-This matches our existing "Unified Staff" pattern (memory: Unified Staff — staff from `team_staff` and `user_teams` are merged).
+This is also the source of the React "two children with the same key" warning — the second key would be the duplicate fallback render after the failed load.
 
 ## Fix
 
-Update `src/components/staff/StaffKitSection.tsx` so the staff records list is the union of:
+In `src/components/staff/StaffKitSection.tsx`:
 
-1. **`user_staff` → `team_staff` → `teams`** (existing query, unchanged)
-2. **`user_teams` → `teams`** filtered to staff/management roles, for entries that don't already have a `team_staff` record for the same team
+1. **Drop the embed.** Replace the `user_teams` query with a plain select of `team_id, role`, then fetch the missing team names in a separate query against `teams` filtered by the collected ids.
 
-For source #2 there is no `team_staff.id`, so we use a synthetic id (`user-team:{team_id}`) and persist kit sizes by upserting into `team_staff` on save (create the missing `team_staff` row with the user's role + email, link it via `user_staff`), so the existing save path keeps working and future loads come through source #1.
+2. **Make each team section collapsible.** Wrap each per-team block in a shadcn `Collapsible`:
+   - Header row stays visible (team name, role, chevron).
+   - Body (kit sizes + issued list) collapses.
+   - First card open by default; the rest collapsed.
+   - Track open state in a `Record<string, boolean>` keyed by `record.id`.
 
-### Technical details
+No DB changes. No other files affected.
 
-`StaffKitSection.tsx`:
+## Technical details
 
-- After loading `userStaffData`, also fetch:
-  ```ts
-  supabase.from('user_teams')
-    .select('team_id, role, teams!inner(id, name)')
-    .eq('user_id', userId)
-    .in('role', ['team_manager','team_assistant_manager','team_coach','team_helper','manager','coach','staff','helper'])
-  ```
-- Build a `Set` of team_ids already covered by `user_staff` records and append only the missing teams to `staffRecords` with:
-  - `id: \`user-team:${team_id}\``
-  - `kit_sizes: {}` (no team_staff row yet)
-- Kit issues query for synthetic records: skip (no `team_staff.id` to match `staff_ids`); show empty issued list.
-- `handleSaveKitSizes`: if `staffId` starts with `user-team:`, first `insert` a `team_staff` row (`team_id`, `role`, `name` from auth user, `email`), then `insert` into `user_staff` linking `user_id` ↔ new `staff_id`, then proceed with the kit_sizes update against the new id. Refresh local state with the real id and call `loadStaffData()`.
+```ts
+// Replacement query
+const { data: userTeamsData, error } = await supabase
+  .from('user_teams')
+  .select('team_id, role')
+  .eq('user_id', userId)
+  .in('role', STAFF_ROLES);
 
-No DB schema changes needed. No other files affected.
+const missingTeamIds = [...new Set(
+  (userTeamsData ?? [])
+    .map(ut => ut.team_id)
+    .filter(id => !coveredTeamIds.has(id))
+)];
 
-## Out of scope
+const { data: teamsData } = await supabase
+  .from('teams').select('id, name').in('id', missingTeamIds);
 
-- "Kit Issued to You" history for teams the user only joined via `user_teams` until they save sizes (then it works normally).
-- Existing `EditProfileModal` and `UnifiedProfile` consumers are unchanged — they already render `StaffKitSection`.
+const teamNamesById = new Map(teamsData?.map(t => [t.id, t.name]) ?? []);
+```
+
+Collapsible structure per record:
+```tsx
+<Collapsible open={openMap[record.id]} onOpenChange={(o) => setOpenMap(s => ({...s, [record.id]: o}))}>
+  <CollapsibleTrigger className="flex w-full items-center justify-between ...">
+    <div>
+      <h4>{record.team_name}</h4>
+      <p className="text-sm text-muted-foreground">{record.role}</p>
+    </div>
+    <ChevronDown className={cn("transition", openMap[record.id] && "rotate-180")} />
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    {/* existing kit sizes + issued kit blocks */}
+  </CollapsibleContent>
+</Collapsible>
+```
