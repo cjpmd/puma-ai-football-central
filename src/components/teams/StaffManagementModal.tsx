@@ -314,33 +314,82 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       logger.log('StaffManagementModal: Adding staff member:', newStaff, 'selectedUser:', selectedUser);
 
       let userId = selectedUser?.id || null;
-      
+      const emailLower = newStaff.email.trim().toLowerCase();
+
       // If not selecting existing user, check if user with this email exists
-      if (!selectedUser && newStaff.email.trim()) {
+      if (!selectedUser && emailLower) {
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', newStaff.email.trim().toLowerCase())
+          .eq('email', emailLower)
           .maybeSingle();
-        
+
         if (existingUser) {
           userId = existingUser.id;
         }
       }
 
-      // Create staff record
-      const { error } = await supabase
-        .from('team_staff')
-        .insert({
-          team_id: team.id,
-          name: newStaff.name.trim(),
-          email: newStaff.email.trim() || null,
-          phone: newStaff.phone.trim() || null,
-          role: newStaff.role,
-          user_id: userId,
-        });
+      // Duplicate guard: check for existing team_staff row with same email on this team
+      if (emailLower) {
+        const { data: dupes } = await supabase
+          .from('team_staff')
+          .select('id, user_id, email')
+          .eq('team_id', team.id);
 
-      if (error) throw error;
+        const existingRow = (dupes || []).find(
+          (d: any) => (d.email || '').trim().toLowerCase() === emailLower
+        );
+
+        if (existingRow) {
+          if (!existingRow.user_id && userId) {
+            // Auto-link the existing unlinked record instead of creating a duplicate
+            const { error: linkErr } = await supabase
+              .from('team_staff')
+              .update({
+                user_id: userId,
+                name: newStaff.name.trim(),
+                phone: newStaff.phone.trim() || null,
+                role: newStaff.role,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingRow.id);
+            if (linkErr) throw linkErr;
+          } else {
+            toast({
+              title: 'Already exists',
+              description: `A staff member with email ${newStaff.email} already exists on this team.`,
+              variant: 'destructive',
+            });
+            return;
+          }
+        } else {
+          // Create staff record
+          const { error } = await supabase
+            .from('team_staff')
+            .insert({
+              team_id: team.id,
+              name: newStaff.name.trim(),
+              email: newStaff.email.trim() || null,
+              phone: newStaff.phone.trim() || null,
+              role: newStaff.role,
+              user_id: userId,
+            });
+          if (error) throw error;
+        }
+      } else {
+        // No email — just insert
+        const { error } = await supabase
+          .from('team_staff')
+          .insert({
+            team_id: team.id,
+            name: newStaff.name.trim(),
+            email: null,
+            phone: newStaff.phone.trim() || null,
+            role: newStaff.role,
+            user_id: userId,
+          });
+        if (error) throw error;
+      }
 
       // If we have a user_id, also add/update user_teams entry
       if (userId) {
@@ -595,8 +644,26 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     return null;
   }
 
-  const linkedStaff = staff.filter(s => s.user_id);
-  const unlinkedStaff = staff.filter(s => !s.user_id);
+  // De-duplicate staff: if the same lower(email) appears multiple times for
+  // this team, keep the linked one (or the earliest). Acts as a safety net
+  // alongside the DB unique index.
+  const dedupedStaff = useMemo(() => {
+    const byKey = new Map<string, typeof staff[number]>();
+    for (const s of staff) {
+      const key = (s.email || '').trim().toLowerCase() || `__noemail_${s.id}`;
+      const existing = byKey.get(key);
+      if (!existing) {
+        byKey.set(key, s);
+      } else {
+        // Prefer linked over unlinked
+        if (!existing.user_id && s.user_id) byKey.set(key, s);
+      }
+    }
+    return Array.from(byKey.values());
+  }, [staff]);
+
+  const linkedStaff = dedupedStaff.filter(s => s.user_id);
+  const unlinkedStaff = dedupedStaff.filter(s => !s.user_id);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -784,6 +851,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     {!selectedUser && !editingStaff && (
                       <p className="text-xs text-muted-foreground">
                         Used to automatically link when they create an account
+                      </p>
+                    )}
+                    {selectedUser && (
+                      <p className="text-xs text-muted-foreground">
+                        Linked to existing account — email is read-only
                       </p>
                     )}
                   </div>
