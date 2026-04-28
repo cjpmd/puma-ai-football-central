@@ -114,43 +114,51 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       const itemsMap: Record<string, KitItem[]> = {};
 
       for (const record of records) {
-        // Load kit issues for this staff member
-        const { data: issuesData } = await supabase
-          .from('team_kit_issues')
-          .select('*')
-          .eq('team_id', record.team_id)
-          .or(`kit_type.eq.coaching,kit_type.eq.both`)
-          .order('date_issued', { ascending: false });
+        // Synthetic records (from user_teams without a team_staff row) have no
+        // staff_id to match against issues — skip the issues lookup.
+        if (!record.id.startsWith('user-team:')) {
+          // Load kit issues for this staff member
+          const { data: issuesData } = await supabase
+            .from('team_kit_issues')
+            .select('*')
+            .eq('team_id', record.team_id)
+            .or(`kit_type.eq.coaching,kit_type.eq.both`)
+            .order('date_issued', { ascending: false });
 
-        // Filter issues that include this staff member
-        const staffIssues = (issuesData || [])
-          .filter(issue => {
-            const staffIds = Array.isArray((issue as any).staff_ids) ? (issue as any).staff_ids : [];
-            return staffIds.includes(record.id);
-          })
-          .map(issue => ({
-            id: issue.id,
-            kit_item_name: issue.kit_item_name,
-            kit_size: issue.kit_size,
-            quantity: issue.quantity,
-            date_issued: issue.date_issued
+          // Filter issues that include this staff member
+          const staffIssues = (issuesData || [])
+            .filter(issue => {
+              const staffIds = Array.isArray((issue as any).staff_ids) ? (issue as any).staff_ids : [];
+              return staffIds.includes(record.id);
+            })
+            .map(issue => ({
+              id: issue.id,
+              kit_item_name: issue.kit_item_name,
+              kit_size: issue.kit_size,
+              quantity: issue.quantity,
+              date_issued: issue.date_issued
+            }));
+
+          issuesMap[record.id] = staffIssues;
+        } else {
+          issuesMap[record.id] = [];
+        }
+
+        // Load coaching kit items for this team (idempotent per team_id)
+        if (!itemsMap[record.team_id]) {
+          const { data: itemsData } = await supabase
+            .from('team_kit_items')
+            .select('id, name, available_sizes')
+            .eq('team_id', record.team_id)
+            .or('kit_type.eq.coaching,kit_type.eq.both')
+            .order('name');
+
+          itemsMap[record.team_id] = (itemsData || []).map(item => ({
+            id: item.id,
+            name: item.name,
+            available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
           }));
-
-        issuesMap[record.id] = staffIssues;
-
-        // Load coaching kit items for this team
-        const { data: itemsData } = await supabase
-          .from('team_kit_items')
-          .select('id, name, available_sizes')
-          .eq('team_id', record.team_id)
-          .or('kit_type.eq.coaching,kit_type.eq.both')
-          .order('name');
-
-        itemsMap[record.team_id] = (itemsData || []).map(item => ({
-          id: item.id,
-          name: item.name,
-          available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
-        }));
+        }
       }
 
       setKitIssues(issuesMap);
