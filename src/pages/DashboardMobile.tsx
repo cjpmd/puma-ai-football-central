@@ -1174,7 +1174,7 @@ export default function DashboardMobile() {
 
       {/* Player FIFA Card Modal */}
       <Dialog open={showPlayerCard} onOpenChange={setShowPlayerCard}>
-        <DialogContent className="max-w-md p-0 bg-transparent border-none shadow-none">
+        <DialogContent className="max-w-md p-0 bg-transparent border-none shadow-none [&>button]:hidden">
           {selectedPlayerData && (
             <FifaStylePlayerCard
               player={selectedPlayerData.player}
