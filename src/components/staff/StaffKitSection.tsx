@@ -79,6 +79,34 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
         };
       });
 
+      // Also include teams the user is staff on via user_teams (management roles).
+      // These don't yet have a team_staff row — use a synthetic id; on save we'll
+      // create the team_staff row and link it via user_staff.
+      const STAFF_ROLES = [
+        'team_manager','team_assistant_manager','team_coach','team_helper',
+        'manager','coach','staff','helper'
+      ];
+      const { data: userTeamsData, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select('team_id, role, teams!inner(id, name)')
+        .eq('user_id', userId)
+        .in('role', STAFF_ROLES);
+
+      if (userTeamsError) throw userTeamsError;
+
+      const coveredTeamIds = new Set(records.map(r => r.team_id));
+      for (const ut of (userTeamsData || []) as any[]) {
+        if (coveredTeamIds.has(ut.team_id)) continue;
+        records.push({
+          id: `user-team:${ut.team_id}`,
+          team_id: ut.team_id,
+          team_name: ut.teams?.name || 'Unknown Team',
+          role: ut.role,
+          kit_sizes: {}
+        });
+        coveredTeamIds.add(ut.team_id);
+      }
+
       setStaffRecords(records);
 
       // Load kit issues and items for each team
@@ -86,43 +114,51 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       const itemsMap: Record<string, KitItem[]> = {};
 
       for (const record of records) {
-        // Load kit issues for this staff member
-        const { data: issuesData } = await supabase
-          .from('team_kit_issues')
-          .select('*')
-          .eq('team_id', record.team_id)
-          .or(`kit_type.eq.coaching,kit_type.eq.both`)
-          .order('date_issued', { ascending: false });
+        // Synthetic records (from user_teams without a team_staff row) have no
+        // staff_id to match against issues — skip the issues lookup.
+        if (!record.id.startsWith('user-team:')) {
+          // Load kit issues for this staff member
+          const { data: issuesData } = await supabase
+            .from('team_kit_issues')
+            .select('*')
+            .eq('team_id', record.team_id)
+            .or(`kit_type.eq.coaching,kit_type.eq.both`)
+            .order('date_issued', { ascending: false });
 
-        // Filter issues that include this staff member
-        const staffIssues = (issuesData || [])
-          .filter(issue => {
-            const staffIds = Array.isArray((issue as any).staff_ids) ? (issue as any).staff_ids : [];
-            return staffIds.includes(record.id);
-          })
-          .map(issue => ({
-            id: issue.id,
-            kit_item_name: issue.kit_item_name,
-            kit_size: issue.kit_size,
-            quantity: issue.quantity,
-            date_issued: issue.date_issued
+          // Filter issues that include this staff member
+          const staffIssues = (issuesData || [])
+            .filter(issue => {
+              const staffIds = Array.isArray((issue as any).staff_ids) ? (issue as any).staff_ids : [];
+              return staffIds.includes(record.id);
+            })
+            .map(issue => ({
+              id: issue.id,
+              kit_item_name: issue.kit_item_name,
+              kit_size: issue.kit_size,
+              quantity: issue.quantity,
+              date_issued: issue.date_issued
+            }));
+
+          issuesMap[record.id] = staffIssues;
+        } else {
+          issuesMap[record.id] = [];
+        }
+
+        // Load coaching kit items for this team (idempotent per team_id)
+        if (!itemsMap[record.team_id]) {
+          const { data: itemsData } = await supabase
+            .from('team_kit_items')
+            .select('id, name, available_sizes')
+            .eq('team_id', record.team_id)
+            .or('kit_type.eq.coaching,kit_type.eq.both')
+            .order('name');
+
+          itemsMap[record.team_id] = (itemsData || []).map(item => ({
+            id: item.id,
+            name: item.name,
+            available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
           }));
-
-        issuesMap[record.id] = staffIssues;
-
-        // Load coaching kit items for this team
-        const { data: itemsData } = await supabase
-          .from('team_kit_items')
-          .select('id, name, available_sizes')
-          .eq('team_id', record.team_id)
-          .or('kit_type.eq.coaching,kit_type.eq.both')
-          .order('name');
-
-        itemsMap[record.team_id] = (itemsData || []).map(item => ({
-          id: item.id,
-          name: item.name,
-          available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
-        }));
+        }
       }
 
       setKitIssues(issuesMap);
@@ -158,12 +194,47 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
     try {
       setSaving(staffId);
 
-      const { error } = await supabase
-        .from('team_staff')
-        .update({ kit_sizes: record.kit_sizes })
-        .eq('id', staffId);
+      let realStaffId = staffId;
 
-      if (error) throw error;
+      // Synthetic record from user_teams — materialize a team_staff row and
+      // link it to the user via user_staff before saving kit sizes.
+      if (staffId.startsWith('user-team:')) {
+        const { data: authData } = await supabase.auth.getUser();
+        const authUser = authData?.user;
+        const fullName =
+          (authUser?.user_metadata as any)?.name ||
+          (authUser?.user_metadata as any)?.full_name ||
+          authUser?.email ||
+          'Staff Member';
+        const email = authUser?.email || null;
+
+        const { data: insertedStaff, error: insertStaffError } = await supabase
+          .from('team_staff')
+          .insert({
+            team_id: record.team_id,
+            role: record.role,
+            name: fullName,
+            email,
+            kit_sizes: record.kit_sizes,
+          } as any)
+          .select('id')
+          .single();
+
+        if (insertStaffError) throw insertStaffError;
+        realStaffId = insertedStaff.id;
+
+        const { error: linkError } = await supabase
+          .from('user_staff')
+          .insert({ user_id: userId, staff_id: realStaffId } as any);
+        if (linkError) throw linkError;
+      } else {
+        const { error } = await supabase
+          .from('team_staff')
+          .update({ kit_sizes: record.kit_sizes })
+          .eq('id', staffId);
+
+        if (error) throw error;
+      }
 
       toast({
         title: 'Success',
@@ -171,6 +242,9 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       });
 
       onUpdate?.();
+      // Refresh so synthetic ids are replaced and issues for the new staff
+      // record are loaded.
+      await loadStaffData();
     } catch (error: any) {
       logger.error('Error saving kit sizes:', error);
       toast({

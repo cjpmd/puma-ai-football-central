@@ -1,48 +1,40 @@
-# Fix FIFA Card Play Styles + Duplicate Close Button
+# Show all linked teams in Coaching Kit
 
-## Problem 1 — Legacy play styles persist
-`player.play_style` in the DB still contains pre-migration values (e.g. `speedster`, `finisher`, `workhorse`, `maestro`, `interceptor`, `guardian`, `wall`, `clinical`, `commander`, `engine`, `reflexes`, `rock`, `sweeper`). Andrew McDonald has `["finisher","speedster","rapid"]`. Only `rapid` exists in the new `FIFA_PLAY_STYLES` list.
+## Problem
 
-Result in `FifaStylePlayerCard.tsx`:
-- The picker grid only highlights values present in `FIFA_PLAY_STYLES`, so legacy values appear unselected in the UI.
-- However, `selectedPlayStyles` still contains them, so the counter shows `3/3` and the user can't add more.
-- On the front of the card, `getPlayStyleIcon()` returns `null` for legacy values, leaving phantom slots.
+In Edit Profile → Coaching Kit, only one team appears (e.g. "Broughty United Pumas 2015s") even when the user is staff on multiple teams. `StaffKitSection` only queries the `user_staff` linking table, so teams the user manages via `user_teams` (team_manager, team_coach, team_assistant_manager, team_helper, manager, coach, staff, helper) are missing.
 
-## Problem 2 — Two close (X) buttons on the Dashboard
-On `DashboardMobile.tsx` (line 1176–1198) the card is wrapped in a shadcn `<Dialog>`. `DialogContent` (`src/components/ui/dialog.tsx` line 45) renders its own `DialogPrimitive.Close` X in the top-right. The card itself already has its own X (`FifaStylePlayerCard.tsx` line 557–566), so the user sees two — the outer one floating outside the card frame.
+This matches our existing "Unified Staff" pattern (memory: Unified Staff — staff from `team_staff` and `user_teams` are merged).
 
 ## Fix
 
-### 1. Sanitize legacy play styles in `FifaStylePlayerCard.tsx`
-In `parsePlayStyles()` (lines 148–190), after building `rawStyles`, filter to keep only values that exist in the current `FIFA_PLAY_STYLES` list:
+Update `src/components/staff/StaffKitSection.tsx` so the staff records list is the union of:
 
-```ts
-const validValues = new Set(FIFA_PLAY_STYLES.map(s => s.value));
-return [...new Set(rawStyles)].filter(v => validValues.has(v)).slice(0, 3);
-```
+1. **`user_staff` → `team_staff` → `teams`** (existing query, unchanged)
+2. **`user_teams` → `teams`** filtered to staff/management roles, for entries that don't already have a `team_staff` record for the same team
 
-Effect: legacy values are dropped on load, so:
-- Counter shows the correct number (e.g. `1/3` for Andrew after dropping `finisher`/`speedster`).
-- Front-of-card no longer has phantom empty icon slots.
-- The next time the user changes their selection, `onSavePlayStyle` writes only the cleaned array back to the DB, naturally migrating the record.
+For source #2 there is no `team_staff.id`, so we use a synthetic id (`user-team:{team_id}`) and persist kit sizes by upserting into `team_staff` on save (create the missing `team_staff` row with the user's role + email, link it via `user_staff`), so the existing save path keeps working and future loads come through source #1.
 
-No DB migration required — sanitization happens client-side and self-heals on next save. (Optionally we could run a one-off cleanup query later, but it's not needed for the bug fix.)
+### Technical details
 
-### 2. Hide the duplicate X on `DashboardMobile.tsx`
-Two equally simple options — picking the cleanest one:
+`StaffKitSection.tsx`:
 
-Replace the wrapping `DialogContent` with a custom variant that omits the built-in close button. The simplest in-place change is to override the close button via CSS on this single Dialog instance:
+- After loading `userStaffData`, also fetch:
+  ```ts
+  supabase.from('user_teams')
+    .select('team_id, role, teams!inner(id, name)')
+    .eq('user_id', userId)
+    .in('role', ['team_manager','team_assistant_manager','team_coach','team_helper','manager','coach','staff','helper'])
+  ```
+- Build a `Set` of team_ids already covered by `user_staff` records and append only the missing teams to `staffRecords` with:
+  - `id: \`user-team:${team_id}\``
+  - `kit_sizes: {}` (no team_staff row yet)
+- Kit issues query for synthetic records: skip (no `team_staff.id` to match `staff_ids`); show empty issued list.
+- `handleSaveKitSizes`: if `staffId` starts with `user-team:`, first `insert` a `team_staff` row (`team_id`, `role`, `name` from auth user, `email`), then `insert` into `user_staff` linking `user_id` ↔ new `staff_id`, then proceed with the kit_sizes update against the new id. Refresh local state with the real id and call `loadStaffData()`.
 
-```tsx
-<DialogContent className="max-w-md p-0 bg-transparent border-none shadow-none [&>button]:hidden">
-```
-
-The `[&>button]:hidden` arbitrary selector hides the auto-rendered `DialogPrimitive.Close` (the only direct `<button>` child of `DialogContent`), leaving the card's own X intact and inside the frame.
-
-## Files to edit
-- `src/components/players/FifaStylePlayerCard.tsx` — add legacy-value filter inside `parsePlayStyles`.
-- `src/pages/DashboardMobile.tsx` — add `[&>button]:hidden` to the `DialogContent` className on line 1177.
+No DB schema changes needed. No other files affected.
 
 ## Out of scope
-- One-off DB cleanup of legacy values across all players (not required; handled lazily on next save). Happy to add a migration if you want a single sweep.
-- Changes to how positional labels (`Midfielder Right+++` etc.) are computed — those come from match minutes, not from `play_style`, and are working as designed.
+
+- "Kit Issued to You" history for teams the user only joined via `user_teams` until they save sizes (then it works normally).
+- Existing `EditProfileModal` and `UnifiedProfile` consumers are unchanged — they already render `StaffKitSection`.
