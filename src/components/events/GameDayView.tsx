@@ -767,6 +767,10 @@ export const GameDayView: React.FC = () => {
                 onEventCreated={handleEventCreated}
                 onSubstitution={handleSubstitution}
                 currentMinute={currentMinute}
+                kitDesign={kitDesign}
+                goalkeeperKitDesign={goalkeeperKitDesign}
+                gameFormat={(event as any).game_format}
+                isMobile={isMobile}
               />
             </div>
 
@@ -774,6 +778,8 @@ export const GameDayView: React.FC = () => {
               <GameDaySubstituteBench
                 substitutes={substitutes}
                 onPlayerLongPress={handlePlayerLongPress}
+                kitDesign={kitDesign}
+                goalkeeperKitDesign={goalkeeperKitDesign}
               />
             )}
           </>
