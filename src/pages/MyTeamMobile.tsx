@@ -613,6 +613,100 @@ export default function MyTeamMobile() {
               </CardContent>
             </Card>
 
+            {/* Attendance (collapsible) */}
+            <Card>
+              <Collapsible open={attendanceOpen} onOpenChange={setAttendanceOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-4 text-left">
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 mr-2" />
+                      <span className="text-lg font-semibold">Attendance</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-white/50">{analytics.totalAppearances} total</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${attendanceOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-2">
+                    {analytics.attendanceByType.length > 0 ? (
+                      <>
+                        {analytics.attendanceByType.map(row => (
+                          <div
+                            key={row.eventType}
+                            className="flex items-center justify-between p-3 rounded-lg"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}
+                          >
+                            <span className="font-medium">{EVENT_TYPE_LABELS[row.eventType] ?? humaniseType(row.eventType)}</span>
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="text-white/70 font-semibold">{row.count}</span>
+                              <Badge style={{ background: 'rgba(184,159,255,0.15)', color: '#b89fff', border: '1px solid rgba(184,159,255,0.35)' }}>
+                                {row.percent}%
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                        <div
+                          className="flex items-center justify-between p-3 rounded-lg mt-2"
+                          style={{ background: 'rgba(245,158,11,0.08)', border: '0.5px solid rgba(245,158,11,0.25)' }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-amber-400" />
+                            <span className="font-medium">Captain appearances</span>
+                          </div>
+                          <span className="font-bold text-amber-400">{analytics.captainAppearances}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-white/50 text-center py-4 text-sm">No attendance recorded</p>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+
+            {/* Game Day Stats (collapsible, dynamic) */}
+            <Card>
+              <Collapsible open={gameDayOpen} onOpenChange={setGameDayOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-4 text-left">
+                    <div className="flex items-center">
+                      <Activity className="h-5 w-5 mr-2" />
+                      <span className="text-lg font-semibold">Game Day Stats</span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${gameDayOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    {analytics.gameDayStats.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        {analytics.gameDayStats.map(s => {
+                          const meta = GAME_DAY_META[s.eventType];
+                          return (
+                            <div
+                              key={s.eventType}
+                              className="text-center p-3 rounded-lg"
+                              style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}
+                            >
+                              <div className="flex justify-center mb-1">
+                                {meta?.icon ?? <Activity className="h-6 w-6 text-[#b89fff]" />}
+                              </div>
+                              <div className="text-xl font-bold">{s.count}</div>
+                              <div className="text-xs text-white/50">{meta?.label ?? humaniseType(s.eventType)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-white/50 text-center py-4 text-sm">No Game Day events recorded yet</p>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+
             {/* Performance Category Breakdown */}
             {selectedCategory === 'all' && displayStats.categoryStats.length > 1 && (
               <Card>
