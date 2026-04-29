@@ -1,6 +1,6 @@
 
 import { logger } from '@/lib/logger';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,10 +11,12 @@ import { useSmartView } from '@/contexts/SmartViewContext';
 import { HeaderEntitySwitcher } from './HeaderEntitySwitcher';
 import { RoleContextSwitcher } from './RoleContextSwitcher';
 import { useSmartNavigation } from '@/hooks/useSmartNavigation';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Menu,
   LogOut,
-  Zap
+  Zap,
+  BookOpen
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleDebugPanel } from '@/components/debug/RoleDebugPanel';
@@ -31,6 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, signOut, teams, clubs, connectedPlayers } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [academyId, setAcademyId] = useState<string | null>(null);
   
   // Handle case where contexts might not be available
   let currentView: string = 'parent';
@@ -59,6 +62,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       { name: 'Calendar', href: '/calendar', icon: Menu, priority: 3 }
     ];
   }
+
+  // Academy nav: visible to global_admin, academy_admin, and head_of_academy roles
+  const userRoles: string[] = (user as any)?.roles || [];
+  const showAcademyLink =
+    isGlobalAdmin ||
+    userRoles.includes('academy_admin') ||
+    userRoles.includes('head_of_academy');
+
+  // Fetch the user's first academy ID for non-global-admin academy members
+  useEffect(() => {
+    if (!showAcademyLink || isGlobalAdmin) return;
+    supabase
+      .from('user_academies')
+      .select('academy_id')
+      .limit(1)
+      .then(({ data }) => {
+        if (data?.[0]?.academy_id) setAcademyId(data[0].academy_id);
+      });
+  }, [showAcademyLink, isGlobalAdmin]);
+
+  // global_admin goes to /clubs (academy management lives there);
+  // academy members go to their specific academy dashboard
+  const academyHref = isGlobalAdmin ? '/clubs' : (academyId ? `/academy/${academyId}` : null);
 
   const handleSignOut = async () => {
     await signOut();
@@ -174,6 +200,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             );
           })}
+
+          {/* Academy nav item — visible to global_admin, academy_admin, head_of_academy */}
+          {showAcademyLink && academyHref && (
+            <Link
+              to={academyHref}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
+                location.pathname.startsWith('/academy')
+                  ? 'bg-white/15 text-white'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+              )}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <BookOpen className="h-5 w-5" />
+              <div className="flex-1">Academy</div>
+            </Link>
+          )}
         </nav>
       </ScrollArea>
       <div className="border-t border-white/10 p-4">
