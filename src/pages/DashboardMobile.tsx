@@ -741,7 +741,7 @@ export default function DashboardMobile() {
               <Avatar className="w-11 h-11 rounded-full ring-1 ring-white/20">
                 {profile?.avatar_url ? (
                   <AvatarImage
-                    src={`${profile.avatar_url}${profile.avatar_url.includes('?') ? '&' : '?'}v=${profile.updated_at ?? ''}`}
+                    src={profile.avatar_url}
                     alt="Profile"
                     className="rounded-full"
                   />
