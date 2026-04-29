@@ -9,12 +9,48 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Trophy, TrendingUp, TrendingDown, Minus, Clock, MapPin } from 'lucide-react';
+import { Calendar, Trophy, TrendingUp, TrendingDown, Minus, Clock, MapPin, CheckCircle2, XCircle, MinusCircle, Star } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ChildSummaryCard } from '@/components/child-progress/ChildSummaryCard';
 import { ChildMatchHistory } from '@/components/child-progress/ChildMatchHistory';
 import { ChildTrainingProgress } from '@/components/child-progress/ChildTrainingProgress';
 import { ChildCalendarView } from '@/components/child-progress/ChildCalendarView';
+
+type AvailabilityStatus = 'available' | 'unavailable' | 'unknown';
+
+function resolveAvailability(ps: ChildProgressData['performance_summary']): AvailabilityStatus {
+  const raw = ps?.availability_status;
+  if (!raw) return 'unknown';
+  const v = String(raw).toLowerCase();
+  if (v === 'available' || v === 'green') return 'available';
+  if (v === 'unavailable' || v === 'red') return 'unavailable';
+  return 'unknown';
+}
+
+function AvailabilityBadge({ status }: { status: AvailabilityStatus }) {
+  if (status === 'available') {
+    return (
+      <Badge variant="outline" className="gap-1 border-green-500 text-green-700 bg-green-50">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Available
+      </Badge>
+    );
+  }
+  if (status === 'unavailable') {
+    return (
+      <Badge variant="outline" className="gap-1 border-red-500 text-red-700 bg-red-50">
+        <XCircle className="h-3.5 w-3.5" />
+        Unavailable
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="gap-1 text-muted-foreground">
+      <MinusCircle className="h-3.5 w-3.5" />
+      No status
+    </Badge>
+  );
+}
 
 const ChildProgress = () => {
   const { user } = useAuth();
@@ -73,6 +109,9 @@ const ChildProgress = () => {
     );
   }
 
+  const availability = selectedChild ? resolveAvailability(selectedChild.performance_summary) : 'unknown';
+  const overallRating = selectedChild?.performance_summary?.overall_rating;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -120,6 +159,42 @@ const ChildProgress = () => {
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
+                {/* Performance Summary from Origin Sports Performance app */}
+                {(availability !== 'unknown' || overallRating != null) && (
+                  <Card className="border-purple-200 bg-purple-50/50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Star className="h-4 w-4 text-purple-600" />
+                        Performance Summary
+                        <Badge variant="secondary" className="text-xs font-normal ml-auto">
+                          Origin Sports
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>Latest data from the Performance app</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap gap-6 items-center">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Availability</p>
+                        <AvailabilityBadge status={availability} />
+                      </div>
+                      {overallRating != null && (
+                        <div className="space-y-1 min-w-[140px]">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Overall Rating</span>
+                            <span className="font-semibold text-purple-700">
+                              {typeof overallRating === 'number' ? overallRating.toFixed(1) : overallRating}
+                            </span>
+                          </div>
+                          <Progress
+                            value={typeof overallRating === 'number' ? Math.min(overallRating, 100) : 0}
+                            className="h-2 [&>div]:bg-purple-500"
+                          />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Recent Achievements */}
                   <Card>

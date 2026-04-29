@@ -61,6 +61,8 @@ const AdminPlayStylesMobile        = lazy(() => import("./pages/AdminPlayStylesM
 const TeamSettingsMobile           = lazy(() => import("./pages/TeamSettingsMobile"));
 const ResetPassword                = lazy(() => import("./pages/ResetPassword"));
 const ResetPasswordMobile          = lazy(() => import("./pages/ResetPasswordMobile"));
+const AcademyDashboard             = lazy(() => import("./pages/AcademyDashboard"));
+const AcademyDashboardMobile       = lazy(() => import("./pages/mobile/AcademyDashboardMobile"));
 // --------------------------------------------------------------
 
 const queryClient = new QueryClient({
@@ -261,6 +263,14 @@ const AppContent = () => {
           <ProtectedRoute>
             <Page name="Team Settings">
               <ResponsiveRoute desktopComponent={<TeamManagement />} mobileComponent={<TeamSettingsMobile />} />
+            </Page>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/academy/:id" element={
+          <ProtectedRoute>
+            <Page name="Academy">
+              <ResponsiveRoute desktopComponent={<AcademyDashboard />} mobileComponent={<AcademyDashboardMobile />} />
             </Page>
           </ProtectedRoute>
         } />

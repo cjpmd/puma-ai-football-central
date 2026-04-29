@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSmartView } from '@/contexts/SmartViewContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Home, 
   Users, 
@@ -30,6 +31,44 @@ export const useSmartNavigation = () => {
   const { currentView } = useSmartView();
   const { connectedPlayers, teams, clubs } = useAuth();
   const { hasPermission } = useAuthorization();
+  const [userAcademies, setUserAcademies] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch academies where current user is a member or head — not needed for global_admin
+  // (they manage all academies via /clubs).
+  useEffect(() => {
+    if (currentView === 'global_admin') return;
+
+    const fetchAcademies = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [memberRes, headRes] = await Promise.all([
+        supabase
+          .from('user_academies')
+          .select('academies!inner(id, name)')
+          .eq('user_id', user.id),
+        supabase
+          .from('academies')
+          .select('id, name')
+          .eq('head_of_academy_user_id', user.id),
+      ]);
+
+      const seen = new Set<string>();
+      const merged: { id: string; name: string }[] = [];
+
+      for (const row of (memberRes.data ?? [])) {
+        const a = (row as any).academies;
+        if (a && !seen.has(a.id)) { seen.add(a.id); merged.push(a); }
+      }
+      for (const a of (headRes.data ?? [])) {
+        if (!seen.has(a.id)) { seen.add(a.id); merged.push(a); }
+      }
+
+      setUserAcademies(merged);
+    };
+
+    fetchAcademies();
+  }, [currentView]);
 
   const navigation = useMemo((): NavigationItem[] => {
     const items: NavigationItem[] = [];
@@ -245,10 +284,18 @@ export const useSmartNavigation = () => {
       case 'global_admin':
         // Global Admin navigation - system-wide management
         items.push({
+          name: 'Academies',
+          href: '/clubs',
+          icon: BookOpen,
+          priority: 2,
+          description: 'Manage academies and year groups'
+        });
+
+        items.push({
           name: 'Clubs',
           href: '/clubs',
           icon: Building2,
-          priority: 2,
+          priority: 3,
           description: 'Manage all clubs'
         });
 
@@ -256,7 +303,7 @@ export const useSmartNavigation = () => {
           name: 'Teams',
           href: '/teams',
           icon: Trophy,
-          priority: 3,
+          priority: 4,
           description: 'Manage all teams'
         });
 
@@ -264,7 +311,7 @@ export const useSmartNavigation = () => {
           name: 'User Management',
           href: '/users',
           icon: UserPlus,
-          priority: 4,
+          priority: 5,
           description: 'System user administration'
         });
 
@@ -272,7 +319,7 @@ export const useSmartNavigation = () => {
           name: 'Staff Management',
           href: '/staff',
           icon: UserCog,
-          priority: 5,
+          priority: 6,
           description: 'Global staff management'
         });
 
@@ -280,7 +327,7 @@ export const useSmartNavigation = () => {
           name: 'System Analytics',
           href: '/analytics',
           icon: BarChart3,
-          priority: 6,
+          priority: 7,
           description: 'Platform-wide analytics'
         });
 
@@ -288,7 +335,7 @@ export const useSmartNavigation = () => {
           name: 'Players',
           href: '/players',
           icon: Users,
-          priority: 7,
+          priority: 8,
           description: 'View all players'
         });
 
@@ -296,7 +343,7 @@ export const useSmartNavigation = () => {
           name: 'Calendar',
           href: '/calendar',
           icon: Calendar,
-          priority: 8,
+          priority: 9,
           description: 'System-wide events'
         });
 
@@ -304,15 +351,26 @@ export const useSmartNavigation = () => {
           name: 'Subscriptions',
           href: '/subscriptions',
           icon: CreditCard,
-          priority: 9,
+          priority: 10,
           description: 'Manage subscriptions'
         });
         break;
     }
 
+    // Academy members (non-global-admin): add a nav item per academy
+    userAcademies.forEach((academy, i) => {
+      items.push({
+        name: academy.name,
+        href: `/academy/${academy.id}`,
+        icon: BookOpen,
+        priority: 20 + i,
+        description: 'Academy dashboard',
+      });
+    });
+
     // Sort by priority
     return items.sort((a, b) => a.priority - b.priority);
-  }, [currentView, connectedPlayers, teams, clubs, hasPermission]);
+  }, [currentView, connectedPlayers, teams, clubs, hasPermission, userAcademies]);
 
   const quickActions = useMemo(() => {
     const actions: NavigationItem[] = [];
