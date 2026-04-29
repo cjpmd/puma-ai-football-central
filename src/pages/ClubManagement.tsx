@@ -23,7 +23,8 @@ import { YearGroupManagement } from '@/components/clubs/YearGroupManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
+const supabase = supabaseClient as any;
 import { Club } from '@/types/index';
 import { PlusCircle, Settings, Users, Building, Eye, BookOpen } from 'lucide-react';
 
