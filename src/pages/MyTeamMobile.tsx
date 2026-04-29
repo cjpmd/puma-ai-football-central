@@ -259,12 +259,14 @@ export default function MyTeamMobile() {
       const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
 
       const safeEventIds = eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000'];
+      const allPastEventIds = events.map(e => e.id);
+      const safeAllEventIds = allPastEventIds.length > 0 ? allPastEventIds : ['00000000-0000-0000-0000-000000000000'];
 
-      // Appearances and minutes — season-scoped by event_id
+      // Appearances and minutes — all past events (incl. training)
       const { data: playerStats } = await supabase
         .from('event_player_stats')
         .select('event_id, player_id, is_captain, position, players!inner(name), minutes_played')
-        .in('event_id', safeEventIds)
+        .in('event_id', safeAllEventIds)
         .eq('players.team_id', currentTeam.id)
         .gt('minutes_played', 0);
 
@@ -272,7 +274,7 @@ export default function MyTeamMobile() {
       const { data: confirmedAvail } = await supabase
         .from('event_availability')
         .select('event_id, player_id, players!inner(team_id)')
-        .in('event_id', safeEventIds)
+        .in('event_id', safeAllEventIds)
         .eq('role', 'player')
         .eq('status', 'available')
         .eq('players.team_id', currentTeam.id);
