@@ -117,7 +117,7 @@ export default function AuthMobile() {
     return (
       <div className="min-h-screen ios-wallpaper-twilight flex flex-col">
         {/* Top Header with Logo */}
-        <div className="pt-safe px-6 py-8 text-center">
+        <div className="pt-safe px-6 pb-8 text-center" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
           <div className="flex justify-center mb-3">
             <img 
               src="/brand/stopwatch-mark.svg" 
