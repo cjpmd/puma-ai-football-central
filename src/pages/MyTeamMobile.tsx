@@ -37,6 +37,17 @@ interface CategoryStats {
   totalGames: number;
 }
 
+interface AttendanceByType {
+  eventType: string;
+  count: number;
+  percent: number;
+}
+
+interface GameDayStat {
+  eventType: string;
+  count: number;
+}
+
 interface AnalyticsData {
   totalWins: number;
   totalDraws: number;
@@ -60,6 +71,10 @@ interface AnalyticsData {
   matchResults: MatchResult[];
   trainingCount: number;
   availableEventTypes: string[];
+  totalAppearances: number;
+  attendanceByType: AttendanceByType[];
+  captainAppearances: number;
+  gameDayStats: GameDayStat[];
 }
 
 const EMPTY_ANALYTICS: AnalyticsData = {
@@ -69,6 +84,7 @@ const EMPTY_ANALYTICS: AnalyticsData = {
   totalGoals: 0, totalAssists: 0, totalSaves: 0,
   yellowCards: 0, redCards: 0, topScorers: [], topAssisters: [], categoryStats: [],
   matchResults: [], trainingCount: 0, availableEventTypes: [],
+  totalAppearances: 0, attendanceByType: [], captainAppearances: 0, gameDayStats: [],
 };
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
