@@ -284,10 +284,10 @@ export default function MyTeamMobile() {
         .in('event_id', safeEventIds)
         .eq('players.team_id', currentTeam.id);
 
-      type PlayerStat = { name: string; goals: number; assists: number; saves: number; yellowCards: number; redCards: number; appearances: number; totalMinutes: number };
+      type PlayerStat = { name: string; goals: number; assists: number; saves: number; yellowCards: number; redCards: number; appearances: number; totalMinutes: number; minutesByPosition: Record<string, number> };
       const playerMap = new Map<string, PlayerStat>();
       const ensurePlayer = (pid: string, name: string) => {
-        if (!playerMap.has(pid)) playerMap.set(pid, { name, goals: 0, assists: 0, saves: 0, yellowCards: 0, redCards: 0, appearances: 0, totalMinutes: 0 });
+        if (!playerMap.has(pid)) playerMap.set(pid, { name, goals: 0, assists: 0, saves: 0, yellowCards: 0, redCards: 0, appearances: 0, totalMinutes: 0, minutesByPosition: {} });
         return playerMap.get(pid)!;
       };
 
@@ -303,22 +303,50 @@ export default function MyTeamMobile() {
         gameDayMap.set(ev.event_type, (gameDayMap.get(ev.event_type) || 0) + 1);
       });
 
-      // Attendance: count appearances per event type, plus captain count
+      // Per-player aggregation: minutes & captain count from event_player_stats
       const eventTypeById = new Map<string, string>();
       events.forEach(e => eventTypeById.set(e.id, e.event_type as string));
 
-      const attendanceMap = new Map<string, number>();
-      let totalAppearances = 0;
+      // Track unique (event_id, player_id) attendance keys
+      const attendedKeys = new Set<string>();
+      const playerAppearedEvents = new Map<string, Set<string>>(); // pid -> Set<event_id>
       let captainAppearances = 0;
 
       playerStats?.forEach(stat => {
         const p = ensurePlayer(stat.player_id, (stat.players as any).name);
-        p.appearances++;
-        p.totalMinutes += stat.minutes_played || 0;
-        const et = eventTypeById.get(stat.event_id) || 'unknown';
+        const mins = stat.minutes_played || 0;
+        p.totalMinutes += mins;
+        if (stat.position) {
+          p.minutesByPosition[stat.position] = (p.minutesByPosition[stat.position] || 0) + mins;
+        }
+        if (stat.is_captain) captainAppearances++;
+        attendedKeys.add(`${stat.event_id}:${stat.player_id}`);
+        if (!playerAppearedEvents.has(stat.player_id)) playerAppearedEvents.set(stat.player_id, new Set());
+        playerAppearedEvents.get(stat.player_id)!.add(stat.event_id);
+      });
+
+      // Add confirmed-available rows (overrides selection-only attendance)
+      confirmedAvail?.forEach(a => {
+        if (!a.player_id) return;
+        attendedKeys.add(`${a.event_id}:${a.player_id}`);
+        if (!playerAppearedEvents.has(a.player_id)) playerAppearedEvents.set(a.player_id, new Set());
+        playerAppearedEvents.get(a.player_id)!.add(a.event_id);
+      });
+
+      // Bucket attendance by event type
+      const attendanceMap = new Map<string, number>();
+      let totalAppearances = 0;
+      attendedKeys.forEach(key => {
+        const [eid] = key.split(':');
+        const et = eventTypeById.get(eid) || 'unknown';
         attendanceMap.set(et, (attendanceMap.get(et) || 0) + 1);
         totalAppearances++;
-        if (stat.is_captain) captainAppearances++;
+      });
+
+      // Sync per-player appearance count from unique events
+      playerAppearedEvents.forEach((evSet, pid) => {
+        const p = playerMap.get(pid);
+        if (p) p.appearances = evSet.size;
       });
 
       const attendanceByType: AttendanceByType[] = Array.from(attendanceMap.entries())
