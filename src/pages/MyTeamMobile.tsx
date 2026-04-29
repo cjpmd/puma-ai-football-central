@@ -5,7 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   TrendingUp, Users, Trophy, Target, Calendar, BarChart3,
   Shield, AlertTriangle, Layers, ChevronLeft, ChevronRight, Info,
+  ChevronDown, Star, Activity,
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
