@@ -405,6 +405,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 </div>
 
                 <div className="border-t pt-4">
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={loading} className="flex-1">
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -422,15 +433,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                   </Button>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex gap-3 px-6 py-4 border-t bg-background">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Saving...' : 'Save Changes'}
-              </Button>
             </div>
           </form>
         </DialogContent>
