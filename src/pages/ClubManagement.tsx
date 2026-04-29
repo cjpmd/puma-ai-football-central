@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 const supabase = supabaseClient as any;
 import { Club } from '@/types/index';
-import { PlusCircle, Settings, Users, Building, Eye, BookOpen } from 'lucide-react';
+import { PlusCircle, Settings, Users, Building, Eye, BookOpen, Upload, CheckCircle2, Search } from 'lucide-react';
 
 export const ClubManagement = () => {
   const { clubs, refreshUserData, teams } = useAuth();
@@ -41,7 +41,7 @@ export const ClubManagement = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'year-groups' | 'teams' | 'players' | 'calendar' | 'analytics' | 'staff'>('overview');
   const { toast } = useToast();
 
-  // Academy creation state (global_admin only)
+  // ── Academy creation state (global_admin only) ──────────────────────────
   const [isAcademyDialogOpen, setIsAcademyDialogOpen] = useState(false);
   const [academyForm, setAcademyForm] = useState({
     name: '',
@@ -50,13 +50,20 @@ export const ClubManagement = () => {
     foundedYear: '',
     linkedClubIds: [] as string[],
   });
+  const [academyLogoFile, setAcademyLogoFile] = useState<File | null>(null);
+  const [academyLogoPreview, setAcademyLogoPreview] = useState<string>('');
+  const [headEmail, setHeadEmail] = useState('');
+  const [headUser, setHeadUser] = useState<{ id: string; name: string | null } | null>(null);
+  const [headSearching, setHeadSearching] = useState(false);
+  const [headError, setHeadError] = useState('');
   const [creatingAcademy, setCreatingAcademy] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     loadLinkedClubs();
   }, [teams]);
 
-  // Auto-select club if only one available
   useEffect(() => {
     const allClubs = [...clubs, ...linkedClubs];
     if (allClubs.length === 1 && !selectedClubForView) {
@@ -66,179 +73,181 @@ export const ClubManagement = () => {
 
   const loadLinkedClubs = async () => {
     try {
-      logger.log('Loading linked clubs...');
-      logger.log('User teams:', teams);
-      
-      if (!teams || teams.length === 0) {
-        logger.log('No teams available, skipping linked clubs load');
-        setLinkedClubs([]);
-        return;
-      }
-
-      // Get team IDs that the user has access to
-      const teamIds = teams.map(team => team.id);
-      logger.log('Team IDs:', teamIds);
-
-      // Get clubs linked to these teams
-      const { data: teamClubRelations, error: teamClubError } = await supabase
+      if (!teams || teams.length === 0) { setLinkedClubs([]); return; }
+      const teamIds = teams.map(t => t.id);
+      const { data: relations, error } = await supabase
         .from('club_teams')
-        .select(`
-          club_id,
-          clubs!club_teams_club_id_fkey (
-            id,
-            name,
-            reference_number,
-            subscription_type,
-            serial_number,
-            logo_url,
-            created_at,
-            updated_at
-          )
-        `)
+        .select(`club_id, clubs!club_teams_club_id_fkey(id,name,reference_number,subscription_type,serial_number,logo_url,created_at,updated_at)`)
         .in('team_id', teamIds);
-
-      if (teamClubError) {
-        logger.error('Error loading team-club relationships:', teamClubError);
-        return;
-      }
-
-      logger.log('Team-club relations:', teamClubRelations);
-
-      // Filter out clubs that the user already owns
-      const ownedClubIds = clubs.map(club => club.id);
-      logger.log('Owned club IDs:', ownedClubIds);
-
-      const linkedClubsData = teamClubRelations
-        ?.filter(relation => relation.clubs && !ownedClubIds.includes(relation.clubs.id))
-        .map(relation => {
-          const club = relation.clubs!;
-          return {
-            id: club.id,
-            name: club.name,
-            referenceNumber: club.reference_number || undefined,
-            subscriptionType: club.subscription_type as Club['subscriptionType'],
-            serialNumber: club.serial_number,
-            logoUrl: club.logo_url,
-            createdAt: club.created_at,
-            updatedAt: club.updated_at,
-            userRole: 'team_member', // User has access through team membership
-            isReadOnly: true,
-            teams: []
-          };
-        })
-        .filter((club, index, self) => 
-          // Remove duplicates based on club ID
-          index === self.findIndex(c => c.id === club.id)
-        ) || [];
-
-      logger.log('Processed linked clubs:', linkedClubsData);
-      setLinkedClubs(linkedClubsData as Club[]);
-    } catch (error) {
-      logger.error('Error in loadLinkedClubs:', error);
-    }
+      if (error) { logger.error('Error loading linked clubs:', error); return; }
+      const ownedIds = clubs.map(c => c.id);
+      const linked = (relations || [])
+        .filter((r: any) => r.clubs && !ownedIds.includes(r.clubs.id))
+        .map((r: any) => ({
+          id: r.clubs.id, name: r.clubs.name,
+          referenceNumber: r.clubs.reference_number || undefined,
+          subscriptionType: r.clubs.subscription_type as Club['subscriptionType'],
+          serialNumber: r.clubs.serial_number, logoUrl: r.clubs.logo_url,
+          createdAt: r.clubs.created_at, updatedAt: r.clubs.updated_at,
+          userRole: 'team_member', isReadOnly: true, teams: [],
+        }))
+        .filter((c: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === c.id) === i);
+      setLinkedClubs(linked as Club[]);
+    } catch (e) { logger.error('loadLinkedClubs error:', e); }
   };
 
   const handleCreateClub = async (clubData: Partial<Club>) => {
     try {
-      logger.log('Creating club with data:', clubData);
-      
-      const { data, error } = await supabase.from('clubs').insert([{
+      const { error } = await supabase.from('clubs').insert([{
         name: clubData.name,
         reference_number: clubData.referenceNumber,
         subscription_type: clubData.subscriptionType || 'free',
-        logo_url: clubData.logoUrl
+        logo_url: clubData.logoUrl,
       }]).select().single();
-
       if (error) throw error;
-
-      logger.log('Club created successfully:', data);
       await refreshUserData();
       setIsClubDialogOpen(false);
-      
-      toast({
-        title: 'Club created',
-        description: `${clubData.name} has been created successfully.`,
-      });
-    } catch (error: any) {
-      logger.error('Error creating club:', error);
-      toast({
-        title: 'Error creating club',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Club created', description: `${clubData.name} has been created successfully.` });
+    } catch (e: any) {
+      toast({ title: 'Error creating club', description: e.message, variant: 'destructive' });
     }
   };
 
   const handleUpdateClub = async (clubData: Partial<Club>) => {
     if (!selectedClub?.id) return;
-
     try {
-      logger.log('Updating club with data:', clubData);
-      
-      const { error } = await supabase
-        .from('clubs')
-        .update({
-          name: clubData.name,
-          reference_number: clubData.referenceNumber,
-          subscription_type: clubData.subscriptionType,
-          logo_url: clubData.logoUrl
-        })
-        .eq('id', selectedClub.id);
-
+      const { error } = await supabase.from('clubs').update({
+        name: clubData.name, reference_number: clubData.referenceNumber,
+        subscription_type: clubData.subscriptionType, logo_url: clubData.logoUrl,
+      }).eq('id', selectedClub.id);
       if (error) throw error;
-
-      logger.log('Club updated successfully');
       await refreshUserData();
       setIsClubDialogOpen(false);
-      
-      toast({
-        title: 'Club updated',
-        description: `${clubData.name} has been updated successfully.`,
-      });
-    } catch (error: any) {
-      logger.error('Error updating club:', error);
-      toast({
-        title: 'Error updating club',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Club updated', description: `${clubData.name} has been updated successfully.` });
+    } catch (e: any) {
+      toast({ title: 'Error updating club', description: e.message, variant: 'destructive' });
     }
+  };
+
+  // ── Academy helpers ──────────────────────────────────────────────────────
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAcademyLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setAcademyLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const searchHead = async () => {
+    const email = headEmail.trim().toLowerCase();
+    if (!email) return;
+    setHeadSearching(true);
+    setHeadUser(null);
+    setHeadError('');
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .ilike('email', email)
+      .limit(1)
+      .maybeSingle();
+    setHeadSearching(false);
+    if (error || !data) {
+      setHeadError('No user found with that email address.');
+    } else {
+      setHeadUser({ id: data.id, name: data.name });
+    }
+  };
+
+  const resetAcademyForm = () => {
+    setAcademyForm({ name: '', faRegistrationNumber: '', epppCategory: '', foundedYear: '', linkedClubIds: [] });
+    setAcademyLogoFile(null);
+    setAcademyLogoPreview('');
+    setHeadEmail('');
+    setHeadUser(null);
+    setHeadError('');
   };
 
   const handleCreateAcademy = async () => {
     if (!academyForm.name.trim()) return;
     setCreatingAcademy(true);
     try {
+      // 1. Upload logo if a file was selected
+      let logoUrl: string | null = null;
+      if (academyLogoFile) {
+        try {
+          const ext = academyLogoFile.name.split('.').pop() || 'png';
+          const path = `academy-logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { data: upload, error: uploadErr } = await supabase.storage
+            .from('logos')
+            .upload(path, academyLogoFile, { contentType: academyLogoFile.type, upsert: false });
+          if (!uploadErr && upload) {
+            const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+            logoUrl = publicUrl;
+          } else {
+            logger.warn('Logo upload failed (continuing without logo):', uploadErr);
+          }
+        } catch (uploadEx) {
+          logger.warn('Logo upload exception:', uploadEx);
+        }
+      }
+
+      // 2. Insert academy
       const { data, error } = await supabase
         .from('academies')
         .insert({
           name: academyForm.name.trim(),
+          logo_url: logoUrl,
           fa_registration_number: academyForm.faRegistrationNumber.trim() || null,
           eppp_category: academyForm.epppCategory ? parseInt(academyForm.epppCategory, 10) : null,
           founded_year: academyForm.foundedYear ? parseInt(academyForm.foundedYear, 10) : null,
+          head_of_academy_user_id: headUser?.id ?? null,
         })
         .select('id')
         .single();
-
       if (error) throw error;
 
+      // 3. Link clubs
       if (academyForm.linkedClubIds.length > 0) {
-        const { error: linkError } = await supabase
+        const { error: linkErr } = await supabase
           .from('academy_clubs')
-          .insert(academyForm.linkedClubIds.map(clubId => ({
-            academy_id: data.id,
-            club_id: clubId,
-          })));
-        if (linkError) throw linkError;
+          .insert(academyForm.linkedClubIds.map(clubId => ({ academy_id: data.id, club_id: clubId })));
+        if (linkErr) throw linkErr;
+      }
+
+      // 4. Assign head of academy
+      if (headUser) {
+        // Insert user_academies row
+        await supabase.from('user_academies').insert({
+          user_id: headUser.id,
+          academy_id: data.id,
+          role: 'academy_admin',
+        });
+
+        // Update profiles.roles — append 'academy_admin' if not already present
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('roles')
+          .eq('id', headUser.id)
+          .single();
+        if (profile) {
+          const current: string[] = Array.isArray(profile.roles) ? profile.roles : [];
+          if (!current.includes('academy_admin')) {
+            await supabase
+              .from('profiles')
+              .update({ roles: [...current, 'academy_admin'] })
+              .eq('id', headUser.id);
+          }
+        }
       }
 
       toast({ title: 'Academy created', description: `${academyForm.name} has been created.` });
       setIsAcademyDialogOpen(false);
-      setAcademyForm({ name: '', faRegistrationNumber: '', epppCategory: '', foundedYear: '', linkedClubIds: [] });
+      resetAcademyForm();
       navigate(`/academy/${data.id}`);
-    } catch (error: any) {
-      logger.error('Error creating academy:', error);
-      toast({ title: 'Error creating academy', description: error.message, variant: 'destructive' });
+    } catch (e: any) {
+      logger.error('Error creating academy:', e);
+      toast({ title: 'Error creating academy', description: e.message, variant: 'destructive' });
     } finally {
       setCreatingAcademy(false);
     }
@@ -252,126 +261,69 @@ export const ClubManagement = () => {
         : [...prev.linkedClubIds, clubId],
     }));
   };
+  // ────────────────────────────────────────────────────────────────────────
 
-  const openDetailsModal = (club: Club, isReadOnly = false) => {
-    setDetailsClub({ ...club, isReadOnly });
-    setIsDetailsModalOpen(true);
-  };
-
-  const openEditClubDialog = (club: Club) => {
-    setSelectedClub(club);
-    setIsClubDialogOpen(true);
-  };
+  const openEditClubDialog = (club: Club) => { setSelectedClub(club); setIsClubDialogOpen(true); };
 
   const ClubCard = ({ club, isLinked = false }: { club: Club; isLinked?: boolean }) => {
     const [teamCount, setTeamCount] = useState(0);
-
     useEffect(() => {
-      const fetchTeamCount = async () => {
-        const { count } = await supabase
-          .from('club_teams')
-          .select('*', { count: 'exact', head: true })
-          .eq('club_id', club.id);
-        setTeamCount(count || 0);
-      };
-      fetchTeamCount();
+      supabase.from('club_teams').select('*', { count: 'exact', head: true }).eq('club_id', club.id)
+        .then(({ count }: any) => setTeamCount(count || 0));
     }, [club.id]);
-
     return (
-    <Card key={club.id} className={`hover:shadow-lg transition-shadow ${isLinked ? 'border-dashed opacity-75' : ''}`}>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-3 flex-1">
+      <Card className={`hover:shadow-lg transition-shadow ${isLinked ? 'border-dashed opacity-75' : ''}`}>
+        <CardHeader>
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 flex items-center justify-center rounded bg-muted">
-              {club.logoUrl ? (
-                <img 
-                  src={club.logoUrl} 
-                  alt={`${club.name} logo`}
-                  className="w-7 h-7 object-contain rounded"
-                />
-              ) : (
-                <Building className="h-5 w-5 text-muted-foreground" />
-              )}
+              {club.logoUrl
+                ? <img src={club.logoUrl} alt={`${club.name} logo`} className="w-7 h-7 object-contain rounded" />
+                : <Building className="h-5 w-5 text-muted-foreground" />}
             </div>
             <div className="flex-1">
               <CardTitle className="flex items-center gap-2">
                 {club.name}
-                {club.serialNumber && (
-                  <Badge variant="secondary" className="text-xs">
-                    #{club.serialNumber}
-                  </Badge>
-                )}
-                {isLinked && (
-                  <Badge variant="outline" className="text-xs">
-                    Linked
-                  </Badge>
-                )}
+                {club.serialNumber && <Badge variant="secondary" className="text-xs">#{club.serialNumber}</Badge>}
+                {isLinked && <Badge variant="outline" className="text-xs">Linked</Badge>}
               </CardTitle>
-              {club.referenceNumber && (
-                <CardDescription>
-                  Ref: {club.referenceNumber}
-                </CardDescription>
-              )}
+              {club.referenceNumber && <CardDescription>Ref: {club.referenceNumber}</CardDescription>}
             </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Subscription:</span>
-            <Badge variant="outline" className="capitalize">
-              {club.subscriptionType}
-            </Badge>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Teams:</span>
-            <span className="font-medium flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              {teamCount}
-            </span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Serial Number:</span>
-            <span className="font-mono text-xs">
-              {club.serialNumber || 'Auto-generated'}
-            </span>
-          </div>
-          {isLinked && club.userRole && (
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Your Role:</span>
-              <Badge variant="outline" className="capitalize text-xs">
-                {club.userRole.replace('_', ' ')}
-              </Badge>
+              <span className="text-muted-foreground">Subscription:</span>
+              <Badge variant="outline" className="capitalize">{club.subscriptionType}</Badge>
             </div>
-          )}
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between gap-2">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => {
-            setSelectedClubForView(club.id);
-            setActiveTab('overview');
-          }}
-          className="flex-1"
-        >
-          <Eye className="mr-2 h-4 w-4" />
-          View Details
-        </Button>
-        {!isLinked && (
-          <Button 
-            size="sm" 
-            onClick={() => openEditClubDialog(club)}
-            className="flex-1"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Teams:</span>
+              <span className="font-medium flex items-center gap-1"><Users className="h-3 w-3" />{teamCount}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Serial:</span>
+              <span className="font-mono text-xs">{club.serialNumber || 'Auto-generated'}</span>
+            </div>
+            {isLinked && club.userRole && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Your Role:</span>
+                <Badge variant="outline" className="capitalize text-xs">{club.userRole.replace('_', ' ')}</Badge>
+              </div>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1"
+            onClick={() => { setSelectedClubForView(club.id); setActiveTab('overview'); }}>
+            <Eye className="mr-2 h-4 w-4" />View Details
           </Button>
-        )}
-      </CardFooter>
-    </Card>
+          {!isLinked && (
+            <Button size="sm" className="flex-1" onClick={() => openEditClubDialog(club)}>
+              <Settings className="mr-2 h-4 w-4" />Settings
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
     );
   };
 
@@ -381,73 +333,77 @@ export const ClubManagement = () => {
   return (
     <SafeDashboardLayout>
       <div className="space-y-6">
+        {/* ── Header ── */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Club Management</h1>
-            <p className="text-muted-foreground">
-              Comprehensive management of clubs, teams, officials, and facilities
-            </p>
+            <p className="text-muted-foreground">Comprehensive management of clubs, teams, officials, and facilities</p>
           </div>
           <div className="flex gap-2">
+
+            {/* Create Academy button — global_admin only */}
             {isGlobalAdmin && (
-              <Dialog open={isAcademyDialogOpen} onOpenChange={setIsAcademyDialogOpen}>
+              <Dialog open={isAcademyDialogOpen} onOpenChange={(open) => { setIsAcademyDialogOpen(open); if (!open) resetAcademyForm(); }}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="border-purple-500 text-purple-700 hover:bg-purple-50">
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Create Academy
+                    <BookOpen className="mr-2 h-4 w-4" />Create Academy
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[520px]">
+                <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create New Academy</DialogTitle>
-                    <DialogDescription>
-                      Set up an Origin Sports Academy and optionally link existing clubs to it.
-                    </DialogDescription>
+                    <DialogDescription>Set up an Origin Sports Academy, link clubs, and assign a head of academy.</DialogDescription>
                   </DialogHeader>
+
                   <div className="space-y-4 pt-2">
+                    {/* Name */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="academy-name">Academy Name <span className="text-destructive">*</span></Label>
-                      <Input
-                        id="academy-name"
-                        placeholder="e.g. Origin FC Academy"
+                      <Label htmlFor="ac-name">Academy Name <span className="text-destructive">*</span></Label>
+                      <Input id="ac-name" placeholder="e.g. Origin FC Academy"
                         value={academyForm.name}
-                        onChange={e => setAcademyForm(prev => ({ ...prev, name: e.target.value }))}
-                      />
+                        onChange={e => setAcademyForm(p => ({ ...p, name: e.target.value }))} />
                     </div>
 
+                    {/* Logo upload */}
+                    <div className="space-y-1.5">
+                      <Label>Academy Logo</Label>
+                      <div className="flex items-center gap-3">
+                        {academyLogoPreview
+                          ? <img src={academyLogoPreview} alt="Logo preview" className="w-12 h-12 object-contain rounded border" />
+                          : <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center"><BookOpen className="h-5 w-5 text-muted-foreground" /></div>
+                        }
+                        <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          {academyLogoFile ? 'Change Logo' : 'Upload Logo'}
+                        </Button>
+                        {academyLogoFile && <span className="text-xs text-muted-foreground truncate max-w-[120px]">{academyLogoFile.name}</span>}
+                      </div>
+                      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                    </div>
+
+                    {/* FA reg + founded year */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="fa-reg">FA Registration No.</Label>
-                        <Input
-                          id="fa-reg"
-                          placeholder="e.g. FA123456"
+                        <Label htmlFor="ac-fa">FA Registration No.</Label>
+                        <Input id="ac-fa" placeholder="e.g. FA123456"
                           value={academyForm.faRegistrationNumber}
-                          onChange={e => setAcademyForm(prev => ({ ...prev, faRegistrationNumber: e.target.value }))}
-                        />
+                          onChange={e => setAcademyForm(p => ({ ...p, faRegistrationNumber: e.target.value }))} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="founded">Founded Year</Label>
-                        <Input
-                          id="founded"
-                          type="number"
-                          placeholder="e.g. 2010"
-                          min={1800}
-                          max={new Date().getFullYear()}
+                        <Label htmlFor="ac-year">Founded Year</Label>
+                        <Input id="ac-year" type="number" placeholder="e.g. 2010"
+                          min={1800} max={new Date().getFullYear()}
                           value={academyForm.foundedYear}
-                          onChange={e => setAcademyForm(prev => ({ ...prev, foundedYear: e.target.value }))}
-                        />
+                          onChange={e => setAcademyForm(p => ({ ...p, foundedYear: e.target.value }))} />
                       </div>
                     </div>
 
+                    {/* EPPP category */}
                     <div className="space-y-1.5">
                       <Label>EPPP Category</Label>
-                      <Select
-                        value={academyForm.epppCategory}
-                        onValueChange={v => setAcademyForm(prev => ({ ...prev, epppCategory: v }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category (optional)" />
-                        </SelectTrigger>
+                      <Select value={academyForm.epppCategory}
+                        onValueChange={v => setAcademyForm(p => ({ ...p, epppCategory: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select category (optional)" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">Category 1 — Elite</SelectItem>
                           <SelectItem value="2">Category 2</SelectItem>
@@ -457,20 +413,43 @@ export const ClubManagement = () => {
                       </Select>
                     </div>
 
+                    {/* Head of academy */}
+                    <div className="space-y-1.5">
+                      <Label>Head of Academy</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Search by email address"
+                          value={headEmail}
+                          onChange={e => { setHeadEmail(e.target.value); setHeadUser(null); setHeadError(''); }}
+                          onKeyDown={e => e.key === 'Enter' && searchHead()}
+                        />
+                        <Button type="button" variant="outline" size="sm"
+                          onClick={searchHead}
+                          disabled={headSearching || !headEmail.trim()}
+                          className="shrink-0">
+                          {headSearching ? '…' : <Search className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      {headUser && (
+                        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                          <CheckCircle2 className="h-4 w-4 shrink-0" />
+                          <span><strong>{headUser.name || headEmail}</strong> will be assigned as Academy Admin</span>
+                        </div>
+                      )}
+                      {headError && <p className="text-xs text-destructive">{headError}</p>}
+                    </div>
+
+                    {/* Link clubs */}
                     {clubs.length > 0 && (
                       <div className="space-y-2">
                         <Label>Link Clubs</Label>
                         <div className="space-y-2 max-h-40 overflow-y-auto rounded border p-3">
                           {clubs.map(club => (
                             <div key={club.id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`club-${club.id}`}
+                              <Checkbox id={`cl-${club.id}`}
                                 checked={academyForm.linkedClubIds.includes(club.id)}
-                                onCheckedChange={() => toggleClubLink(club.id)}
-                              />
-                              <label htmlFor={`club-${club.id}`} className="text-sm cursor-pointer">
-                                {club.name}
-                              </label>
+                                onCheckedChange={() => toggleClubLink(club.id)} />
+                              <label htmlFor={`cl-${club.id}`} className="text-sm cursor-pointer">{club.name}</label>
                             </div>
                           ))}
                         </div>
@@ -478,14 +457,11 @@ export const ClubManagement = () => {
                     )}
 
                     <div className="flex justify-end gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setIsAcademyDialogOpen(false)}>
-                        Cancel
-                      </Button>
+                      <Button variant="outline" onClick={() => setIsAcademyDialogOpen(false)}>Cancel</Button>
                       <Button
                         onClick={handleCreateAcademy}
                         disabled={!academyForm.name.trim() || creatingAcademy}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
-                      >
+                        className="bg-purple-600 hover:bg-purple-700 text-white">
                         {creatingAcademy ? 'Creating…' : 'Create Academy'}
                       </Button>
                     </div>
@@ -494,106 +470,67 @@ export const ClubManagement = () => {
               </Dialog>
             )}
 
+            {/* Add Club button */}
             <Dialog open={isClubDialogOpen} onOpenChange={setIsClubDialogOpen}>
               <DialogTrigger asChild>
-                <Button 
-                  onClick={() => setSelectedClub(null)} 
-                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Club
+                <Button onClick={() => setSelectedClub(null)} className="bg-puma-blue-500 hover:bg-puma-blue-600">
+                  <PlusCircle className="mr-2 h-4 w-4" />Add Club
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                  <DialogTitle>
-                    {selectedClub ? 'Edit Club' : 'Create New Club'}
-                  </DialogTitle>
+                  <DialogTitle>{selectedClub ? 'Edit Club' : 'Create New Club'}</DialogTitle>
                   <DialogDescription>
-                    {selectedClub 
-                      ? 'Update your club details and settings.' 
-                      : 'Add a new club with automatic serial number generation.'}
+                    {selectedClub ? 'Update your club details and settings.' : 'Add a new club with automatic serial number generation.'}
                   </DialogDescription>
                 </DialogHeader>
-                <ClubForm 
-                  club={selectedClub} 
-                  onSubmit={selectedClub ? handleUpdateClub : handleCreateClub} 
-                  onCancel={() => setIsClubDialogOpen(false)}
-                />
+                <ClubForm club={selectedClub}
+                  onSubmit={selectedClub ? handleUpdateClub : handleCreateClub}
+                  onCancel={() => setIsClubDialogOpen(false)} />
               </DialogContent>
             </Dialog>
           </div>
         </div>
 
+        {/* ── Club list / detail view ── */}
         {allClubs.length === 0 ? (
           <Card className="border-dashed border-2 border-muted">
             <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-              <div className="rounded-full bg-muted p-3 mb-4">
-                <Building className="h-6 w-6 text-muted-foreground" />
-              </div>
+              <div className="rounded-full bg-muted p-3 mb-4"><Building className="h-6 w-6 text-muted-foreground" /></div>
               <h3 className="font-semibold text-lg mb-1">No Clubs Yet</h3>
               <p className="text-muted-foreground mb-4 max-w-md">
-                You haven't created any clubs yet. Start by creating your first club to manage teams, 
-                officials, facilities, and more with automatic serial number generation.
+                You haven’t created any clubs yet. Start by creating your first club.
               </p>
-              <Button 
-                onClick={() => setIsClubDialogOpen(true)}
-                className="bg-puma-blue-500 hover:bg-puma-blue-600"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create Club
+              <Button onClick={() => setIsClubDialogOpen(true)} className="bg-puma-blue-500 hover:bg-puma-blue-600">
+                <PlusCircle className="mr-2 h-4 w-4" />Create Club
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Club Selection */}
             {allClubs.length > 1 && !selectedClubForView && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Select a Club</h2>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {/* Owned Clubs */}
-                  {clubs.map((club) => (
-                    <ClubCard key={club.id} club={club} />
-                  ))}
-                  {/* Linked Clubs */}
-                  {linkedClubs.map((club) => (
-                    <LinkedClubCard key={club.id} club={club} />
-                  ))}
+                  {clubs.map(c => <ClubCard key={c.id} club={c} />)}
+                  {linkedClubs.map(c => <LinkedClubCard key={c.id} club={c} />)}
                 </div>
               </div>
             )}
 
-            {/* Club Details View */}
             {selectedClubData && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setSelectedClubForView('')}
-                    >
-                      ← Back to Clubs
-                    </Button>
-                    {selectedClubData.logoUrl ? (
-                      <img 
-                        src={selectedClubData.logoUrl} 
-                        alt={selectedClubData.name}
-                        className="w-10 h-10 rounded-full object-cover ring-2 ring-border"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                        <Building className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    )}
-                    <h2 className="text-xl font-semibold">{selectedClubData.name}</h2>
-                    {selectedClubData.isReadOnly && (
-                      <Badge variant="outline">Read-only</Badge>
-                    )}
-                  </div>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" onClick={() => setSelectedClubForView('')}>← Back to Clubs</Button>
+                  {selectedClubData.logoUrl
+                    ? <img src={selectedClubData.logoUrl} alt={selectedClubData.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-border" />
+                    : <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"><Building className="h-5 w-5 text-muted-foreground" /></div>
+                  }
+                  <h2 className="text-xl font-semibold">{selectedClubData.name}</h2>
+                  {selectedClubData.isReadOnly && <Badge variant="outline">Read-only</Badge>}
                 </div>
 
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+                <Tabs value={activeTab} onValueChange={v => setActiveTab(v as any)}>
                   <TabsList className="grid w-full grid-cols-7">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="year-groups">Year Groups</TabsTrigger>
@@ -603,79 +540,41 @@ export const ClubManagement = () => {
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
                     <TabsTrigger value="staff">Staff</TabsTrigger>
                   </TabsList>
-                  
                   <TabsContent value="overview" className="space-y-6">
-                    <ClubStaffManagement
-                      clubId={selectedClubData.id}
-                      clubName={selectedClubData.name}
-                    />
+                    <ClubStaffManagement clubId={selectedClubData.id} clubName={selectedClubData.name} />
                   </TabsContent>
-
                   <TabsContent value="year-groups" className="space-y-6">
                     <YearGroupManagement clubId={selectedClubData.id} />
                   </TabsContent>
-
                   <TabsContent value="teams" className="space-y-6">
-                    <ClubTeamLinking
-                      clubId={selectedClubData.id}
-                      clubName={selectedClubData.name}
-                      onTeamLinked={() => refreshUserData()}
-                    />
+                    <ClubTeamLinking clubId={selectedClubData.id} clubName={selectedClubData.name} onTeamLinked={() => refreshUserData()} />
                   </TabsContent>
-
                   <TabsContent value="players" className="space-y-6">
-                    <ClubPlayerManagement
-                      clubId={selectedClubData.id}
-                      clubName={selectedClubData.name}
-                    />
+                    <ClubPlayerManagement clubId={selectedClubData.id} clubName={selectedClubData.name} />
                   </TabsContent>
-
                   <TabsContent value="calendar" className="space-y-6">
-                    <ClubCalendarEvents
-                      clubId={selectedClubData.id}
-                      clubName={selectedClubData.name}
-                    />
+                    <ClubCalendarEvents clubId={selectedClubData.id} clubName={selectedClubData.name} />
                   </TabsContent>
-
                   <TabsContent value="analytics" className="space-y-6">
-                    <ClubAnalytics
-                      clubId={selectedClubData.id}
-                      clubName={selectedClubData.name}
-                    />
+                    <ClubAnalytics clubId={selectedClubData.id} clubName={selectedClubData.name} />
                   </TabsContent>
-
                   <TabsContent value="staff" className="space-y-6">
-                    <ClubStaffManagement
-                      clubId={selectedClubData.id}
-                      clubName={selectedClubData.name}
-                    />
+                    <ClubStaffManagement clubId={selectedClubData.id} clubName={selectedClubData.name} />
                   </TabsContent>
                 </Tabs>
               </div>
             )}
 
-            {/* Show club cards if no club selected but clubs exist */}
             {!selectedClubForView && allClubs.length === 1 && (
-              <div>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {clubs.map((club) => (
-                    <ClubCard key={club.id} club={club} />
-                  ))}
-                  {linkedClubs.map((club) => (
-                    <LinkedClubCard key={club.id} club={club} />
-                  ))}
-                </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {clubs.map(c => <ClubCard key={c.id} club={c} />)}
+                {linkedClubs.map(c => <LinkedClubCard key={c.id} club={c} />)}
               </div>
             )}
           </div>
         )}
 
-        {/* Club Details Modal */}
-        <ClubDetailsModal 
-          club={detailsClub}
-          isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
-        />
+        <ClubDetailsModal club={detailsClub} isOpen={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} />
       </div>
     </SafeDashboardLayout>
   );
