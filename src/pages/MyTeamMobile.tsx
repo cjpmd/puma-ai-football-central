@@ -97,6 +97,17 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   training: 'Training',
 };
 
+const humaniseType = (t: string) =>
+  t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+const GAME_DAY_META: Record<string, { label: string; icon: JSX.Element }> = {
+  goal: { label: 'Goals', icon: <Target className="h-6 w-6 text-[#b89fff]" /> },
+  assist: { label: 'Assists', icon: <Target className="h-6 w-6 text-teal-400" /> },
+  save: { label: 'Saves', icon: <Shield className="h-6 w-6 text-[#b89fff]" /> },
+  yellow_card: { label: 'Yellow Cards', icon: <AlertTriangle className="h-6 w-6 text-amber-400" /> },
+  red_card: { label: 'Red Cards', icon: <AlertTriangle className="h-6 w-6 text-red-400" /> },
+};
+
 export default function MyTeamMobile() {
   const { currentTeam, isLoading: teamLoading } = useTeamContext();
   const { toast } = useToast();
