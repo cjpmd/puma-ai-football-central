@@ -12,7 +12,9 @@ export type UserRole =
   | "club_secretary"
   | "coach"
   | "staff"
-  | "global_admin";
+  | "global_admin"
+  | "academy_admin"
+  | "academy_welfare_officer";
 
 export type SubscriptionType = "free" | "premium" | "pro" | "analytics_plus";
 export type PlayerSubscriptionType = "full_squad" | "training" | "trialist";
@@ -93,6 +95,29 @@ export type Club = {
   isReadOnly?: boolean; // For linked clubs
   createdAt: string;
   updatedAt: string;
+};
+
+export type Academy = {
+  id: string;
+  name: string;
+  logoUrl?: string | null;
+  faRegistrationNumber?: string | null;
+  epppCategory?: number | null;
+  foundedYear?: number | null;
+  headOfAcademyUserId?: string | null;
+  performanceAppUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AcademyRole = 'academy_admin' | 'academy_welfare_officer';
+
+export type UserAcademy = {
+  id: string;
+  userId: string;
+  academyId: string;
+  role: AcademyRole;
+  createdAt: string;
 };
 
 export type PlayerAttribute = {
@@ -182,6 +207,7 @@ export type Player = {
   type?: 'goalkeeper' | 'outfield';
   subscriptionType?: 'full_squad' | 'training' | 'trialist';
   availability?: 'green' | 'amber' | 'red';
+  performance_summary?: Record<string, any> | null;
   team_id: string;
   teamId?: string; // Allow both for compatibility
   attributes?: PlayerAttribute[];
