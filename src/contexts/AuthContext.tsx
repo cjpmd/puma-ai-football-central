@@ -242,6 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ? profileData.coaching_badges 
           : [],
         managed_player_ids: managedPlayerIds,
+        avatar_url: (profileData as any).avatar_url ?? null,
         created_at: profileData.created_at,
         updated_at: profileData.updated_at,
       };

@@ -739,11 +739,15 @@ export default function DashboardMobile() {
               aria-label="Edit profile"
             >
               <Avatar className="w-11 h-11 rounded-full ring-1 ring-white/20">
-                {(profile as any)?.avatar_url ? (
-                  <AvatarImage src={(profile as any).avatar_url} alt="Profile" className="rounded-full" />
+                {profile?.avatar_url ? (
+                  <AvatarImage
+                    src={`${profile.avatar_url}${profile.avatar_url.includes('?') ? '&' : '?'}v=${profile.updated_at ?? ''}`}
+                    alt="Profile"
+                    className="rounded-full"
+                  />
                 ) : null}
                 <AvatarFallback className="rounded-full bg-white/15 text-base font-semibold text-white">
-                  {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
+                  {getInitials(profile?.name || user?.email?.charAt(0) || 'U')}
                 </AvatarFallback>
               </Avatar>
             </button>
