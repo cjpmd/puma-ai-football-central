@@ -146,41 +146,67 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     setLoading(true);
 
     try {
-      let avatarUrl = profile?.avatar_url;
+      const profileId = user?.id || profile?.id;
+      if (!profileId) {
+        throw new Error('You must be signed in to update your profile.');
+      }
+
+      let avatarUrl = profile?.avatar_url ?? null;
 
       // Upload avatar if changed
-      if (avatarFile && user?.id) {
-        const fileName = `${user.id}/${Date.now()}.jpg`;
-        
+      if (avatarFile) {
+        const fileName = `${profileId}/avatar_${Date.now()}.jpg`;
+        console.log('[EditProfile] Uploading avatar to', fileName, 'size:', (avatarFile as Blob).size);
+
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(fileName, avatarFile, {
             contentType: 'image/jpeg',
-            upsert: true
+            upsert: true,
+            cacheControl: '3600',
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('[EditProfile] Avatar upload failed:', uploadError);
+          throw new Error(`Avatar upload failed: ${uploadError.message}`);
+        }
 
         const { data: urlData } = supabase.storage
           .from('avatars')
           .getPublicUrl(fileName);
 
-        avatarUrl = urlData.publicUrl;
+        // Cache-bust the public URL so newly uploaded image renders immediately
+        avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+        console.log('[EditProfile] Avatar uploaded. Public URL:', avatarUrl);
       }
 
       // Update profile
-      const updateData: Record<string, any> = {};
+      const updateData: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
       if (formData.name !== undefined) updateData.name = formData.name || null;
       if (formData.phone !== undefined) updateData.phone = formData.phone || null;
-      if (avatarUrl !== profile?.avatar_url) updateData.avatar_url = avatarUrl;
+      if (avatarUrl !== (profile?.avatar_url ?? null)) updateData.avatar_url = avatarUrl;
 
-      if (Object.keys(updateData).length > 0) {
-        const { error: profileError } = await supabase
+      if (Object.keys(updateData).length > 1 || updateData.avatar_url !== undefined) {
+        const { data: updatedRow, error: profileError } = await supabase
           .from('profiles')
           .update(updateData)
-          .eq('id', profile?.id);
+          .eq('id', profileId)
+          .select('id, avatar_url, updated_at')
+          .maybeSingle();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('[EditProfile] Profile update failed:', profileError);
+          throw new Error(`Profile save failed: ${profileError.message}`);
+        }
+
+        if (!updatedRow) {
+          console.error('[EditProfile] Profile update returned no row (RLS likely blocked the update).');
+          throw new Error('Profile save was blocked. Please sign out and back in, then try again.');
+        }
+
+        console.log('[EditProfile] Profile updated:', updatedRow);
       }
 
       // Update email if changed
