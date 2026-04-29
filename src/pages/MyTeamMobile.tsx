@@ -250,7 +250,7 @@ export default function MyTeamMobile() {
       // Appearances and minutes — season-scoped by event_id
       const { data: playerStats } = await supabase
         .from('event_player_stats')
-        .select('player_id, players!inner(name), minutes_played')
+        .select('event_id, player_id, is_captain, players!inner(name), minutes_played')
         .in('event_id', safeEventIds)
         .eq('players.team_id', currentTeam.id)
         .gt('minutes_played', 0);
@@ -269,6 +269,8 @@ export default function MyTeamMobile() {
         return playerMap.get(pid)!;
       };
 
+      // Game Day stats: dynamic group by event_type from match_events
+      const gameDayMap = new Map<string, number>();
       matchEvData?.forEach(ev => {
         const p = ensurePlayer(ev.player_id, (ev.players as any).name);
         if (ev.event_type === 'goal') p.goals++;
@@ -276,13 +278,38 @@ export default function MyTeamMobile() {
         else if (ev.event_type === 'save') p.saves++;
         else if (ev.event_type === 'yellow_card') p.yellowCards++;
         else if (ev.event_type === 'red_card') p.redCards++;
+        gameDayMap.set(ev.event_type, (gameDayMap.get(ev.event_type) || 0) + 1);
       });
+
+      // Attendance: count appearances per event type, plus captain count
+      const eventTypeById = new Map<string, string>();
+      events.forEach(e => eventTypeById.set(e.id, e.event_type as string));
+
+      const attendanceMap = new Map<string, number>();
+      let totalAppearances = 0;
+      let captainAppearances = 0;
 
       playerStats?.forEach(stat => {
         const p = ensurePlayer(stat.player_id, (stat.players as any).name);
         p.appearances++;
         p.totalMinutes += stat.minutes_played || 0;
+        const et = eventTypeById.get(stat.event_id) || 'unknown';
+        attendanceMap.set(et, (attendanceMap.get(et) || 0) + 1);
+        totalAppearances++;
+        if (stat.is_captain) captainAppearances++;
       });
+
+      const attendanceByType: AttendanceByType[] = Array.from(attendanceMap.entries())
+        .map(([eventType, count]) => ({
+          eventType,
+          count,
+          percent: totalAppearances > 0 ? Math.round((count / totalAppearances) * 100) : 0,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const gameDayStats: GameDayStat[] = Array.from(gameDayMap.entries())
+        .map(([eventType, count]) => ({ eventType, count }))
+        .sort((a, b) => b.count - a.count);
 
       const allPlayerStats = Array.from(playerMap.values());
 
@@ -305,6 +332,10 @@ export default function MyTeamMobile() {
         matchResults,
         trainingCount,
         availableEventTypes,
+        totalAppearances,
+        attendanceByType,
+        captainAppearances,
+        gameDayStats,
       });
     } catch {
       toast({ title: 'Error', description: 'Failed to load analytics data', variant: 'destructive' });
