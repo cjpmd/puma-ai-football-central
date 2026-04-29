@@ -263,10 +263,19 @@ export default function MyTeamMobile() {
       // Appearances and minutes — season-scoped by event_id
       const { data: playerStats } = await supabase
         .from('event_player_stats')
-        .select('event_id, player_id, is_captain, players!inner(name), minutes_played')
+        .select('event_id, player_id, is_captain, position, players!inner(name), minutes_played')
         .in('event_id', safeEventIds)
         .eq('players.team_id', currentTeam.id)
         .gt('minutes_played', 0);
+
+      // Confirmed availability ('available') — counts as attendance even if not selected
+      const { data: confirmedAvail } = await supabase
+        .from('event_availability')
+        .select('event_id, player_id, players!inner(team_id)')
+        .in('event_id', safeEventIds)
+        .eq('role', 'player')
+        .eq('status', 'available')
+        .eq('players.team_id', currentTeam.id);
 
       // Goals, assists, saves, cards — from match_events, season-scoped
       const { data: matchEvData } = await supabase
