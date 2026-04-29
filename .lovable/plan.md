@@ -1,74 +1,40 @@
-# Game Day improvements + Create Event title fix
+## Goal
 
-## 1. Use the same kit design as the Formation tab
+Add two new collapsible cards to the My Team analytics page (`/my-team`):
 
-Currently `GameDayView` fetches `team.kit_designs` and computes `kitDesign` / `goalkeeperKitDesign`, but it does **not** pass them down to `GameDayFormationCard` → `FPLPlayerToken`, so players render with default position-coloured shirts instead of the team's kit (the Formation tab passes them in via `DraggablePitchPlayer`).
+1. **Attendance Breakdown** — appearances broken down by event type, with counts and percentages, plus a captain count.
+2. **Game Day Stats** — aggregate goals, assists, saves, yellow cards, red cards, sourced live from the `match_events` table so any new event type added in Game Day automatically flows through.
 
-Changes:
-- `src/components/events/GameDayFormationCard.tsx`
-  - Add `kitDesign?: KitDesign` and `goalkeeperKitDesign?: KitDesign` props.
-  - Pass them through to each `<FPLPlayerToken>` (pitch + bench renders).
-  - Also forward `gameFormat` (from event) and `isMobile` so sizing matches Formation tab.
-- `src/components/events/GameDaySubstituteBench.tsx`
-  - Accept and forward the same kit props to its `FPLPlayerToken` instances.
-- `src/components/events/GameDayView.tsx`
-  - Pass `kitDesign`, `goalkeeperKitDesign`, `gameFormat={event.game_format}` into `GameDayFormationCard` and `GameDaySubstituteBench`.
+Both respect the currently selected season and the existing category / event-type filters.
 
-Result: Game Day shirts match Formation tab exactly (same KitShirt SVG, same sizing).
+## What you'll see
 
-## 2. Header shows opponent name only
+**Attendance card** (collapsed by default, tap header to expand):
+- Total appearances number at the top
+- Per-event-type rows (Fixtures, Friendlies, Tournaments, Festivals, Training, etc.) showing `count` and `%` of total appearances
+- Bottom row: "Captain appearances: X" with a small captain icon
 
-In `GameDayView.tsx` the header currently shows: tiny "GAME DAY" eyebrow, `event.title`, then `vs {opponent}`. Replace the title block with just the opponent name (no eyebrow, no event title, no "vs" prefix). Fall back to `event.title` only when `opponent` is missing.
+**Game Day Stats card** (collapsed by default):
+- Grid of stat tiles for every event type recorded in `match_events` for the season:
+  Goals, Assists, Saves, Yellow Cards, Red Cards, plus any future types (e.g. own goals, penalties) — driven dynamically from the data so nothing has to change here when Game Day adds a new event type.
+- Each tile shows icon, count, label.
 
-## 3. Persistent, shared match timer
+## Technical notes
 
-Today `useMatchTimer` is in-memory only. If the user navigates away or locks the phone, the displayed time resets when they return (and is unique per device).
+**File touched:** `src/pages/MyTeamMobile.tsx` only. No DB changes needed — all data already exists in `event_player_stats` (appearances, captain) and `match_events` (goals/assists/saves/cards).
 
-Approach: store the timer state on the event row so all viewers see the same clock and it survives navigation / app backgrounding.
+**Data fetching** (extends existing `loadAnalyticsData`):
+- `event_player_stats`: already loaded; extend select to include `event_id` so we can join back to `events.event_type`. Aggregate per event_type to count appearances. Sum `is_captain = true` for captain count.
+- `match_events`: already loaded; group by `event_type` dynamically (no hardcoded list) to build the Game Day stats grid. Map known types to friendly labels + icons; unknown future types fall back to a title-cased label and a default icon.
 
-- Database migration: add columns to `events`
-  - `match_timer_started_at timestamptz`
-  - `match_timer_paused_elapsed_seconds int default 0`
-  - `match_timer_is_running boolean default false`
-  - `match_timer_period int default 1`
-- Rewrite `useMatchTimer` (or add a new `useSharedMatchTimer(eventId)`):
-  - Read timer fields from the event row (already fetched).
-  - Computed elapsed = `paused_elapsed + (is_running ? now - started_at : 0)`.
-  - Tick locally every second using `Date.now()` so backgrounded tabs catch up correctly when foregrounded.
-  - `start()` → update event: `is_running=true, started_at=now()`.
-  - `pause()` → update event: `is_running=false, paused_elapsed = paused_elapsed + (now - started_at)`.
-  - `reset()` → update event: `is_running=false, paused_elapsed=0, started_at=null`.
-  - Realtime: extend `useGameDayRealtime` (already subscribes to `events` UPDATE) so any user pressing play/pause updates everyone's timer.
-- RLS: add an UPDATE policy (or rely on existing event-update policy) so any user with team-staff/management access can write timer fields.
+**Collapsible UI:** use the existing `Collapsible` / `CollapsibleTrigger` / `CollapsibleContent` primitives (`src/components/ui/collapsible.tsx`) wrapped in the existing `Card` style used elsewhere on this page. Default state: collapsed. Chevron rotates on open.
 
-Backgrounding behaviour: because elapsed is derived from `now() - started_at`, the clock keeps "running" even when the tab is suspended or the phone is locked — when the user returns, the displayed time jumps forward to the correct value.
+**Filtering:** both cards recompute when `selectedCategory` / `selectedEventType` / `selectedSeason` change, matching how the existing W-D-L card behaves.
 
-## 4. Confirm multi-user Game Day recording
+**Future-proofing Game Day:** the Game Day stats grid iterates over `Object.keys(groupedByType)` from `match_events` rather than a fixed list, so any new `event_type` value introduced by Game Day automatically appears here with no code change. A small `EVENT_TYPE_META` map provides icon/label for known types; unknowns get a generic icon and a humanised label.
 
-Already true today and will continue to work after the above changes:
-- `useGameDayRealtime(eventId)` subscribes to `event_selections`, `event_player_stats`, and `events` updates. Goals/cards/subs logged by one user invalidate everyone's React Query cache and re-render in real time.
-- `match_events` are written through `matchEventService.createMatchEvent` → straight to Supabase, so any authorised staff member on any device can log events.
-- After this change, the timer also syncs across users via the same realtime channel.
+## Out of scope
 
-We will additionally extend the realtime subscription to invalidate on `match_events` inserts/deletes so timeline updates are instant for all viewers (currently relies on the stats/selection invalidation).
-
-## 5. Create Event — Title no longer required
-
-- `src/components/events/MobileEventForm.tsx`
-  - Label: "Title *" → "Title".
-  - Remove `required` on the title input.
-  - In submit handler, if `formData.title` is blank, fall back to a sensible default before insert: e.g. for fixtures `"vs {opponent}"` (or `"Match"` if no opponent), and for trainings `"Training"`. This keeps lists/calendars readable.
-- `src/components/events/EventForm.tsx` (desktop) — same change for parity.
-
-## Technical summary
-
-Files edited:
-- `src/components/events/GameDayView.tsx` — header, pass kit/format props, use shared timer hook.
-- `src/components/events/GameDayFormationCard.tsx` — accept + forward kit props.
-- `src/components/events/GameDaySubstituteBench.tsx` — accept + forward kit props.
-- `src/hooks/useMatchTimer.ts` — switch to event-backed shared timer (or new hook).
-- `src/hooks/useGameDayRealtime.ts` — also invalidate on `match_events` changes.
-- `src/components/events/MobileEventForm.tsx`, `src/components/events/EventForm.tsx` — title optional + default.
-
-Database:
-- New migration adding `match_timer_*` columns to `events` and an UPDATE policy permitting team staff to write them.
+- No changes to Game Day recording UI.
+- No new DB columns or migrations.
+- No changes to desktop `/my-team` (this page is mobile-only via routing).
