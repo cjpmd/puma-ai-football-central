@@ -645,21 +645,47 @@ export default function MyTeamMobile() {
               ))}
             </div>
 
-            {/* W-D-L Record */}
+            {/* 1. Season Record (collapsible) */}
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">Season Record</div>
-                  <div className="flex gap-2 text-sm">
-                    <span className="text-green-400 font-semibold">W{displayStats.totalWins}</span>
-                    <span className="text-white/50 font-semibold">D{displayStats.totalDraws}</span>
-                    <span className="text-red-400 font-semibold">L{displayStats.totalLosses}</span>
-                  </div>
-                </div>
-              </CardContent>
+              <Collapsible open={recordOpen} onOpenChange={setRecordOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-4 text-left">
+                    <div className="flex items-center">
+                      <Trophy className="h-5 w-5 mr-2" />
+                      <span className="text-lg font-semibold">Season Record</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-2 text-sm">
+                        <span className="text-green-400 font-semibold">W{displayStats.totalWins}</span>
+                        <span className="text-white/50 font-semibold">D{displayStats.totalDraws}</span>
+                        <span className="text-red-400 font-semibold">L{displayStats.totalLosses}</span>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${recordOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-3 rounded-lg" style={{ background: 'rgba(34,197,94,0.1)', border: '0.5px solid rgba(34,197,94,0.25)' }}>
+                        <div className="text-2xl font-bold text-green-400">{displayStats.totalWins}</div>
+                        <div className="text-xs text-white/60">Wins</div>
+                      </div>
+                      <div className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)' }}>
+                        <div className="text-2xl font-bold text-white/70">{displayStats.totalDraws}</div>
+                        <div className="text-xs text-white/60">Draws</div>
+                      </div>
+                      <div className="p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)' }}>
+                        <div className="text-2xl font-bold text-red-400">{displayStats.totalLosses}</div>
+                        <div className="text-xs text-white/60">Losses</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
 
-            {/* Attendance (collapsible) */}
+            {/* 2. Attendance (collapsible) */}
             <Card>
               <Collapsible open={attendanceOpen} onOpenChange={setAttendanceOpen}>
                 <CollapsibleTrigger asChild>
@@ -712,7 +738,7 @@ export default function MyTeamMobile() {
               </Collapsible>
             </Card>
 
-            {/* Game Day Stats (collapsible, dynamic) */}
+            {/* 3. Game Day Stats (collapsible, dynamic) */}
             <Card>
               <Collapsible open={gameDayOpen} onOpenChange={setGameDayOpen}>
                 <CollapsibleTrigger asChild>
@@ -753,222 +779,244 @@ export default function MyTeamMobile() {
               </Collapsible>
             </Card>
 
-            {/* Performance Category Breakdown */}
-            {selectedCategory === 'all' && displayStats.categoryStats.length > 1 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center">
-                    <Layers className="h-5 w-5 mr-2" />
-                    By Performance Category
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {displayStats.categoryStats.map((cat, i) => (
-                    <div key={i} className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
-                      <div className="font-medium mb-2">{cat.categoryName}</div>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex gap-2">
-                          <span className="text-green-400 font-semibold">W{cat.wins}</span>
-                          <span className="text-white/50 font-semibold">D{cat.draws}</span>
-                          <span className="text-red-400 font-semibold">L{cat.losses}</span>
-                        </div>
-                        <div className="flex gap-3 text-white/50">
-                          <span>GF: {cat.goalsFor}</span>
-                          <span>GA: {cat.goalsAgainst}</span>
-                          <span className={cat.goalsFor - cat.goalsAgainst >= 0 ? 'text-green-400' : 'text-red-400'}>
-                            {cat.goalsFor - cat.goalsAgainst >= 0 ? '+' : ''}{cat.goalsFor - cat.goalsAgainst}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Match Events */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center">
-                  <Target className="h-5 w-5 mr-2" />
-                  Match Events
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { icon: <Target className="h-6 w-6 text-[#b89fff]" />, value: analytics.totalGoals, label: 'Goals' },
-                    { icon: <Target className="h-6 w-6 text-teal-400" />, value: analytics.totalAssists, label: 'Assists' },
-                    { icon: <Shield className="h-6 w-6 text-[#b89fff]" />, value: analytics.totalSaves, label: 'Saves' },
-                    { icon: <AlertTriangle className="h-6 w-6 text-amber-400" />, value: analytics.yellowCards, label: 'Yellow Cards' },
-                  ].map(({ icon, value, label }) => (
-                    <div
-                      key={label}
-                      className="text-center p-3 rounded-lg"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}
-                    >
-                      <div className="flex justify-center mb-1">{icon}</div>
-                      <div className="text-xl font-bold">{value}</div>
-                      <div className="text-xs text-white/50">{label}</div>
-                    </div>
-                  ))}
-                </div>
-                {analytics.redCards > 0 && (
-                  <div
-                    className="mt-3 text-center p-3 rounded-lg"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}
-                  >
-                    <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-red-400" />
-                    <div className="text-xl font-bold text-red-400">{analytics.redCards}</div>
-                    <div className="text-xs text-white/50">Red Cards</div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Team Performance */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center">
-                  <BarChart3 className="h-5 w-5 mr-2" />
-                  Team Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Goals Scored</span>
-                    <Badge className="bg-green-500">{displayStats.goalsScored}</Badge>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: displayStats.goalsScored > 0 ? `${Math.min((displayStats.goalsScored / (displayStats.goalsScored + displayStats.goalsConceded)) * 100, 100)}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Goals Conceded</span>
-                    <Badge variant="destructive">{displayStats.goalsConceded}</Badge>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-2">
-                    <div
-                      className="bg-red-500 h-2 rounded-full"
-                      style={{ width: displayStats.goalsConceded > 0 ? `${Math.min((displayStats.goalsConceded / (displayStats.goalsScored + displayStats.goalsConceded)) * 100, 100)}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Results */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Recent Results
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {analytics.recentResults.length > 0 ? analytics.recentResults.map((event) => {
-                  const result = getResultBadge(event, 1);
-                  return (
-                    <div key={event.id} className="flex items-center justify-between p-3 rounded-lg"
-                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
-                      <div>
-                        <div className="font-medium">vs {event.opponent || 'Unknown'}</div>
-                        <div className="text-sm text-white/50">
-                          {new Date(event.date).toLocaleDateString()}
-                        </div>
-                      </div>
-                      {result && (
-                        <div className="text-right">
-                          <div className="font-bold">{result.ourScore}-{result.opponentScore}</div>
-                          <Badge className={`text-white text-xs ${result.color}`}>{result.text}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }) : (
-                  <p className="text-white/50 text-center py-4">No results in this period</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Top Scorers */}
-            {analytics.topScorers.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center">
-                    <Target className="h-5 w-5 mr-2" />
-                    Top Scorers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {analytics.topScorers.map((player, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg"
-                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
-                      <div>
-                        <div className="font-medium">{player.name}</div>
-                        <div className="text-sm text-white/50">{player.appearances || 0} games</div>
-                      </div>
-                      <Badge style={{ background: 'rgba(184,159,255,0.2)', color: '#b89fff', border: '1px solid rgba(184,159,255,0.4)' }}>
-                        {player.goals || 0} goals
-                      </Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Top Assisters */}
-            {analytics.topAssisters.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center">
-                    <Target className="h-5 w-5 mr-2" />
-                    Top Assisters
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {analytics.topAssisters.map((player, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg"
-                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
-                      <div>
-                        <div className="font-medium">{player.name}</div>
-                        <div className="text-sm text-white/50">{player.appearances || 0} games</div>
-                      </div>
-                      <Badge style={{ background: 'rgba(45,212,191,0.15)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.35)' }}>
-                        {player.assists || 0} assists
-                      </Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Most Appearances */}
+            {/* 4. Most Appearances (collapsible, with minutes & positions) */}
             {analytics.topPerformers.length > 0 && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    Most Appearances
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {analytics.topPerformers.map((player, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg"
-                         style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
-                      <div>
-                        <div className="font-medium">{player.name}</div>
-                        <div className="text-sm text-white/50">{player.totalMinutes} minutes played</div>
+                <Collapsible open={appearancesOpen} onOpenChange={setAppearancesOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center justify-between p-4 text-left">
+                      <div className="flex items-center">
+                        <Users className="h-5 w-5 mr-2" />
+                        <span className="text-lg font-semibold">Most Appearances</span>
                       </div>
-                      <Badge variant="secondary">{player.appearances} games</Badge>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${appearancesOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-3">
+                      {analytics.topPerformers.map((player, i) => {
+                        const positionEntries = Object.entries(player.minutesByPosition || {})
+                          .filter(([, m]) => (m as number) > 0)
+                          .sort((a, b) => (b[1] as number) - (a[1] as number));
+                        return (
+                          <div key={i} className="p-3 rounded-lg"
+                               style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium">{player.name}</div>
+                              <Badge variant="secondary">{player.appearances} games</Badge>
+                            </div>
+                            <div className="text-sm text-white/60 mt-1">
+                              {player.totalMinutes} mins total
+                            </div>
+                            {positionEntries.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {positionEntries.map(([pos, mins]) => (
+                                  <span
+                                    key={pos}
+                                    className="text-xs px-2 py-0.5 rounded-full"
+                                    style={{ background: 'rgba(184,159,255,0.12)', color: '#b89fff', border: '1px solid rgba(184,159,255,0.3)' }}
+                                  >
+                                    {pos} {mins as number}m
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            )}
+
+            {/* 5. Performance Category Breakdown (collapsible) */}
+            {selectedCategory === 'all' && displayStats.categoryStats.length > 1 && (
+              <Card>
+                <Collapsible open={categoryOpen} onOpenChange={setCategoryOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center justify-between p-4 text-left">
+                      <div className="flex items-center">
+                        <Layers className="h-5 w-5 mr-2" />
+                        <span className="text-lg font-semibold">By Performance Category</span>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${categoryOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-3">
+                      {displayStats.categoryStats.map((cat, i) => (
+                        <div key={i} className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                          <div className="font-medium mb-2">{cat.categoryName}</div>
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex gap-2">
+                              <span className="text-green-400 font-semibold">W{cat.wins}</span>
+                              <span className="text-white/50 font-semibold">D{cat.draws}</span>
+                              <span className="text-red-400 font-semibold">L{cat.losses}</span>
+                            </div>
+                            <div className="flex gap-3 text-white/50">
+                              <span>GF: {cat.goalsFor}</span>
+                              <span>GA: {cat.goalsAgainst}</span>
+                              <span className={cat.goalsFor - cat.goalsAgainst >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                {cat.goalsFor - cat.goalsAgainst >= 0 ? '+' : ''}{cat.goalsFor - cat.goalsAgainst}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            )}
+
+            {/* 6. Team Performance (collapsible) */}
+            <Card>
+              <Collapsible open={teamPerfOpen} onOpenChange={setTeamPerfOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-4 text-left">
+                    <div className="flex items-center">
+                      <BarChart3 className="h-5 w-5 mr-2" />
+                      <span className="text-lg font-semibold">Team Performance</span>
                     </div>
-                  ))}
-                </CardContent>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${teamPerfOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Goals Scored</span>
+                        <Badge className="bg-green-500">{displayStats.goalsScored}</Badge>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-2">
+                        <div
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{ width: displayStats.goalsScored > 0 ? `${Math.min((displayStats.goalsScored / (displayStats.goalsScored + displayStats.goalsConceded)) * 100, 100)}%` : '0%' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Goals Conceded</span>
+                        <Badge variant="destructive">{displayStats.goalsConceded}</Badge>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-2">
+                        <div
+                          className="bg-red-500 h-2 rounded-full"
+                          style={{ width: displayStats.goalsConceded > 0 ? `${Math.min((displayStats.goalsConceded / (displayStats.goalsScored + displayStats.goalsConceded)) * 100, 100)}%` : '0%' }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+
+            {/* 7. Recent Results (collapsible) */}
+            <Card>
+              <Collapsible open={recentOpen} onOpenChange={setRecentOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-4 text-left">
+                    <div className="flex items-center">
+                      <Calendar className="h-5 w-5 mr-2" />
+                      <span className="text-lg font-semibold">Recent Results</span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${recentOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-3">
+                    {analytics.recentResults.length > 0 ? analytics.recentResults.map((event) => {
+                      const result = getResultBadge(event, 1);
+                      return (
+                        <div key={event.id} className="flex items-center justify-between p-3 rounded-lg"
+                             style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                          <div>
+                            <div className="font-medium">vs {event.opponent || 'Unknown'}</div>
+                            <div className="text-sm text-white/50">
+                              {new Date(event.date).toLocaleDateString()}
+                            </div>
+                          </div>
+                          {result && (
+                            <div className="text-right">
+                              <div className="font-bold">{result.ourScore}-{result.opponentScore}</div>
+                              <Badge className={`text-white text-xs ${result.color}`}>{result.text}</Badge>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }) : (
+                      <p className="text-white/50 text-center py-4">No results in this period</p>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+
+            {/* 8. Top Scorers (collapsible) */}
+            {analytics.topScorers.length > 0 && (
+              <Card>
+                <Collapsible open={scorersOpen} onOpenChange={setScorersOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center justify-between p-4 text-left">
+                      <div className="flex items-center">
+                        <Target className="h-5 w-5 mr-2" />
+                        <span className="text-lg font-semibold">Top Scorers</span>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${scorersOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-3">
+                      {analytics.topScorers.map((player, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg"
+                             style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                          <div>
+                            <div className="font-medium">{player.name}</div>
+                            <div className="text-sm text-white/50">{player.appearances || 0} games</div>
+                          </div>
+                          <Badge style={{ background: 'rgba(184,159,255,0.2)', color: '#b89fff', border: '1px solid rgba(184,159,255,0.4)' }}>
+                            {player.goals || 0} goals
+                          </Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            )}
+
+            {/* 9. Top Assisters (collapsible) */}
+            {analytics.topAssisters.length > 0 && (
+              <Card>
+                <Collapsible open={assistersOpen} onOpenChange={setAssistersOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center justify-between p-4 text-left">
+                      <div className="flex items-center">
+                        <Target className="h-5 w-5 mr-2" />
+                        <span className="text-lg font-semibold">Top Assisters</span>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${assistersOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-3">
+                      {analytics.topAssisters.map((player, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg"
+                             style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                          <div>
+                            <div className="font-medium">{player.name}</div>
+                            <div className="text-sm text-white/50">{player.appearances || 0} games</div>
+                          </div>
+                          <Badge style={{ background: 'rgba(45,212,191,0.15)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.35)' }}>
+                            {player.assists || 0} assists
+                          </Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
               </Card>
             )}
           </>
