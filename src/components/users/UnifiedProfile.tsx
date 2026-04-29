@@ -252,7 +252,7 @@ export const UnifiedProfile: React.FC<UnifiedProfileProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={targetProfile.photo_url} />
+                <AvatarImage src={targetProfile.avatar_url || targetProfile.photo_url} />
                 <AvatarFallback className="text-lg font-semibold">
                   {getInitials(targetProfile.name || targetProfile.email || 'U')}
                 </AvatarFallback>
