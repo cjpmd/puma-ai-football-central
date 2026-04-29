@@ -13,6 +13,11 @@ export interface ChildProgressData {
   teamId: string;
   clubName?: string;
   performanceTrend: 'improving' | 'maintaining' | 'needs-work';
+  performance_summary?: {
+    availability_status?: string;
+    overall_rating?: number;
+    [key: string]: any;
+  } | null;
   stats: {
     totalGames: number;
     totalMinutes: number;
@@ -89,6 +94,7 @@ export const childProgressService = {
             squad_number,
             play_style,
             match_stats,
+            performance_summary,
             team_id,
             teams!inner (
               id,
@@ -224,6 +230,7 @@ export const childProgressService = {
           teamId: player.team_id,
           clubName: clubName,
           performanceTrend,
+          performance_summary: (player as any).performance_summary ?? null,
           stats: {
             totalGames,
             totalMinutes,
