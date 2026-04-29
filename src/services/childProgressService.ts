@@ -94,7 +94,6 @@ export const childProgressService = {
             squad_number,
             play_style,
             match_stats,
-            performance_summary,
             team_id,
             teams!inner (
               id,

@@ -42,12 +42,13 @@ export const useSmartNavigation = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const sb = supabase as any;
       const [memberRes, headRes] = await Promise.all([
-        supabase
+        sb
           .from('user_academies')
           .select('academies!inner(id, name)')
           .eq('user_id', user.id),
-        supabase
+        sb
           .from('academies')
           .select('id, name')
           .eq('head_of_academy_user_id', user.id),
@@ -60,7 +61,7 @@ export const useSmartNavigation = () => {
         const a = (row as any).academies;
         if (a && !seen.has(a.id)) { seen.add(a.id); merged.push(a); }
       }
-      for (const a of (headRes.data ?? [])) {
+      for (const a of ((headRes.data ?? []) as any[])) {
         if (!seen.has(a.id)) { seen.add(a.id); merged.push(a); }
       }
 
