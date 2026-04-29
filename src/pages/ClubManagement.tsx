@@ -1,11 +1,16 @@
 import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ClubForm } from '@/components/clubs/ClubForm';
 import { ClubDetailsModal } from '@/components/clubs/ClubDetailsModal';
 import { ClubPlayerManagement } from '@/components/clubs/ClubPlayerManagement';
@@ -16,13 +21,16 @@ import { ClubTeamLinking } from '@/components/clubs/ClubTeamLinking';
 import { LinkedClubCard } from '@/components/clubs/LinkedClubCard';
 import { YearGroupManagement } from '@/components/clubs/YearGroupManagement';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Club } from '@/types/index';
-import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
+import { PlusCircle, Settings, Users, Building, Eye, BookOpen } from 'lucide-react';
 
 export const ClubManagement = () => {
   const { clubs, refreshUserData, teams } = useAuth();
+  const { isGlobalAdmin } = useAuthorization();
+  const navigate = useNavigate();
   const [linkedClubs, setLinkedClubs] = useState<Club[]>([]);
   const [isClubDialogOpen, setIsClubDialogOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
@@ -31,6 +39,17 @@ export const ClubManagement = () => {
   const [selectedClubForView, setSelectedClubForView] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'overview' | 'year-groups' | 'teams' | 'players' | 'calendar' | 'analytics' | 'staff'>('overview');
   const { toast } = useToast();
+
+  // Academy creation state (global_admin only)
+  const [isAcademyDialogOpen, setIsAcademyDialogOpen] = useState(false);
+  const [academyForm, setAcademyForm] = useState({
+    name: '',
+    faRegistrationNumber: '',
+    epppCategory: '',
+    foundedYear: '',
+    linkedClubIds: [] as string[],
+  });
+  const [creatingAcademy, setCreatingAcademy] = useState(false);
 
   useEffect(() => {
     loadLinkedClubs();
@@ -185,6 +204,54 @@ export const ClubManagement = () => {
     }
   };
 
+  const handleCreateAcademy = async () => {
+    if (!academyForm.name.trim()) return;
+    setCreatingAcademy(true);
+    try {
+      const { data, error } = await supabase
+        .from('academies')
+        .insert({
+          name: academyForm.name.trim(),
+          fa_registration_number: academyForm.faRegistrationNumber.trim() || null,
+          eppp_category: academyForm.epppCategory ? parseInt(academyForm.epppCategory, 10) : null,
+          founded_year: academyForm.foundedYear ? parseInt(academyForm.foundedYear, 10) : null,
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      if (academyForm.linkedClubIds.length > 0) {
+        const { error: linkError } = await supabase
+          .from('academy_clubs')
+          .insert(academyForm.linkedClubIds.map(clubId => ({
+            academy_id: data.id,
+            club_id: clubId,
+          })));
+        if (linkError) throw linkError;
+      }
+
+      toast({ title: 'Academy created', description: `${academyForm.name} has been created.` });
+      setIsAcademyDialogOpen(false);
+      setAcademyForm({ name: '', faRegistrationNumber: '', epppCategory: '', foundedYear: '', linkedClubIds: [] });
+      navigate(`/academy/${data.id}`);
+    } catch (error: any) {
+      logger.error('Error creating academy:', error);
+      toast({ title: 'Error creating academy', description: error.message, variant: 'destructive' });
+    } finally {
+      setCreatingAcademy(false);
+    }
+  };
+
+  const toggleClubLink = (clubId: string) => {
+    setAcademyForm(prev => ({
+      ...prev,
+      linkedClubIds: prev.linkedClubIds.includes(clubId)
+        ? prev.linkedClubIds.filter(id => id !== clubId)
+        : [...prev.linkedClubIds, clubId],
+    }));
+  };
+
   const openDetailsModal = (club: Club, isReadOnly = false) => {
     setDetailsClub({ ...club, isReadOnly });
     setIsDetailsModalOpen(true);
@@ -320,34 +387,141 @@ export const ClubManagement = () => {
               Comprehensive management of clubs, teams, officials, and facilities
             </p>
           </div>
-          <Dialog open={isClubDialogOpen} onOpenChange={setIsClubDialogOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                onClick={() => setSelectedClub(null)} 
-                className="bg-puma-blue-500 hover:bg-puma-blue-600"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Club
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedClub ? 'Edit Club' : 'Create New Club'}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedClub 
-                    ? 'Update your club details and settings.' 
-                    : 'Add a new club with automatic serial number generation.'}
-                </DialogDescription>
-              </DialogHeader>
-              <ClubForm 
-                club={selectedClub} 
-                onSubmit={selectedClub ? handleUpdateClub : handleCreateClub} 
-                onCancel={() => setIsClubDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            {isGlobalAdmin && (
+              <Dialog open={isAcademyDialogOpen} onOpenChange={setIsAcademyDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="border-purple-500 text-purple-700 hover:bg-purple-50">
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Create Academy
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[520px]">
+                  <DialogHeader>
+                    <DialogTitle>Create New Academy</DialogTitle>
+                    <DialogDescription>
+                      Set up an Origin Sports Academy and optionally link existing clubs to it.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="academy-name">Academy Name <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="academy-name"
+                        placeholder="e.g. Origin FC Academy"
+                        value={academyForm.name}
+                        onChange={e => setAcademyForm(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="fa-reg">FA Registration No.</Label>
+                        <Input
+                          id="fa-reg"
+                          placeholder="e.g. FA123456"
+                          value={academyForm.faRegistrationNumber}
+                          onChange={e => setAcademyForm(prev => ({ ...prev, faRegistrationNumber: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="founded">Founded Year</Label>
+                        <Input
+                          id="founded"
+                          type="number"
+                          placeholder="e.g. 2010"
+                          min={1800}
+                          max={new Date().getFullYear()}
+                          value={academyForm.foundedYear}
+                          onChange={e => setAcademyForm(prev => ({ ...prev, foundedYear: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label>EPPP Category</Label>
+                      <Select
+                        value={academyForm.epppCategory}
+                        onValueChange={v => setAcademyForm(prev => ({ ...prev, epppCategory: v }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Category 1 — Elite</SelectItem>
+                          <SelectItem value="2">Category 2</SelectItem>
+                          <SelectItem value="3">Category 3</SelectItem>
+                          <SelectItem value="4">Category 4</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {clubs.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Link Clubs</Label>
+                        <div className="space-y-2 max-h-40 overflow-y-auto rounded border p-3">
+                          {clubs.map(club => (
+                            <div key={club.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`club-${club.id}`}
+                                checked={academyForm.linkedClubIds.includes(club.id)}
+                                onCheckedChange={() => toggleClubLink(club.id)}
+                              />
+                              <label htmlFor={`club-${club.id}`} className="text-sm cursor-pointer">
+                                {club.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="outline" onClick={() => setIsAcademyDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleCreateAcademy}
+                        disabled={!academyForm.name.trim() || creatingAcademy}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        {creatingAcademy ? 'Creating…' : 'Create Academy'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            <Dialog open={isClubDialogOpen} onOpenChange={setIsClubDialogOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  onClick={() => setSelectedClub(null)} 
+                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Club
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedClub ? 'Edit Club' : 'Create New Club'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {selectedClub 
+                      ? 'Update your club details and settings.' 
+                      : 'Add a new club with automatic serial number generation.'}
+                  </DialogDescription>
+                </DialogHeader>
+                <ClubForm 
+                  club={selectedClub} 
+                  onSubmit={selectedClub ? handleUpdateClub : handleCreateClub} 
+                  onCancel={() => setIsClubDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {allClubs.length === 0 ? (
