@@ -119,6 +119,13 @@ export default function MyTeamMobile() {
   const [teamCategories, setTeamCategories] = useState<string[]>([]);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const [gameDayOpen, setGameDayOpen] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [appearancesOpen, setAppearancesOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [teamPerfOpen, setTeamPerfOpen] = useState(false);
+  const [recentOpen, setRecentOpen] = useState(false);
+  const [scorersOpen, setScorersOpen] = useState(false);
+  const [assistersOpen, setAssistersOpen] = useState(false);
 
   const {
     allSeasons,
