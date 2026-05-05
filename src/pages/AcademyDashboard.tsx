@@ -18,6 +18,7 @@ import { supabase as supabaseClient } from '@/integrations/supabase/client';
 const supabase = supabaseClient as any;
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { isAcademyStaffRole } from '@/lib/academyRoles';
 import {
   Building2,
   Users,
@@ -394,7 +395,7 @@ export default function AcademyDashboard() {
     enabled: !!id && !!user?.id,
   });
 
-  const isStaffRole = userAcademyRole === 'academy_admin' || userAcademyRole === 'academy_welfare_officer';
+  const isStaffRole = isAcademyStaffRole(userAcademyRole);
   const showPerformanceLink = isGlobalAdmin || isStaffRole;
   const performanceUrl =
     (academy as any)?.performance_app_url ??
