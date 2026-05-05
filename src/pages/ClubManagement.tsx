@@ -207,6 +207,17 @@ export const ClubManagement = () => {
         .single();
       if (error) throw error;
 
+      // Auto-grant creator academy_admin membership so RLS lets them see it
+      if (user?.id) {
+        const { error: creatorErr } = await supabase
+          .from('user_academies')
+          .upsert(
+            { user_id: user.id, academy_id: data.id, role: 'academy_admin' },
+            { onConflict: 'user_id,academy_id,role' }
+          );
+        if (creatorErr) logger.warn('Failed to add creator to user_academies:', creatorErr);
+      }
+
       // 3. Link clubs
       if (academyForm.linkedClubIds.length > 0) {
         const { error: linkErr } = await supabase
