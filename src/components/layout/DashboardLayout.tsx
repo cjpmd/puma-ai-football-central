@@ -30,7 +30,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut, teams, clubs, connectedPlayers } = useAuth();
+  const { user, signOut, teams, clubs, connectedPlayers, profile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [academyId, setAcademyId] = useState<string | null>(null);
@@ -63,12 +63,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     ];
   }
 
-  // Academy nav: visible to global_admin, academy_admin, and head_of_academy roles
-  const userRoles: string[] = (user as any)?.roles || [];
+  // Academy nav: visible to global_admin, academy_admin, head_of_academy, academy_welfare_officer
+  const userRoles: string[] = profile?.roles || [];
   const showAcademyLink =
     isGlobalAdmin ||
     userRoles.includes('academy_admin') ||
-    userRoles.includes('head_of_academy');
+    userRoles.includes('head_of_academy') ||
+    userRoles.includes('academy_welfare_officer');
 
   // Fetch the user's first academy ID for non-global-admin academy members
   useEffect(() => {
