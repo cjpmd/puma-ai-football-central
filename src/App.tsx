@@ -68,20 +68,19 @@ const FitnessTesting               = lazy(() => import("./pages/FitnessTesting")
 const PlayerProfile                = lazy(() => import("./pages/PlayerProfile"));
 const LogRPE                       = lazy(() => import("./pages/LogRPE"));
 const Welfare                      = lazy(() => import("./pages/Welfare"));
+const Scouting                     = lazy(() => import("./pages/Scouting"));
 // --------------------------------------------------------------
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000,           // 1 min — avoid refetching on every mount
+      staleTime: 60_000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
   },
 });
 
-// Attach offline persistence — serialises query cache to localStorage
-// so coaches retain data access on poor-signal pitches.
 attachQueryPersistence(queryClient);
 
 /** Wrap a lazy element with Suspense + ErrorBoundary in one place */
@@ -93,7 +92,6 @@ const Page = ({ children, name }: { children: React.ReactNode; name?: string }) 
 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(() => {
-    // Only show splash once per session
     return !sessionStorage.getItem('splashShown');
   });
 
@@ -301,6 +299,12 @@ const AppContent = () => {
         <Route path="/welfare" element={
           <ProtectedRoute>
             <Page name="Welfare"><Welfare /></Page>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/scouting" element={
+          <ProtectedRoute>
+            <Page name="Scouting"><Scouting /></Page>
           </ProtectedRoute>
         } />
 
