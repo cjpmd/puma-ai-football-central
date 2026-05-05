@@ -29,7 +29,7 @@ import { Club } from '@/types/index';
 import { PlusCircle, Settings, Users, Building, Eye, BookOpen, Upload, CheckCircle2, Search } from 'lucide-react';
 
 export const ClubManagement = () => {
-  const { clubs, refreshUserData, teams } = useAuth();
+  const { clubs, refreshUserData, teams, user } = useAuth();
   const { isGlobalAdmin } = useAuthorization();
   const navigate = useNavigate();
   const [linkedClubs, setLinkedClubs] = useState<Club[]>([]);
@@ -206,6 +206,17 @@ export const ClubManagement = () => {
         .select('id')
         .single();
       if (error) throw error;
+
+      // Auto-grant creator academy_admin membership so RLS lets them see it
+      if (user?.id) {
+        const { error: creatorErr } = await supabase
+          .from('user_academies')
+          .upsert(
+            { user_id: user.id, academy_id: data.id, role: 'academy_admin' },
+            { onConflict: 'user_id,academy_id,role' }
+          );
+        if (creatorErr) logger.warn('Failed to add creator to user_academies:', creatorErr);
+      }
 
       // 3. Link clubs
       if (academyForm.linkedClubIds.length > 0) {
