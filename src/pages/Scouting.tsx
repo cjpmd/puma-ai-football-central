@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import SafeDashboardLayout from "@/components/layout/SafeDashboardLayout";
+import { SafeDashboardLayout } from "@/components/layout/SafeDashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,7 +108,6 @@ export default function Scouting() {
   return (
     <SafeDashboardLayout>
       <div className="p-6 space-y-6 max-w-screen-2xl mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Scouting &amp; Recruitment</h1>
@@ -124,7 +123,6 @@ export default function Scouting() {
           </div>
         </div>
 
-        {/* Urgent alerts */}
         {(urgentDeadlines.length > 0 || epppAlerts.length > 0) && (
           <div className="space-y-2">
             {urgentDeadlines.map((p: any) => (
@@ -149,7 +147,6 @@ export default function Scouting() {
             <TabsTrigger value="trials">Trials ({trialProspects.length})</TabsTrigger>
           </TabsList>
 
-          {/* PIPELINE */}
           <TabsContent value="pipeline" className="mt-4">
             {isLoading ? (
               <div className="grid grid-cols-4 gap-4">
@@ -197,7 +194,6 @@ export default function Scouting() {
             )}
           </TabsContent>
 
-          {/* WATCHLIST */}
           <TabsContent value="watchlist" className="mt-4">
             <div className="space-y-3">
               {watchlistProspects.length === 0 ? (
@@ -215,7 +211,6 @@ export default function Scouting() {
             </div>
           </TabsContent>
 
-          {/* TRIALS */}
           <TabsContent value="trials" className="mt-4">
             <div className="space-y-3">
               {trialProspects.length === 0 ? (
@@ -275,10 +270,6 @@ export default function Scouting() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
 function ProspectCard({
   prospect, col, reportCount, minReports, onEdit, onReport, onMove,
 }: {
@@ -303,7 +294,6 @@ function ProspectCard({
             <Globe className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
           )}
         </div>
-
         <div className="flex flex-wrap gap-1">
           {prospect.rating != null && (
             <Badge variant="outline" className="text-xs px-1.5 py-0">
@@ -316,14 +306,12 @@ function ProspectCard({
             </Badge>
           )}
         </div>
-
         {prospect.competing_interest && (
           <p className="text-xs text-amber-400 leading-tight">&#9888; {prospect.competing_interest}</p>
         )}
         {prospect.current_club && (
           <p className="text-xs text-muted-foreground truncate">{prospect.current_club}</p>
         )}
-
         {col.key === "watching" && (
           <div className={`text-xs rounded px-1.5 py-0.5 inline-block ${
             reportCount >= minReports ? "bg-emerald-500/20 text-emerald-300" : "bg-muted text-muted-foreground"
@@ -331,7 +319,6 @@ function ProspectCard({
             {reportCount}/{minReports} reports
           </div>
         )}
-
         <div className="flex gap-1 pt-1">
           <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={onReport}>
             <Eye className="h-3 w-3 mr-1" /> Report
