@@ -29,7 +29,7 @@ import { Club } from '@/types/index';
 import { PlusCircle, Settings, Users, Building, Eye, BookOpen, Upload, CheckCircle2, Search } from 'lucide-react';
 
 export const ClubManagement = () => {
-  const { clubs, refreshUserData, teams } = useAuth();
+  const { clubs, refreshUserData, teams, user } = useAuth();
   const { isGlobalAdmin } = useAuthorization();
   const navigate = useNavigate();
   const [linkedClubs, setLinkedClubs] = useState<Club[]>([]);
