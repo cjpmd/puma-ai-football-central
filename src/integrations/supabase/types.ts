@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      academies: {
+        Row: {
+          created_at: string
+          eppp_category: number | null
+          fa_registration_number: string | null
+          founded_year: number | null
+          head_of_academy_user_id: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          eppp_category?: number | null
+          fa_registration_number?: string | null
+          founded_year?: number | null
+          head_of_academy_user_id?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          eppp_category?: number | null
+          fa_registration_number?: string | null
+          founded_year?: number | null
+          head_of_academy_user_id?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academies_head_of_academy_user_id_fkey"
+            columns: ["head_of_academy_user_id"]
+            isOneToOne: false
+            referencedRelation: "player_profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "academies_head_of_academy_user_id_fkey"
+            columns: ["head_of_academy_user_id"]
+            isOneToOne: false
+            referencedRelation: "profile_player_team"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "academies_head_of_academy_user_id_fkey"
+            columns: ["head_of_academy_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academies_head_of_academy_user_id_fkey"
+            columns: ["head_of_academy_user_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff_roles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      academy_clubs: {
+        Row: {
+          academy_id: string
+          club_id: string
+          created_at: string
+        }
+        Insert: {
+          academy_id: string
+          club_id: string
+          created_at?: string
+        }
+        Update: {
+          academy_id?: string
+          club_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_clubs_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_clubs_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_training_recommendations: {
         Row: {
           confidence_score: number | null
@@ -4235,6 +4333,38 @@ export type Database = {
           },
         ]
       }
+      user_academies: {
+        Row: {
+          academy_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_academies_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_clubs: {
         Row: {
           club_id: string
@@ -5187,6 +5317,10 @@ export type Database = {
           source_id: string
           source_type: string
         }[]
+      }
+      is_academy_member: {
+        Args: { _academy_id: string; _roles?: string[] }
+        Returns: boolean
       }
       is_club_member: {
         Args: { club_uuid: string; required_roles?: string[] }
