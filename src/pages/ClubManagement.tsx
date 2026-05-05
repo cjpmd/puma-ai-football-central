@@ -226,14 +226,12 @@ export const ClubManagement = () => {
         if (linkErr) throw linkErr;
       }
 
-      // 4. Assign head of academy
-      if (headUser) {
-        // Insert user_academies row
-        await supabase.from('user_academies').insert({
-          user_id: headUser.id,
-          academy_id: data.id,
-          role: 'academy_admin',
-        });
+      // 4. Assign head of academy (separate row from creator's academy_admin)
+      if (headUser && headUser.id !== user?.id) {
+        await supabase.from('user_academies').upsert(
+          { user_id: headUser.id, academy_id: data.id, role: 'head_of_academy' },
+          { onConflict: 'user_id,academy_id,role' }
+        );
 
         // Update profiles.roles — append 'academy_admin' if not already present
         const { data: profile } = await supabase
@@ -363,7 +361,10 @@ export const ClubManagement = () => {
                 <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create New Academy</DialogTitle>
-                    <DialogDescription>Set up an Origin Sports Academy, link clubs, and assign a head of academy.</DialogDescription>
+                    <DialogDescription>
+                      An academy is a separate performance/development entity that sits above clubs.
+                      Existing clubs remain unchanged — you can associate one or more feeder clubs with this academy.
+                    </DialogDescription>
                   </DialogHeader>
 
                   <div className="space-y-4 pt-2">
@@ -450,10 +451,13 @@ export const ClubManagement = () => {
                       {headError && <p className="text-xs text-destructive">{headError}</p>}
                     </div>
 
-                    {/* Link clubs */}
+                    {/* Associated / feeder clubs */}
                     {clubs.length > 0 && (
                       <div className="space-y-2">
-                        <Label>Link Clubs</Label>
+                        <Label>Associated / Feeder Clubs (optional)</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Clubs that feed players into this academy. Clubs and the academy remain separate records.
+                        </p>
                         <div className="space-y-2 max-h-40 overflow-y-auto rounded border p-3">
                           {clubs.map(club => (
                             <div key={club.id} className="flex items-center gap-2">
