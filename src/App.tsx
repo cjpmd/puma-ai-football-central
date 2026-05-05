@@ -63,6 +63,11 @@ const ResetPassword                = lazy(() => import("./pages/ResetPassword"))
 const ResetPasswordMobile          = lazy(() => import("./pages/ResetPasswordMobile"));
 const AcademyDashboard             = lazy(() => import("./pages/AcademyDashboard"));
 const AcademyDashboardMobile       = lazy(() => import("./pages/mobile/AcademyDashboardMobile"));
+const Medical                      = lazy(() => import("./pages/Medical"));
+const FitnessTesting               = lazy(() => import("./pages/FitnessTesting"));
+const PlayerProfile                = lazy(() => import("./pages/PlayerProfile"));
+const LogRPE                       = lazy(() => import("./pages/LogRPE"));
+const Welfare                      = lazy(() => import("./pages/Welfare"));
 // --------------------------------------------------------------
 
 const queryClient = new QueryClient({
@@ -132,6 +137,12 @@ const AppContent = () => {
             <Page name="Players">
               <ResponsiveRoute desktopComponent={<PlayerManagement />} mobileComponent={<PlayerManagementMobile />} />
             </Page>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/players/:id" element={
+          <ProtectedRoute>
+            <Page name="Player Profile"><PlayerProfile /></Page>
           </ProtectedRoute>
         } />
 
@@ -274,6 +285,26 @@ const AppContent = () => {
             </Page>
           </ProtectedRoute>
         } />
+
+        <Route path="/medical" element={
+          <ProtectedRoute>
+            <Page name="Medical"><Medical /></Page>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/fitness-testing" element={
+          <ProtectedRoute>
+            <Page name="Fitness Testing"><FitnessTesting /></Page>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/welfare" element={
+          <ProtectedRoute>
+            <Page name="Welfare"><Welfare /></Page>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/log-rpe/:token" element={<Page name="Log RPE"><LogRPE /></Page>} />
 
         <Route path="/data-recovery"              element={<Page><DataRecovery /></Page>} />
         <Route path="/email-test"                 element={<Page><EmailTestPage /></Page>} />
