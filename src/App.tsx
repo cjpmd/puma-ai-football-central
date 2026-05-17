@@ -69,6 +69,10 @@ const PlayerProfile                = lazy(() => import("./pages/PlayerProfile"))
 const LogRPE                       = lazy(() => import("./pages/LogRPE"));
 const Welfare                      = lazy(() => import("./pages/Welfare"));
 const Scouting                     = lazy(() => import("./pages/Scouting"));
+const Compliance                   = lazy(() => import("./pages/Compliance"));
+const ReportBuilder                = lazy(() => import("./pages/ReportBuilder"));
+const SessionPlans                 = lazy(() => import("./pages/SessionPlans"));
+const SquadGrid                    = lazy(() => import("./pages/SquadGrid"));
 // --------------------------------------------------------------
 
 const queryClient = new QueryClient({
@@ -83,7 +87,6 @@ const queryClient = new QueryClient({
 
 attachQueryPersistence(queryClient);
 
-/** Wrap a lazy element with Suspense + ErrorBoundary in one place */
 const Page = ({ children, name }: { children: React.ReactNode; name?: string }) => (
   <ErrorBoundary pageName={name}>
     <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
@@ -91,14 +94,8 @@ const Page = ({ children, name }: { children: React.ReactNode; name?: string }) 
 );
 
 const AppContent = () => {
-  const [showSplash, setShowSplash] = useState(() => {
-    return !sessionStorage.getItem('splashShown');
-  });
-
-  const handleSplashComplete = () => {
-    sessionStorage.setItem('splashShown', 'true');
-    setShowSplash(false);
-  };
+  const [showSplash, setShowSplash] = useState(() => !sessionStorage.getItem('splashShown'));
+  const handleSplashComplete = () => { sessionStorage.setItem('splashShown', 'true'); setShowSplash(false); };
 
   return (
     <>
@@ -107,213 +104,107 @@ const AppContent = () => {
         <Route path="/" element={<Navigate to="/auth" replace />} />
 
         <Route path="/auth" element={
-          <Page name="Auth">
-            <ResponsiveRoute desktopComponent={<Auth />} mobileComponent={<AuthMobile />} />
-          </Page>
+          <Page name="Auth"><ResponsiveRoute desktopComponent={<Auth />} mobileComponent={<AuthMobile />} /></Page>
         } />
-
         <Route path="/login" element={<Navigate to="/auth" replace />} />
-
         <Route path="/reset-password" element={
-          <Page name="Reset Password">
-            <ResponsiveRoute desktopComponent={<ResetPassword />} mobileComponent={<ResetPasswordMobile />} />
-          </Page>
+          <Page name="Reset Password"><ResponsiveRoute desktopComponent={<ResetPassword />} mobileComponent={<ResetPasswordMobile />} /></Page>
         } />
-
         <Route path="/account-linking" element={<Page name="Account Linking"><AccountLinking /></Page>} />
 
         <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Page name="Dashboard">
-              <ResponsiveRoute desktopComponent={<Dashboard />} mobileComponent={<DashboardMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Dashboard"><ResponsiveRoute desktopComponent={<Dashboard />} mobileComponent={<DashboardMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/players" element={
-          <ProtectedRoute>
-            <Page name="Players">
-              <ResponsiveRoute desktopComponent={<PlayerManagement />} mobileComponent={<PlayerManagementMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Players"><ResponsiveRoute desktopComponent={<PlayerManagement />} mobileComponent={<PlayerManagementMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/players/:id" element={
-          <ProtectedRoute>
-            <Page name="Player Profile"><PlayerProfile /></Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Player Profile"><PlayerProfile /></Page></ProtectedRoute>
         } />
-
         <Route path="/calendar" element={
-          <ProtectedRoute>
-            <Page name="Calendar">
-              <ResponsiveRoute desktopComponent={<CalendarEvents />} mobileComponent={<CalendarEventsMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Calendar"><ResponsiveRoute desktopComponent={<CalendarEvents />} mobileComponent={<CalendarEventsMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/analytics" element={
-          <ProtectedRoute>
-            <Page name="Analytics">
-              <ResponsiveRoute desktopComponent={<Analytics />} mobileComponent={<AnalyticsMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Analytics"><ResponsiveRoute desktopComponent={<Analytics />} mobileComponent={<AnalyticsMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/teams" element={
-          <ProtectedRoute>
-            <Page name="Teams">
-              <ResponsiveRoute desktopComponent={<TeamManagement />} mobileComponent={<TeamManagementMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Teams"><ResponsiveRoute desktopComponent={<TeamManagement />} mobileComponent={<TeamManagementMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/clubs" element={
-          <ProtectedRoute>
-            <Page name="Clubs">
-              <ResponsiveRoute desktopComponent={<ClubManagement />} mobileComponent={<ClubManagementMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Clubs"><ResponsiveRoute desktopComponent={<ClubManagement />} mobileComponent={<ClubManagementMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/clubs/:id" element={
-          <ProtectedRoute>
-            <Page name="Club Details">
-              <ResponsiveRoute desktopComponent={<ClubManagement />} mobileComponent={<ClubDetailsMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Club Details"><ResponsiveRoute desktopComponent={<ClubManagement />} mobileComponent={<ClubDetailsMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/staff" element={
-          <ProtectedRoute>
-            <Page name="Staff">
-              <ResponsiveRoute desktopComponent={<StaffManagement />} mobileComponent={<StaffManagementMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Staff"><ResponsiveRoute desktopComponent={<StaffManagement />} mobileComponent={<StaffManagementMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/training" element={
-          <ProtectedRoute>
-            <Page name="Training">
-              <ResponsiveRoute desktopComponent={<Training />} mobileComponent={<TrainingMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Training"><ResponsiveRoute desktopComponent={<Training />} mobileComponent={<TrainingMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/individual-training" element={
-          <ProtectedRoute>
-            <Page name="Individual Training">
-              <ResponsiveRoute desktopComponent={<IndividualTraining />} mobileComponent={<IndividualTrainingMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Individual Training"><ResponsiveRoute desktopComponent={<IndividualTraining />} mobileComponent={<IndividualTrainingMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/users" element={
-          <ProtectedRoute>
-            <Page name="Users">
-              <ResponsiveRoute desktopComponent={<UserManagement />} mobileComponent={<UserManagementMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Users"><ResponsiveRoute desktopComponent={<UserManagement />} mobileComponent={<UserManagementMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/profile" element={
-          <ProtectedRoute>
-            <Page name="Profile"><UserProfile /></Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Profile"><UserProfile /></Page></ProtectedRoute>
         } />
-
         <Route path="/subscriptions" element={
-          <ProtectedRoute>
-            <Page name="Subscriptions">
-              <ResponsiveRoute desktopComponent={<SubscriptionManagement />} mobileComponent={<SubscriptionManagementMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Subscriptions"><ResponsiveRoute desktopComponent={<SubscriptionManagement />} mobileComponent={<SubscriptionManagementMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/child-progress" element={
-          <ProtectedRoute>
-            <Page name="Child Progress">
-              <ResponsiveRoute desktopComponent={<ChildProgress />} mobileComponent={<ChildProgressMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Child Progress"><ResponsiveRoute desktopComponent={<ChildProgress />} mobileComponent={<ChildProgressMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/player" element={
-          <ProtectedRoute>
-            <Page name="Player">
-              <ResponsiveRoute desktopComponent={<ChildProgress />} mobileComponent={<PlayerMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Player"><ResponsiveRoute desktopComponent={<ChildProgress />} mobileComponent={<PlayerMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/my-team" element={
-          <ProtectedRoute>
-            <Page name="My Team">
-              <ResponsiveRoute desktopComponent={<Analytics />} mobileComponent={<MyTeamMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="My Team"><ResponsiveRoute desktopComponent={<Analytics />} mobileComponent={<MyTeamMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/game-day/:eventId" element={
-          <ProtectedRoute>
-            <Page name="Game Day"><GameDayMobile /></Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Game Day"><GameDayMobile /></Page></ProtectedRoute>
         } />
-
         <Route path="/admin/play-styles" element={
-          <ProtectedRoute>
-            <Page name="Play Styles">
-              <ResponsiveRoute desktopComponent={<AdminPlayStyles />} mobileComponent={<AdminPlayStylesMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Play Styles"><ResponsiveRoute desktopComponent={<AdminPlayStyles />} mobileComponent={<AdminPlayStylesMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/team-settings/:id" element={
-          <ProtectedRoute>
-            <Page name="Team Settings">
-              <ResponsiveRoute desktopComponent={<TeamManagement />} mobileComponent={<TeamSettingsMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Team Settings"><ResponsiveRoute desktopComponent={<TeamManagement />} mobileComponent={<TeamSettingsMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/academy/:id" element={
-          <ProtectedRoute>
-            <Page name="Academy">
-              <ResponsiveRoute desktopComponent={<AcademyDashboard />} mobileComponent={<AcademyDashboardMobile />} />
-            </Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Academy"><ResponsiveRoute desktopComponent={<AcademyDashboard />} mobileComponent={<AcademyDashboardMobile />} /></Page></ProtectedRoute>
         } />
-
         <Route path="/medical" element={
-          <ProtectedRoute>
-            <Page name="Medical"><Medical /></Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Medical"><Medical /></Page></ProtectedRoute>
         } />
-
         <Route path="/fitness-testing" element={
-          <ProtectedRoute>
-            <Page name="Fitness Testing"><FitnessTesting /></Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Fitness Testing"><FitnessTesting /></Page></ProtectedRoute>
         } />
-
         <Route path="/welfare" element={
-          <ProtectedRoute>
-            <Page name="Welfare"><Welfare /></Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Welfare"><Welfare /></Page></ProtectedRoute>
         } />
-
         <Route path="/scouting" element={
-          <ProtectedRoute>
-            <Page name="Scouting"><Scouting /></Page>
-          </ProtectedRoute>
+          <ProtectedRoute><Page name="Scouting"><Scouting /></Page></ProtectedRoute>
+        } />
+        <Route path="/compliance" element={
+          <ProtectedRoute><Page name="Compliance"><Compliance /></Page></ProtectedRoute>
+        } />
+        <Route path="/report-builder" element={
+          <ProtectedRoute><Page name="Report Builder"><ReportBuilder /></Page></ProtectedRoute>
+        } />
+        <Route path="/session-plans" element={
+          <ProtectedRoute><Page name="Session Plans"><SessionPlans /></Page></ProtectedRoute>
+        } />
+        <Route path="/squad-grid" element={
+          <ProtectedRoute><Page name="Squad Grid"><SquadGrid /></Page></ProtectedRoute>
         } />
 
         <Route path="/log-rpe/:token" element={<Page name="Log RPE"><LogRPE /></Page>} />
-
-        <Route path="/data-recovery"              element={<Page><DataRecovery /></Page>} />
-        <Route path="/email-test"                 element={<Page><EmailTestPage /></Page>} />
-        <Route path="/availability-confirmation"  element={<Page><AvailabilityConfirmation /></Page>} />
-        <Route path="*"                           element={<Page><NotFound /></Page>} />
+        <Route path="/data-recovery"             element={<Page><DataRecovery /></Page>} />
+        <Route path="/email-test"                element={<Page><EmailTestPage /></Page>} />
+        <Route path="/availability-confirmation" element={<Page><AvailabilityConfirmation /></Page>} />
+        <Route path="*"                          element={<Page><NotFound /></Page>} />
       </Routes>
       <PWAInstallPrompt />
       <PWAUpdatePrompt />
