@@ -12,6 +12,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { User } from 'lucide-react';
+import ClipsTab from '@/components/player/ClipsTab';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -99,10 +100,11 @@ export default function PlayerProfile() {
           </div>
         </div>
 
-        <Tabs defaultValue="medical">
+        <Tabs defaultValue="overview">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="medical">Medical &amp; Load</TabsTrigger>
+            <TabsTrigger value="clips">Clips</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -179,6 +181,10 @@ export default function PlayerProfile() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="clips" className="mt-4">
+            <ClipsTab playerId={id!} />
           </TabsContent>
         </Tabs>
       </div>

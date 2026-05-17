@@ -73,6 +73,7 @@ const Compliance                   = lazy(() => import("./pages/Compliance"));
 const ReportBuilder                = lazy(() => import("./pages/ReportBuilder"));
 const SessionPlans                 = lazy(() => import("./pages/SessionPlans"));
 const SquadGrid                    = lazy(() => import("./pages/SquadGrid"));
+const Settings                     = lazy(() => import("./pages/Settings"));
 // --------------------------------------------------------------
 
 const queryClient = new QueryClient({
@@ -198,6 +199,9 @@ const AppContent = () => {
         } />
         <Route path="/squad-grid" element={
           <ProtectedRoute><Page name="Squad Grid"><SquadGrid /></Page></ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute><Page name="Settings"><Settings /></Page></ProtectedRoute>
         } />
 
         <Route path="/log-rpe/:token" element={<Page name="Log RPE"><LogRPE /></Page>} />
