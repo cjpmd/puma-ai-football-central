@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, Grid3X3, List, Plus, Clock } from 'lucide-react';
+import { Calendar, Grid3X3, List, Plus, Clock, Plane, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +31,7 @@ export default function CalendarEvents() {
   const [filteredEvents, setFilteredEvents] = useState<DatabaseEvent[]>([]);
   const [filteredIndividualSessions, setFilteredIndividualSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [performanceAppUrl, setPerformanceAppUrl] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showTeamSelection, setShowTeamSelection] = useState(false);
@@ -38,7 +39,7 @@ export default function CalendarEvents() {
   const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>('grid');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const { toast } = useToast();
-  const { connectedPlayers, teams: authTeams, allTeams } = useAuth();
+  const { connectedPlayers, teams: authTeams, allTeams, clubs } = useAuth();
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode: teamViewMode, setCurrentTeam, setViewMode: setTeamViewMode, availableTeams } = useTeamContext();
 
@@ -65,6 +66,21 @@ export default function CalendarEvents() {
   useEffect(() => {
     filterEvents();
   }, [events, individualTrainingSessions, selectedTeam, selectedEventType]);
+
+  useEffect(() => {
+    const clubIds = clubs?.map(c => c.id) ?? [];
+    if (clubIds.length === 0) return;
+    (async () => {
+      const { data } = await supabase
+        .from('academy_clubs')
+        .select('academies(performance_app_url)')
+        .in('club_id', clubIds);
+      const url = (data ?? [])
+        .map((row: any) => row.academies?.performance_app_url as string | null | undefined)
+        .find(u => !!u) ?? null;
+      setPerformanceAppUrl(url ?? null);
+    })();
+  }, [clubs]);
 
   const loadEvents = async () => {
     try {
@@ -281,6 +297,9 @@ export default function CalendarEvents() {
     );
   }
 
+  const travelEvents = filteredEvents.filter(e => e.event_type === 'travel');
+  const regularEvents = filteredEvents.filter(e => e.event_type !== 'travel');
+
   const eventTypes = Array.from(new Set([...events.map(e => e.event_type), 'individual_training']));
 
   const currentMonth = format(new Date(), 'MMMM yyyy');
@@ -436,8 +455,65 @@ export default function CalendarEvents() {
           </CardContent>
         </Card>
 
+        {/* Travel Events Section */}
+        {travelEvents.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Plane className="h-5 w-5 text-sky-600" />
+                Travel Events
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {travelEvents.map(event => {
+                const tripUrl = performanceAppUrl
+                  ? `${performanceAppUrl.replace(/\/$/, '')}/travel/${event.id}`
+                  : null;
+                const isPast = new Date(event.date) < new Date();
+                return (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between gap-4 p-3 rounded-lg border border-sky-100 bg-sky-50"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-sky-100 flex items-center justify-center">
+                        <Plane className="h-4 w-4 text-sky-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-slate-900 truncate">{event.title}</p>
+                        <p className="text-xs text-slate-500">
+                          {format(new Date(event.date), 'EEE, d MMM yyyy')}
+                          {event.start_time && ` · ${event.start_time}`}
+                          {event.location && ` · ${event.location}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge variant={isPast ? 'secondary' : 'outline'} className="text-xs">
+                        {isPast ? 'Past' : 'Upcoming'}
+                      </Badge>
+                      {tripUrl ? (
+                        <Button asChild size="sm" variant="outline" className="text-sky-700 border-sky-300 hover:bg-sky-100">
+                          <a href={tripUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                            Trip details
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" disabled title="Performance app URL not configured in academy settings">
+                          Trip details
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Events Display */}
-        {filteredEvents.length === 0 && filteredIndividualSessions.length === 0 ? (
+        {regularEvents.length === 0 && filteredIndividualSessions.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
               <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -458,7 +534,7 @@ export default function CalendarEvents() {
           <>
             {calendarViewMode === 'grid' && (
               <EventsGridView
-                events={filteredEvents}
+                events={regularEvents}
                 individualTrainingSessions={filteredIndividualSessions}
                 onEditEvent={handleEditEvent}
                 onTeamSelection={handleTeamSelection}
@@ -467,10 +543,10 @@ export default function CalendarEvents() {
                 onScoreEdit={handlePostGameEdit}
               />
             )}
-            
+
             {calendarViewMode === 'calendar' && (
               <CalendarGridView
-                events={filteredEvents}
+                events={regularEvents}
                 individualTrainingSessions={filteredIndividualSessions}
                 onEditEvent={handleEditEvent}
                 onTeamSelection={handleTeamSelection}
