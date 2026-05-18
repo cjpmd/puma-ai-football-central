@@ -11,7 +11,7 @@ export interface DatabaseEvent {
   latitude?: number;
   longitude?: number;
   notes?: string;
-  event_type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
+  event_type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly' | 'travel';
   opponent?: string;
   is_home?: boolean;
   game_format?: string;
