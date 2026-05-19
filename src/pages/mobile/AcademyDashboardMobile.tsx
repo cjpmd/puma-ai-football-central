@@ -139,28 +139,24 @@ const AcademyDashboardMobile = () => {
     try {
       setLoading(true);
 
-      // Academy record
+      // Academy record (include club_id for team resolution)
       const { data: ac, error: acErr } = await supabase
         .from('academies')
-        .select('id, name, logo_url, eppp_category, performance_app_url')
+        .select('id, name, logo_url, eppp_category, performance_app_url, club_id')
         .eq('id', id!)
         .single();
       if (acErr) throw acErr;
       setAcademy(ac as Academy);
 
-      // Club IDs for this academy
-      const { data: acClubs } = await supabase
-        .from('academy_clubs')
-        .select('club_id')
-        .eq('academy_id', id!);
-      const clubIds = (acClubs ?? []).map((r) => r.club_id as string);
+      // Club ID for this academy (1:1 relationship via academies.club_id)
+      const clubId = ac?.club_id as string | null;
 
-      if (clubIds.length > 0) {
+      if (clubId) {
         // Team IDs via club_teams
         const { data: ct } = await supabase
           .from('club_teams')
           .select('team_id')
-          .in('club_id', clubIds);
+          .eq('club_id', clubId);
         const teamIds = (ct ?? []).map((r) => r.team_id as string);
 
         if (teamIds.length > 0) {

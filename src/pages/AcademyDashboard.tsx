@@ -129,19 +129,20 @@ async function fetchAcademy(academyId: string): Promise<Academy> {
 }
 
 async function fetchYearGroupsForAcademy(academyId: string): Promise<YearGroup[]> {
-  // academy_clubs → club_teams → teams.year_group_id → year_groups
-  const { data: acClubs, error: e1 } = await supabase
-    .from('academy_clubs')
+  // academies.club_id → club_teams → teams.year_group_id → year_groups
+  const { data: ac, error: acErr } = await supabase
+    .from('academies')
     .select('club_id')
-    .eq('academy_id', academyId);
-  if (e1) throw e1;
-  const clubIds = (acClubs ?? []).map((r) => r.club_id as string);
-  if (clubIds.length === 0) return [];
+    .eq('id', academyId)
+    .single();
+  if (acErr) throw acErr;
+  const clubId = ac?.club_id as string | null;
+  if (!clubId) return [];
 
   const { data: ct, error: e2 } = await supabase
     .from('club_teams')
     .select('team_id')
-    .in('club_id', clubIds);
+    .eq('club_id', clubId);
   if (e2) throw e2;
   const teamIds = (ct ?? []).map((r) => r.team_id as string);
   if (teamIds.length === 0) return [];
@@ -165,17 +166,18 @@ async function fetchYearGroupsForAcademy(academyId: string): Promise<YearGroup[]
 }
 
 async function fetchAllTeamsForAcademy(academyId: string): Promise<AcademyTeam[]> {
-  const { data: acClubs } = await supabase
-    .from('academy_clubs')
+  const { data: ac } = await supabase
+    .from('academies')
     .select('club_id')
-    .eq('academy_id', academyId);
-  const clubIds = (acClubs ?? []).map((r) => r.club_id as string);
-  if (clubIds.length === 0) return [];
+    .eq('id', academyId)
+    .single();
+  const clubId = ac?.club_id as string | null;
+  if (!clubId) return [];
 
   const { data: ct } = await supabase
     .from('club_teams')
     .select('team_id')
-    .in('club_id', clubIds);
+    .eq('club_id', clubId);
   const teamIds = (ct ?? []).map((r) => r.team_id as string);
   if (teamIds.length === 0) return [];
 

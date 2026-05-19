@@ -81,6 +81,8 @@ export type YearGroup = {
   updatedAt: string;
 };
 
+export type UserGroupTier = 'grassroots_junior' | 'amateur_professional';
+
 export type Club = {
   id: string;
   name: string;
@@ -88,6 +90,7 @@ export type Club = {
   serialNumber?: string;
   teams?: string[]; // Array of team IDs - made optional
   subscriptionType: SubscriptionType;
+  userGroupTier?: UserGroupTier;
   logoUrl?: string | null;
   officials?: ClubOfficial[];
   facilities?: Facility[];
@@ -99,6 +102,7 @@ export type Club = {
 
 export type Academy = {
   id: string;
+  clubId: string;
   name: string;
   logoUrl?: string | null;
   faRegistrationNumber?: string | null;

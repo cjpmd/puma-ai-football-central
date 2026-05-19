@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ClubForm } from '@/components/clubs/ClubForm';
 import { ClubDetailsModal } from '@/components/clubs/ClubDetailsModal';
 import { ClubPlayerManagement } from '@/components/clubs/ClubPlayerManagement';
@@ -20,13 +19,14 @@ import { ClubStaffManagement } from '@/components/clubs/ClubStaffManagement';
 import { ClubTeamLinking } from '@/components/clubs/ClubTeamLinking';
 import { LinkedClubCard } from '@/components/clubs/LinkedClubCard';
 import { YearGroupManagement } from '@/components/clubs/YearGroupManagement';
+import { ClubAcademySection } from '@/components/clubs/ClubAcademySection';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 const supabase = supabaseClient as any;
 import { Club } from '@/types/index';
-import { PlusCircle, Settings, Users, Building, Eye, BookOpen, Upload, CheckCircle2, Search } from 'lucide-react';
+import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
 
 export const ClubManagement = () => {
   const { clubs, refreshUserData, teams, user } = useAuth();
@@ -38,27 +38,9 @@ export const ClubManagement = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [detailsClub, setDetailsClub] = useState<Club | null>(null);
   const [selectedClubForView, setSelectedClubForView] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'year-groups' | 'teams' | 'players' | 'calendar' | 'analytics' | 'staff'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'year-groups' | 'teams' | 'players' | 'calendar' | 'analytics' | 'staff' | 'academy'>('overview');
   const { toast } = useToast();
 
-  // ── Academy creation state (global_admin only) ──────────────────────────
-  const [isAcademyDialogOpen, setIsAcademyDialogOpen] = useState(false);
-  const [academyForm, setAcademyForm] = useState({
-    name: '',
-    faRegistrationNumber: '',
-    epppCategory: '',
-    foundedYear: '',
-    linkedClubIds: [] as string[],
-  });
-  const [academyLogoFile, setAcademyLogoFile] = useState<File | null>(null);
-  const [academyLogoPreview, setAcademyLogoPreview] = useState<string>('');
-  const [headEmail, setHeadEmail] = useState('');
-  const [headUser, setHeadUser] = useState<{ id: string; name: string | null } | null>(null);
-  const [headSearching, setHeadSearching] = useState(false);
-  const [headError, setHeadError] = useState('');
-  const [creatingAcademy, setCreatingAcademy] = useState(false);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     loadLinkedClubs();
@@ -129,148 +111,6 @@ export const ClubManagement = () => {
     }
   };
 
-  // ── Academy helpers ──────────────────────────────────────────────────────
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setAcademyLogoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setAcademyLogoPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
-  const searchHead = async () => {
-    const email = headEmail.trim().toLowerCase();
-    if (!email) return;
-    setHeadSearching(true);
-    setHeadUser(null);
-    setHeadError('');
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, name, email')
-      .ilike('email', email)
-      .limit(1)
-      .maybeSingle();
-    setHeadSearching(false);
-    if (error || !data) {
-      setHeadError('No user found with that email address.');
-    } else {
-      setHeadUser({ id: data.id, name: data.name });
-    }
-  };
-
-  const resetAcademyForm = () => {
-    setAcademyForm({ name: '', faRegistrationNumber: '', epppCategory: '', foundedYear: '', linkedClubIds: [] });
-    setAcademyLogoFile(null);
-    setAcademyLogoPreview('');
-    setHeadEmail('');
-    setHeadUser(null);
-    setHeadError('');
-  };
-
-  const handleCreateAcademy = async () => {
-    if (!academyForm.name.trim()) return;
-    setCreatingAcademy(true);
-    try {
-      // 1. Upload logo if a file was selected
-      let logoUrl: string | null = null;
-      if (academyLogoFile) {
-        try {
-          const ext = academyLogoFile.name.split('.').pop() || 'png';
-          const path = `academy-logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-          const { data: upload, error: uploadErr } = await supabase.storage
-            .from('logos')
-            .upload(path, academyLogoFile, { contentType: academyLogoFile.type, upsert: false });
-          if (!uploadErr && upload) {
-            const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
-            logoUrl = publicUrl;
-          } else {
-            logger.warn('Logo upload failed (continuing without logo):', uploadErr);
-          }
-        } catch (uploadEx) {
-          logger.warn('Logo upload exception:', uploadEx);
-        }
-      }
-
-      // 2. Insert academy
-      const { data, error } = await supabase
-        .from('academies')
-        .insert({
-          name: academyForm.name.trim(),
-          logo_url: logoUrl,
-          fa_registration_number: academyForm.faRegistrationNumber.trim() || null,
-          eppp_category: academyForm.epppCategory ? parseInt(academyForm.epppCategory, 10) : null,
-          founded_year: academyForm.foundedYear ? parseInt(academyForm.foundedYear, 10) : null,
-          head_of_academy_user_id: headUser?.id ?? null,
-        })
-        .select('id')
-        .single();
-      if (error) throw error;
-
-      // Auto-grant creator academy_admin membership so RLS lets them see it
-      if (user?.id) {
-        const { error: creatorErr } = await supabase
-          .from('user_academies')
-          .upsert(
-            { user_id: user.id, academy_id: data.id, role: 'academy_admin' },
-            { onConflict: 'user_id,academy_id,role' }
-          );
-        if (creatorErr) logger.warn('Failed to add creator to user_academies:', creatorErr);
-      }
-
-      // 3. Link clubs
-      if (academyForm.linkedClubIds.length > 0) {
-        const { error: linkErr } = await supabase
-          .from('academy_clubs')
-          .insert(academyForm.linkedClubIds.map(clubId => ({ academy_id: data.id, club_id: clubId })));
-        if (linkErr) throw linkErr;
-      }
-
-      // 4. Assign head of academy (separate row from creator's academy_admin)
-      if (headUser && headUser.id !== user?.id) {
-        await supabase.from('user_academies').upsert(
-          { user_id: headUser.id, academy_id: data.id, role: 'head_of_academy' },
-          { onConflict: 'user_id,academy_id,role' }
-        );
-
-        // Update profiles.roles — append 'academy_admin' if not already present
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('roles')
-          .eq('id', headUser.id)
-          .single();
-        if (profile) {
-          const current: string[] = Array.isArray(profile.roles) ? profile.roles : [];
-          if (!current.includes('academy_admin')) {
-            await supabase
-              .from('profiles')
-              .update({ roles: [...current, 'academy_admin'] })
-              .eq('id', headUser.id);
-          }
-        }
-      }
-
-      toast({ title: 'Academy created', description: `${academyForm.name} has been created.` });
-      setIsAcademyDialogOpen(false);
-      resetAcademyForm();
-      navigate(`/academy/${data.id}`);
-    } catch (e: any) {
-      logger.error('Error creating academy:', e);
-      toast({ title: 'Error creating academy', description: e.message, variant: 'destructive' });
-    } finally {
-      setCreatingAcademy(false);
-    }
-  };
-
-  const toggleClubLink = (clubId: string) => {
-    setAcademyForm(prev => ({
-      ...prev,
-      linkedClubIds: prev.linkedClubIds.includes(clubId)
-        ? prev.linkedClubIds.filter(id => id !== clubId)
-        : [...prev.linkedClubIds, clubId],
-    }));
-  };
-  // ────────────────────────────────────────────────────────────────────────
 
   const openEditClubDialog = (club: Club) => { setSelectedClub(club); setIsClubDialogOpen(true); };
 
@@ -350,141 +190,6 @@ export const ClubManagement = () => {
           </div>
           <div className="flex gap-2">
 
-            {/* Create Academy button — global_admin only */}
-            {isGlobalAdmin && (
-              <Dialog open={isAcademyDialogOpen} onOpenChange={(open) => { setIsAcademyDialogOpen(open); if (!open) resetAcademyForm(); }}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="border-purple-500 text-purple-700 hover:bg-purple-50">
-                    <BookOpen className="mr-2 h-4 w-4" />Create Academy
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Create New Academy</DialogTitle>
-                    <DialogDescription>
-                      An academy is a separate performance/development entity that sits above clubs.
-                      Existing clubs remain unchanged — you can associate one or more feeder clubs with this academy.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 pt-2">
-                    {/* Name */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="ac-name">Academy Name <span className="text-destructive">*</span></Label>
-                      <Input id="ac-name" placeholder="e.g. Origin FC Academy"
-                        value={academyForm.name}
-                        onChange={e => setAcademyForm(p => ({ ...p, name: e.target.value }))} />
-                    </div>
-
-                    {/* Logo upload */}
-                    <div className="space-y-1.5">
-                      <Label>Academy Logo</Label>
-                      <div className="flex items-center gap-3">
-                        {academyLogoPreview
-                          ? <img src={academyLogoPreview} alt="Logo preview" className="w-12 h-12 object-contain rounded border" />
-                          : <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center"><BookOpen className="h-5 w-5 text-muted-foreground" /></div>
-                        }
-                        <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          {academyLogoFile ? 'Change Logo' : 'Upload Logo'}
-                        </Button>
-                        {academyLogoFile && <span className="text-xs text-muted-foreground truncate max-w-[120px]">{academyLogoFile.name}</span>}
-                      </div>
-                      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
-                    </div>
-
-                    {/* FA reg + founded year */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="ac-fa">FA Registration No.</Label>
-                        <Input id="ac-fa" placeholder="e.g. FA123456"
-                          value={academyForm.faRegistrationNumber}
-                          onChange={e => setAcademyForm(p => ({ ...p, faRegistrationNumber: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="ac-year">Founded Year</Label>
-                        <Input id="ac-year" type="number" placeholder="e.g. 2010"
-                          min={1800} max={new Date().getFullYear()}
-                          value={academyForm.foundedYear}
-                          onChange={e => setAcademyForm(p => ({ ...p, foundedYear: e.target.value }))} />
-                      </div>
-                    </div>
-
-                    {/* EPPP category */}
-                    <div className="space-y-1.5">
-                      <Label>EPPP Category</Label>
-                      <Select value={academyForm.epppCategory}
-                        onValueChange={v => setAcademyForm(p => ({ ...p, epppCategory: v }))}>
-                        <SelectTrigger><SelectValue placeholder="Select category (optional)" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Category 1 — Elite</SelectItem>
-                          <SelectItem value="2">Category 2</SelectItem>
-                          <SelectItem value="3">Category 3</SelectItem>
-                          <SelectItem value="4">Category 4</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Head of academy */}
-                    <div className="space-y-1.5">
-                      <Label>Head of Academy</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Search by email address"
-                          value={headEmail}
-                          onChange={e => { setHeadEmail(e.target.value); setHeadUser(null); setHeadError(''); }}
-                          onKeyDown={e => e.key === 'Enter' && searchHead()}
-                        />
-                        <Button type="button" variant="outline" size="sm"
-                          onClick={searchHead}
-                          disabled={headSearching || !headEmail.trim()}
-                          className="shrink-0">
-                          {headSearching ? '…' : <Search className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                      {headUser && (
-                        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
-                          <CheckCircle2 className="h-4 w-4 shrink-0" />
-                          <span><strong>{headUser.name || headEmail}</strong> will be assigned as Academy Admin</span>
-                        </div>
-                      )}
-                      {headError && <p className="text-xs text-destructive">{headError}</p>}
-                    </div>
-
-                    {/* Associated / feeder clubs */}
-                    {clubs.length > 0 && (
-                      <div className="space-y-2">
-                        <Label>Associated / Feeder Clubs (optional)</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Clubs that feed players into this academy. Clubs and the academy remain separate records.
-                        </p>
-                        <div className="space-y-2 max-h-40 overflow-y-auto rounded border p-3">
-                          {clubs.map(club => (
-                            <div key={club.id} className="flex items-center gap-2">
-                              <Checkbox id={`cl-${club.id}`}
-                                checked={academyForm.linkedClubIds.includes(club.id)}
-                                onCheckedChange={() => toggleClubLink(club.id)} />
-                              <label htmlFor={`cl-${club.id}`} className="text-sm cursor-pointer">{club.name}</label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setIsAcademyDialogOpen(false)}>Cancel</Button>
-                      <Button
-                        onClick={handleCreateAcademy}
-                        disabled={!academyForm.name.trim() || creatingAcademy}
-                        className="bg-purple-600 hover:bg-purple-700 text-white">
-                        {creatingAcademy ? 'Creating…' : 'Create Academy'}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-
             {/* Add Club button */}
             <Dialog open={isClubDialogOpen} onOpenChange={setIsClubDialogOpen}>
               <DialogTrigger asChild>
@@ -546,7 +251,7 @@ export const ClubManagement = () => {
                 </div>
 
                 <Tabs value={activeTab} onValueChange={v => setActiveTab(v as any)}>
-                  <TabsList className="grid w-full grid-cols-7">
+                  <TabsList className="grid w-full grid-cols-8">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="year-groups">Year Groups</TabsTrigger>
                     <TabsTrigger value="teams">Teams</TabsTrigger>
@@ -554,6 +259,7 @@ export const ClubManagement = () => {
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
                     <TabsTrigger value="staff">Staff</TabsTrigger>
+                    <TabsTrigger value="academy">Academy</TabsTrigger>
                   </TabsList>
                   <TabsContent value="overview" className="space-y-6">
                     <ClubStaffManagement clubId={selectedClubData.id} clubName={selectedClubData.name} />
@@ -575,6 +281,14 @@ export const ClubManagement = () => {
                   </TabsContent>
                   <TabsContent value="staff" className="space-y-6">
                     <ClubStaffManagement clubId={selectedClubData.id} clubName={selectedClubData.name} />
+                  </TabsContent>
+                  <TabsContent value="academy" className="space-y-6">
+                    <ClubAcademySection
+                      clubId={selectedClubData.id}
+                      clubName={selectedClubData.name}
+                      userGroupTier={selectedClubData.userGroupTier}
+                      isClubAdmin={!selectedClubData.isReadOnly && (isGlobalAdmin || selectedClubData.userRole === 'club_admin' || selectedClubData.userRole === 'club_chair')}
+                    />
                   </TabsContent>
                 </Tabs>
               </div>

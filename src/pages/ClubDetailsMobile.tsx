@@ -9,9 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { 
-  ChevronLeft, Building2, Users, Trophy, Calendar, 
-  BarChart3, Settings, UserCog, Shirt, FileText
+import {
+  ChevronLeft, Building2, Users, Trophy, Calendar,
+  BarChart3, Settings, UserCog, Shirt, FileText, GraduationCap
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,14 +24,18 @@ import { ClubTeamLinking } from '@/components/clubs/ClubTeamLinking';
 import { ClubPlayerManagement } from '@/components/clubs/ClubPlayerManagement';
 import { ClubKitOverview } from '@/components/clubs/ClubKitOverview';
 import { YearGroupManagement } from '@/components/clubs/YearGroupManagement';
+import { ClubAcademySection } from '@/components/clubs/ClubAcademySection';
 import { useAuth } from '@/contexts/AuthContext';
+import type { UserGroupTier } from '@/types/index';
 
 export default function ClubDetailsMobile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshUserData } = useAuth();
+  const { refreshUserData, user } = useAuth();
   const [club, setClub] = useState<Club | null>(null);
+  const [userGroupTier, setUserGroupTier] = useState<UserGroupTier | undefined>(undefined);
+  const [userClubRole, setUserClubRole] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('summary');
 
@@ -63,6 +67,18 @@ export default function ClubDetailsMobile() {
         createdAt: data.created_at,
         updatedAt: data.updated_at
       });
+      setUserGroupTier(data.user_group_tier as UserGroupTier | undefined);
+
+      // Fetch caller's role in this club
+      if (user?.id) {
+        const { data: uc } = await supabase
+          .from('user_clubs')
+          .select('role')
+          .eq('club_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setUserClubRole(uc?.role ?? undefined);
+      }
     } catch (error: any) {
       logger.error('Error loading club:', error);
       toast({
@@ -170,6 +186,10 @@ export default function ClubDetailsMobile() {
                 <BarChart3 className="h-4 w-4" />
                 Year Groups
               </TabsTrigger>
+              <TabsTrigger value="academy" className="gap-1.5">
+                <GraduationCap className="h-4 w-4" />
+                Academy
+              </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
@@ -200,6 +220,15 @@ export default function ClubDetailsMobile() {
 
           <TabsContent value="year-groups" className="mt-4">
             <YearGroupManagement clubId={club.id} />
+          </TabsContent>
+
+          <TabsContent value="academy" className="mt-4">
+            <ClubAcademySection
+              clubId={club.id}
+              clubName={club.name}
+              userGroupTier={userGroupTier}
+              isClubAdmin={userClubRole === 'club_admin' || userClubRole === 'club_chair'}
+            />
           </TabsContent>
         </Tabs>
       </div>

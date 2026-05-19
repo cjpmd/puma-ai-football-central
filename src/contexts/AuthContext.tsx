@@ -459,6 +459,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logoUrl: clubData.logo_url,
         teams: [],
         subscriptionType: (clubData.subscription_type || 'free') as Club['subscriptionType'],
+        userGroupTier: clubData.user_group_tier as Club['userGroupTier'],
         officials: [],
         facilities: [],
         createdAt: clubData.created_at,
