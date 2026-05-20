@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Club, SubscriptionType } from '@/types/index';
+import { Club, SubscriptionType, UserGroupTier } from '@/types/index';
 import { LogoUpload } from '@/components/shared/LogoUpload';
 
 interface ClubFormProps {
@@ -19,6 +19,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
     name: club?.name || '',
     referenceNumber: club?.referenceNumber || '',
     subscriptionType: (club?.subscriptionType || 'free') as SubscriptionType,
+    userGroupTier: (club?.userGroupTier || 'grassroots_junior') as UserGroupTier,
     logoUrl: club?.logoUrl || null
   });
 
