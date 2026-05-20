@@ -1,165 +1,82 @@
-I’ve checked the current code, database state, RLS policies, the uploaded Claude prompt, and the Origin Sports Performance project context.
+## Root cause
 
-You’re right: the current implementation is getting the concepts blurred. The intended model is:
+Profile fetch is failing with **"infinite recursion detected in policy for relation user_clubs"** (seen in session replay). With no profile loaded, `isGlobalAdmin` is false, `clubs`/`teams` arrays are empty, and `SmartViewContext` only adds the `parent` view (because `connectedPlayers` still loads via `user_players`). That's why you see only the Parent role and lose super-user rights.
 
-```text
-Professional Club may own an Academy
-Academy may link to one or more Clubs
-Grassroots Clubs / Teams can feed into an Academy
-Academy sits above Club for performance/development context
-Club still remains its own separate organisation
+The recursion was introduced when the Academy/Club hierarchy migration rewrote `user_clubs` RLS. The current SELECT/INSERT/UPDATE/DELETE policies on `user_clubs` all contain:
 
-Academy -> Clubs -> Year Groups -> Teams -> Players
+```sql
+EXISTS (SELECT 1 FROM user_clubs uc2 WHERE uc2.club_id = user_clubs.club_id
+        AND uc2.user_id = auth.uid()
+        AND uc2.role IN ('club_admin','club_chair'))
 ```
 
-There are also two separate apps/Supabase projects:
+That sub-query re-evaluates RLS on `user_clubs` → infinite recursion → every dependent query (clubs load, teams via clubs, profile-parallel fetches) errors out.
 
-```text
-Football Central: source of truth for academies, clubs, teams, players, fixtures
-Origin Sports Performance: pulls/syncs academy/club/team/player data from Football Central
+## Fix
+
+### 1. Migration — break the recursion on `user_clubs`
+
+There is already a `SECURITY DEFINER` helper `public.is_user_club_admin(p_club_id, p_user_id)` that bypasses RLS. Replace the recursive sub-queries with calls to it.
+
+```sql
+-- SELECT: own rows OR you're a club admin for that club OR global admin
+DROP POLICY "user_clubs_select_own" ON public.user_clubs;
+DROP POLICY "user_clubs_select_as_admin" ON public.user_clubs;
+CREATE POLICY "user_clubs_select"
+  ON public.user_clubs FOR SELECT TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR public.is_global_admin(auth.uid())
+    OR public.is_user_club_admin(club_id, auth.uid())
+  );
+
+-- INSERT
+DROP POLICY "user_clubs_insert" ON public.user_clubs;
+CREATE POLICY "user_clubs_insert"
+  ON public.user_clubs FOR INSERT TO authenticated
+  WITH CHECK (
+    public.is_global_admin(auth.uid())
+    OR public.is_user_club_admin(club_id, auth.uid())
+    OR (user_id = auth.uid() AND role = 'club_member')
+  );
+
+-- UPDATE
+DROP POLICY "user_clubs_update" ON public.user_clubs;
+CREATE POLICY "user_clubs_update"
+  ON public.user_clubs FOR UPDATE TO authenticated
+  USING (
+    public.is_global_admin(auth.uid())
+    OR public.is_user_club_admin(club_id, auth.uid())
+  );
+
+-- DELETE
+DROP POLICY "user_clubs_delete" ON public.user_clubs;
+CREATE POLICY "user_clubs_delete"
+  ON public.user_clubs FOR DELETE TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR public.is_global_admin(auth.uid())
+    OR public.is_user_club_admin(club_id, auth.uid())
+  );
 ```
 
-## What I found
+### 2. Audit sibling tables for the same pattern
 
-1. The creator backfill now exists for Dundee FC:
-   - `academies`: Dundee FC exists.
-   - `user_academies`: there is now an `academy_admin` membership for the global admin user.
+While in there, double-check `user_teams` and `user_academies` policies don't have the same recursive shape. From inspection:
+- `user_teams` is fine (only `user_id = auth.uid()` and `user_is_global_admin()`).
+- `user_academies` uses `is_academy_member(...)` — if that helper queries `user_academies` without `SECURITY DEFINER`, it would have the same bug. Verify and, if needed, rewrite to use a definer function. Apply the same fix only if recursion is confirmed.
 
-2. The app can still show “Academy not found” because the first academy query is RLS-dependent and the page treats any query failure as “not found”. It doesn’t distinguish:
-   - actual missing academy,
-   - access denied/RLS,
-   - stale auth/profile state,
-   - related-data query failures.
+### 3. No frontend changes required
 
-3. The current academy role model is inconsistent:
-   - Migration constraint currently allows `academy_admin`, `head_of_academy`, `academy_coach`, `academy_staff`.
-   - `AcademyDashboard.tsx` checks for `academy_welfare_officer`, but that role is not allowed by the current `user_academies.role` CHECK constraint.
-   - The uploaded prompt expects academy roles like `head_of_academy`, `academy_admin`, `welfare_officer`, `physio`, `scout`, `analyst`, and profile-level additions `academy_admin` / `academy_welfare_officer`.
+Once profile loads cleanly, `AuthorizationContext` will see `global_admin` in `profile.roles`, `SmartViewContext` will populate `availableViews` with `global_admin / club_admin / team_manager / coach / parent` for you, and the `RoleContextSwitcher` dropdown will reappear in the header. Your existing localStorage preference (`smartview-<your-id>`) may still be pinned to `parent` — if so, switch via the dropdown once it reappears (it persists per-user).
 
-4. The current “Create Academy” flow wording and logic makes an academy feel like a type of club. It should instead make clear that an academy is a separate performance/development entity that can be linked to clubs after creation.
+## Out of scope
 
-5. Current RLS is stricter than the prompt in one key place:
-   - Prompt says `academies` SELECT can be public because name/logo are not sensitive.
-   - Current RLS only allows global admin, direct academy member, or linked-club member.
-   - This is probably why the dashboard experience is fragile. The sensitive data is not the academy row itself; it’s staff membership and player/team data.
+- Any new role types.
+- Refactor of `is_academy_member` unless step 2 confirms recursion.
+- Cosmetic changes to the role switcher.
 
-## Plan
+## Files touched
 
-### 1. Clarify the data model in Football Central
-
-Keep academies and clubs separate:
-
-- `academies`: academy identity/profile only.
-- `clubs`: normal club identity/profile.
-- `academy_clubs`: relationship table showing which clubs feed into or are associated with an academy.
-- `user_academies`: academy-level staff/permission memberships.
-
-No club will be converted into an academy, and no academy will replace a club.
-
-### 2. Fix academy RLS to match the intended privacy model
-
-Create a migration that:
-
-- Allows authenticated users to SELECT basic academy rows, or makes academy rows publicly readable if we follow the prompt exactly.
-- Keeps academy creation/update/delete restricted to global admins / academy admins as appropriate.
-- Keeps `user_academies` protected: users can see their own membership; academy admins/head of academy/global admins can manage members.
-- Keeps `academy_clubs` readable to academy members and linked club members, manageable only by global admins or academy admins/head of academy.
-
-This should stop the academy shell from disappearing just because the current user is not yet linked through every downstream relationship.
-
-### 3. Normalize academy roles
-
-Create a migration to update the `user_academies.role` constraint so it supports the roles the app and prompt reference.
-
-Proposed allowed roles:
-
-```text
-head_of_academy
-academy_admin
-academy_coach
-academy_staff
-academy_welfare_officer
-welfare_officer
-physio
-scout
-analyst
-```
-
-Then update frontend checks to use a single normalized staff role list instead of hardcoded one-offs.
-
-### 4. Fix academy creation flow semantics
-
-Update `src/pages/ClubManagement.tsx` so the modal makes the relationship explicit:
-
-- Rename wording from “link clubs” to “associated / feeder clubs”.
-- Explain that the academy and club remain separate records.
-- Assign the selected head as `head_of_academy` in `user_academies`, not only `academy_admin`.
-- Keep creator auto-grant as `academy_admin` so the creator immediately has access.
-- Continue adding `academy_admin` to `profiles.roles` only if needed for navigation, but do not rely on profile roles for access control.
-
-### 5. Make the academy dashboard handle access states properly
-
-Update `src/pages/AcademyDashboard.tsx` so it distinguishes:
-
-- academy genuinely missing,
-- user not authorized,
-- related data unavailable,
-- academy exists but has no linked clubs/year groups yet.
-
-For an academy with no linked clubs yet, show a useful empty state, e.g.:
-
-```text
-Academy created
-No clubs or teams are linked yet.
-Link feeder clubs from Club Management to populate squads, fixtures and players.
-```
-
-This avoids the misleading “Academy not found” message for a newly created but not-yet-linked academy.
-
-### 6. Fix academy navigation discovery
-
-Update sidebar/navigation logic so it does not use `user.roles` from the Supabase auth user object. That object does not contain the project profile roles.
-
-Instead, use:
-
-- `profile.roles` for global/profile-level navigation labels, and
-- `user_academies` membership rows for academy dashboard links.
-
-Global admins should see academy management in `/clubs`; academy members should see direct academy dashboard links.
-
-### 7. Add the Origin Sports Performance relationship as configuration, not a hardcoded assumption
-
-Football Central should store/show the Performance link per academy when present.
-
-- Use the existing `academies.performance_app_url` field if present in the live DB.
-- If missing in migrations, add it via migration.
-- Display “Open in Origin Sports Performance” only for academy staff/global admins.
-- Do not copy Performance app functionality into Football Central; Performance remains the heavy academy management app.
-
-### 8. Review the Performance sync contract, but do not modify the Performance project in this pass
-
-I confirmed the Performance project already has `sync-external-academy` and core sync logic that expects:
-
-- Football Central `academies`
-- `academy_clubs`
-- `user_academies`
-- profile email matching
-- `academy_id` populated on Performance clubs after academy sync
-
-This pass will make Football Central’s data and roles cleaner so that Performance sync has a consistent source of truth.
-
-## Files / database changes expected
-
-- New Supabase migration for academy RLS and role constraint cleanup.
-- `src/pages/ClubManagement.tsx`
-- `src/pages/AcademyDashboard.tsx`
-- `src/hooks/useSmartNavigation.ts`
-- `src/components/layout/DashboardLayout.tsx`
-- Possibly a small shared helper for academy role checks.
-
-## Out of scope for this pass
-
-- Changing Origin Sports Performance code directly.
-- Building the full Academy Settings/staff invite page.
-- Building welfare/medical/scouting/coaching modules in Football Central.
-- Changing the video pipeline in Performance.
+- New Supabase migration: `user_clubs` RLS rewrite (+ optional `user_academies` fix if recursion is confirmed).
+- No application source changes.
