@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       academies: {
         Row: {
+          club_id: string
           created_at: string
           eppp_category: number | null
           fa_registration_number: string | null
@@ -28,6 +29,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           eppp_category?: number | null
           fa_registration_number?: string | null
@@ -40,6 +42,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           eppp_category?: number | null
           fa_registration_number?: string | null
@@ -52,6 +55,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "academies_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "academies_head_of_academy_user_id_fkey"
             columns: ["head_of_academy_user_id"]
@@ -79,39 +89,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "team_staff_roles"
             referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      academy_clubs: {
-        Row: {
-          academy_id: string
-          club_id: string
-          created_at: string
-        }
-        Insert: {
-          academy_id: string
-          club_id: string
-          created_at?: string
-        }
-        Update: {
-          academy_id?: string
-          club_id?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "academy_clubs_academy_id_fkey"
-            columns: ["academy_id"]
-            isOneToOne: false
-            referencedRelation: "academies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "academy_clubs_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -412,6 +389,7 @@ export type Database = {
           serial_number: string | null
           subscription_type: string | null
           updated_at: string | null
+          user_group_tier: Database["public"]["Enums"]["user_group_tier"]
         }
         Insert: {
           created_at?: string | null
@@ -422,6 +400,7 @@ export type Database = {
           serial_number?: string | null
           subscription_type?: string | null
           updated_at?: string | null
+          user_group_tier?: Database["public"]["Enums"]["user_group_tier"]
         }
         Update: {
           created_at?: string | null
@@ -432,6 +411,7 @@ export type Database = {
           serial_number?: string | null
           subscription_type?: string | null
           updated_at?: string | null
+          user_group_tier?: Database["public"]["Enums"]["user_group_tier"]
         }
         Relationships: []
       }
@@ -2784,6 +2764,7 @@ export type Database = {
           push_token: string | null
           roles: string[] | null
           updated_at: string | null
+          user_group_tier: Database["public"]["Enums"]["user_group_tier"] | null
         }
         Insert: {
           avatar_url?: string | null
@@ -2798,6 +2779,9 @@ export type Database = {
           push_token?: string | null
           roles?: string[] | null
           updated_at?: string | null
+          user_group_tier?:
+            | Database["public"]["Enums"]["user_group_tier"]
+            | null
         }
         Update: {
           avatar_url?: string | null
@@ -2812,6 +2796,9 @@ export type Database = {
           push_token?: string | null
           roles?: string[] | null
           updated_at?: string | null
+          user_group_tier?:
+            | Database["public"]["Enums"]["user_group_tier"]
+            | null
         }
         Relationships: [
           {
@@ -4366,6 +4353,34 @@ export type Database = {
             referencedRelation: "academies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_academies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "player_profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "user_academies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profile_player_team"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "user_academies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_academies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff_roles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       user_clubs: {
@@ -5484,7 +5499,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      user_group_tier: "grassroots_junior" | "amateur_professional"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5611,6 +5626,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_group_tier: ["grassroots_junior", "amateur_professional"],
+    },
   },
 } as const
