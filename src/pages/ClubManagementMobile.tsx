@@ -84,6 +84,7 @@ export default function ClubManagementMobile() {
         name: clubData.name,
         reference_number: clubData.referenceNumber,
         subscription_type: clubData.subscriptionType || 'free',
+        user_group_tier: clubData.userGroupTier || 'grassroots_junior',
         logo_url: clubData.logoUrl
       }]).select().single();
 
