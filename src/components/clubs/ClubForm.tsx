@@ -75,6 +75,28 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
             />
           </div>
 
+          {/* Club Level */}
+          <div className="space-y-2">
+            <Label htmlFor="userGroupTier">Club Level</Label>
+            <Select
+              value={formData.userGroupTier}
+              onValueChange={(value: UserGroupTier) =>
+                setFormData(prev => ({ ...prev, userGroupTier: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select club level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grassroots_junior">Grassroots / Junior</SelectItem>
+                <SelectItem value="amateur_professional">Amateur / Professional</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Grassroots / Junior clubs cannot host an Academy. Amateur / Professional clubs can create and manage an Academy.
+            </p>
+          </div>
+
           {/* Subscription Type */}
           <div className="space-y-2">
             <Label htmlFor="subscriptionType">Subscription Type</Label>
