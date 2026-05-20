@@ -84,6 +84,7 @@ export const ClubManagement = () => {
         name: clubData.name,
         reference_number: clubData.referenceNumber,
         subscription_type: clubData.subscriptionType || 'free',
+        user_group_tier: clubData.userGroupTier || 'grassroots_junior',
         logo_url: clubData.logoUrl,
       }]).select().single();
       if (error) throw error;
@@ -100,7 +101,9 @@ export const ClubManagement = () => {
     try {
       const { error } = await supabase.from('clubs').update({
         name: clubData.name, reference_number: clubData.referenceNumber,
-        subscription_type: clubData.subscriptionType, logo_url: clubData.logoUrl,
+        subscription_type: clubData.subscriptionType,
+        user_group_tier: clubData.userGroupTier,
+        logo_url: clubData.logoUrl,
       }).eq('id', selectedClub.id);
       if (error) throw error;
       await refreshUserData();
