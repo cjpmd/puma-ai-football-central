@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Club, SubscriptionType } from '@/types/index';
+import { Club, SubscriptionType, UserGroupTier } from '@/types/index';
 import { LogoUpload } from '@/components/shared/LogoUpload';
 
 interface ClubFormProps {
@@ -19,6 +19,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
     name: club?.name || '',
     referenceNumber: club?.referenceNumber || '',
     subscriptionType: (club?.subscriptionType || 'free') as SubscriptionType,
+    userGroupTier: (club?.userGroupTier || 'grassroots_junior') as UserGroupTier,
     logoUrl: club?.logoUrl || null
   });
 
@@ -72,6 +73,28 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
               onChange={(e) => setFormData(prev => ({ ...prev, referenceNumber: e.target.value }))}
               placeholder="Enter reference number"
             />
+          </div>
+
+          {/* Club Level */}
+          <div className="space-y-2">
+            <Label htmlFor="userGroupTier">Club Level</Label>
+            <Select
+              value={formData.userGroupTier}
+              onValueChange={(value: UserGroupTier) =>
+                setFormData(prev => ({ ...prev, userGroupTier: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select club level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grassroots_junior">Grassroots / Junior</SelectItem>
+                <SelectItem value="amateur_professional">Amateur / Professional</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Grassroots / Junior clubs cannot host an Academy. Amateur / Professional clubs can create and manage an Academy.
+            </p>
           </div>
 
           {/* Subscription Type */}

@@ -1,82 +1,53 @@
 ## Root cause
 
-Profile fetch is failing with **"infinite recursion detected in policy for relation user_clubs"** (seen in session replay). With no profile loaded, `isGlobalAdmin` is false, `clubs`/`teams` arrays are empty, and `SmartViewContext` only adds the `parent` view (because `connectedPlayers` still loads via `user_players`). That's why you see only the Parent role and lose super-user rights.
+Two different concepts are conflated in the UI:
 
-The recursion was introduced when the Academy/Club hierarchy migration rewrote `user_clubs` RLS. The current SELECT/INSERT/UPDATE/DELETE policies on `user_clubs` all contain:
+- **Subscription tier** (`clubs.subscription_type`): `free / premium / pro / analytics_plus` — billing only.
+- **Club level** (`clubs.user_group_tier`): `grassroots_junior / amateur_professional` — gates the Academy module.
 
-```sql
-EXISTS (SELECT 1 FROM user_clubs uc2 WHERE uc2.club_id = user_clubs.club_id
-        AND uc2.user_id = auth.uid()
-        AND uc2.role IN ('club_admin','club_chair'))
-```
-
-That sub-query re-evaluates RLS on `user_clubs` → infinite recursion → every dependent query (clubs load, teams via clubs, profile-parallel fetches) errors out.
+Today, `ClubForm` only exposes Subscription Type with a "Professional" label. There's no UI anywhere to set `user_group_tier`, so every new club defaults to `grassroots_junior`. `ClubAcademySection` then refuses to enable Academy. (Confirmed in DB: Dundee FC has `subscription_type=pro`, `user_group_tier=grassroots_junior`.)
 
 ## Fix
 
-### 1. Migration — break the recursion on `user_clubs`
+### 1. Add a "Club Level" selector to `ClubForm`
 
-There is already a `SECURITY DEFINER` helper `public.is_user_club_admin(p_club_id, p_user_id)` that bypasses RLS. Replace the recursive sub-queries with calls to it.
+New field above Subscription Type:
 
-```sql
--- SELECT: own rows OR you're a club admin for that club OR global admin
-DROP POLICY "user_clubs_select_own" ON public.user_clubs;
-DROP POLICY "user_clubs_select_as_admin" ON public.user_clubs;
-CREATE POLICY "user_clubs_select"
-  ON public.user_clubs FOR SELECT TO authenticated
-  USING (
-    user_id = auth.uid()
-    OR public.is_global_admin(auth.uid())
-    OR public.is_user_club_admin(club_id, auth.uid())
-  );
+- Label: **Club Level**
+- Help text: "Grassroots / Junior clubs cannot host an Academy. Amateur / Professional clubs can create and manage an Academy."
+- Options:
+  - **Grassroots / Junior** → `grassroots_junior`
+  - **Amateur / Professional** → `amateur_professional`
+- Default: existing value, else `grassroots_junior` for new clubs.
 
--- INSERT
-DROP POLICY "user_clubs_insert" ON public.user_clubs;
-CREATE POLICY "user_clubs_insert"
-  ON public.user_clubs FOR INSERT TO authenticated
-  WITH CHECK (
-    public.is_global_admin(auth.uid())
-    OR public.is_user_club_admin(club_id, auth.uid())
-    OR (user_id = auth.uid() AND role = 'club_member')
-  );
+Wire through:
+- `Club` type already has `userGroupTier?: UserGroupTier` — pass it in `formData`.
+- `handleCreateClub` and `handleUpdateClub` in `src/pages/ClubManagement.tsx` (and the mobile equivalent in `src/pages/ClubManagementMobile.tsx`) write `user_group_tier: clubData.userGroupTier ?? 'grassroots_junior'` on insert and only when set on update.
 
--- UPDATE
-DROP POLICY "user_clubs_update" ON public.user_clubs;
-CREATE POLICY "user_clubs_update"
-  ON public.user_clubs FOR UPDATE TO authenticated
-  USING (
-    public.is_global_admin(auth.uid())
-    OR public.is_user_club_admin(club_id, auth.uid())
-  );
+### 2. Sanity-check existing entry points
 
--- DELETE
-DROP POLICY "user_clubs_delete" ON public.user_clubs;
-CREATE POLICY "user_clubs_delete"
-  ON public.user_clubs FOR DELETE TO authenticated
-  USING (
-    user_id = auth.uid()
-    OR public.is_global_admin(auth.uid())
-    OR public.is_user_club_admin(club_id, auth.uid())
-  );
-```
+- `ClubSetupWizard` (`src/components/auth/ClubSetupWizard.tsx`), `ClubTeamLinking`, `SplitTeamWizard` — these still hard-code `subscription_type: 'free'` and don't touch tier. Leave subscription as-is; just allow tier to remain DB default. Out of scope to add the selector to those flows unless you want it everywhere — happy to do that as a follow-up.
 
-### 2. Audit sibling tables for the same pattern
+### 3. Keep the gate, improve the empty-state copy
 
-While in there, double-check `user_teams` and `user_academies` policies don't have the same recursive shape. From inspection:
-- `user_teams` is fine (only `user_id = auth.uid()` and `user_is_global_admin()`).
-- `user_academies` uses `is_academy_member(...)` — if that helper queries `user_academies` without `SECURITY DEFINER`, it would have the same bug. Verify and, if needed, rewrite to use a definer function. Apply the same fix only if recursion is confirmed.
+In `ClubAcademySection`, when `userGroupTier !== 'amateur_professional'` and the user is a club admin, show an inline "Change Club Level" button that opens the Club edit form (or just sends them to Club Settings). Non-admins keep the current read-only message.
 
-### 3. No frontend changes required
+### 4. One-off fix for Dundee FC
 
-Once profile loads cleanly, `AuthorizationContext` will see `global_admin` in `profile.roles`, `SmartViewContext` will populate `availableViews` with `global_admin / club_admin / team_manager / coach / parent` for you, and the `RoleContextSwitcher` dropdown will reappear in the header. Your existing localStorage preference (`smartview-<your-id>`) may still be pinned to `parent` — if so, switch via the dropdown once it reappears (it persists per-user).
+After deploy, you (global admin) edit Dundee FC in `/clubs` and pick **Amateur / Professional** — saves to `user_group_tier='amateur_professional'`. No data backfill is needed for other clubs because none are intended to be academies.
 
 ## Out of scope
 
-- Any new role types.
-- Refactor of `is_academy_member` unless step 2 confirms recursion.
-- Cosmetic changes to the role switcher.
+- Adding Club Level to every signup wizard.
+- Renaming or restructuring `subscription_type`.
+- Auto-deriving tier from subscription (they're orthogonal — a grassroots club can still be on a paid plan).
+- Any RLS/migration changes (column + enum already exist).
 
 ## Files touched
 
-- New Supabase migration: `user_clubs` RLS rewrite (+ optional `user_academies` fix if recursion is confirmed).
-- No application source changes.
+- `src/components/clubs/ClubForm.tsx` — add Club Level field.
+- `src/pages/ClubManagement.tsx` — write `user_group_tier` on create/update.
+- `src/pages/ClubManagementMobile.tsx` — same.
+- `src/components/clubs/ClubAcademySection.tsx` — add "Change Club Level" hint for club admins in the disabled-state card.
+
+No database changes.

@@ -183,7 +183,9 @@ export function ClubAcademySection({ clubId, clubName, userGroupTier, isClubAdmi
             <p className="font-medium">Academy not available</p>
             <p className="text-sm text-muted-foreground mt-1">
               Academy functionality is available for Amateur &amp; Professional clubs only.
-              Update this club's tier in Club Settings to enable it.
+              {isClubAdmin
+                ? ' Edit this club and set Club Level to "Amateur / Professional" to enable it.'
+                : " Ask a club admin to update this club's level."}
             </p>
           </div>
         </CardContent>
