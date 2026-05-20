@@ -72,11 +72,11 @@ export default function CalendarEvents() {
     if (clubIds.length === 0) return;
     (async () => {
       const { data } = await supabase
-        .from('academy_clubs')
-        .select('academies(performance_app_url)')
+        .from('academies')
+        .select('performance_app_url')
         .in('club_id', clubIds);
       const url = (data ?? [])
-        .map((row: any) => row.academies?.performance_app_url as string | null | undefined)
+        .map((row: any) => row.performance_app_url as string | null | undefined)
         .find(u => !!u) ?? null;
       setPerformanceAppUrl(url ?? null);
     })();
