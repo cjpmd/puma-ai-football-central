@@ -96,8 +96,40 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       // Only exclude Capacitor modules in native builds, not web builds
-      external: []
-    }
+      external: [],
+      output: {
+        manualChunks: {
+          // Core React runtime — always cached after first visit
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Data layer — query client + Supabase
+          'data-vendor': [
+            '@tanstack/react-query',
+            '@tanstack/react-query-persist-client',
+            '@tanstack/query-sync-storage-persister',
+            '@supabase/supabase-js',
+          ],
+          // UI component library — large but stable between deploys
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-scroll-area',
+            '@radix-ui/react-accordion',
+          ],
+          // Charts — heavy, only needed on analytics screens
+          'charts-vendor': ['recharts'],
+          // DnD — only needed on formation editor
+          'dnd-vendor': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/modifiers', '@dnd-kit/utilities'],
+          // Sentry — error tracking, isolated chunk
+          'sentry-vendor': ['@sentry/react', '@sentry/capacitor'],
+        },
+      },
+    },
+    // Warn when any chunk exceeds 200 KB (gzip) — the CI target
+    chunkSizeWarningLimit: 200,
   },
   define: {
     global: 'globalThis',

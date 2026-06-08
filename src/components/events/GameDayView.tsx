@@ -3,6 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useOfflineAwareQuery } from '@/hooks/useOfflineAwareQuery';
+import { staleLabel } from '@/lib/offlineCache';
 import { Button } from '@/components/ui/button';
 import { GameDayFormationCard } from './GameDayFormationCard';
 import { GameDayTimeline } from './GameDayTimeline';
@@ -34,12 +36,14 @@ export const GameDayView: React.FC = () => {
   const [liveSubstitutions, setLiveSubstitutions] = useState<LiveSubstitution[]>([]);
   const [viewMode, setViewMode] = useState<'pitch' | 'list'>('pitch');
   
-  const { 
-    data: event, 
-    error: eventError, 
+  const {
+    data: event,
+    error: eventError,
     isLoading: eventLoading,
-    refetch: refetchEvent
-  } = useQuery({
+    refetch: refetchEvent,
+    staleMins: eventStaleMins,
+  } = useOfflineAwareQuery({
+    cacheKey: `game_day_event_${eventId}`,
     queryKey: ['event', eventId],
     enabled: !!eventId,
     queryFn: async () => {
@@ -48,18 +52,20 @@ export const GameDayView: React.FC = () => {
         .select('*')
         .eq('id', eventId)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data;
     },
     retry: 1
   });
 
-  const { 
-    data: allEventSelections, 
-    error: selectionsError, 
-    isLoading: selectionsLoading 
-  } = useQuery({
+  const {
+    data: allEventSelections,
+    error: selectionsError,
+    isLoading: selectionsLoading,
+    staleMins: selectionsStaleMins,
+  } = useOfflineAwareQuery({
+    cacheKey: `game_day_selections_${eventId}`,
     queryKey: ['event-selections', eventId],
     enabled: !!eventId,
     queryFn: async () => {
@@ -75,12 +81,15 @@ export const GameDayView: React.FC = () => {
         .eq('event_id', eventId)
         .order('team_number', { ascending: true })
         .order('period_number', { ascending: true });
-      
+
       if (error) throw error;
       return data || [];
     },
     retry: 1
   });
+
+  // Show stale indicator if serving cached data (e.g. pitch-side WiFi dropped)
+  const staleBannerLabel = staleLabel(eventStaleMins ?? selectionsStaleMins);
 
   // Fetch players for enriching player data
   const { data: players } = useQuery({
@@ -537,6 +546,13 @@ export const GameDayView: React.FC = () => {
 
   return (
     <div className="game-day-container">
+      {/* Offline stale data banner — only shown when serving cached data */}
+      {staleBannerLabel && (
+        <div className="flex items-center justify-center gap-1.5 py-1 px-3 bg-amber-500/20 border-b border-amber-500/30">
+          <span className="text-xs text-amber-300">{staleBannerLabel} · Offline mode</span>
+        </div>
+      )}
+
       {/* iOS glass header */}
       <div className="game-day-header-glass">
         <div className="flex items-center justify-between px-3 py-2 gap-2">
