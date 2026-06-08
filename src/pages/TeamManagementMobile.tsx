@@ -1,6 +1,11 @@
 
-import { useState, useEffect } from 'react';
+// OFFLINE CAPABLE — cached via localStorage, last updated 2026-06-08
+// Screens: Team Manager (teams list). Cache key: offline_teams_<userId>
+// Strategy: serve localStorage instantly on mount, refresh in background.
+
+import { useState, useEffect, useRef } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
+import { readCache, writeCache, staleLabel, staleMins } from '@/lib/offlineCache';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,8 +38,23 @@ export default function TeamManagementMobile() {
   const { filteredTeams: clubTeams } = useClubContext();
   const { currentTeam } = useTeamContext();
   const [teamsData, setTeamsData] = useState<Team[]>([]);
+  const [staleSavedAt, setStaleSavedAt] = useState<number | null>(null);
+  const teamsCacheKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Build cache key from the user — teams are per-user
+    const cacheKey = user?.id ? `offline_teams_${user.id}` : null;
+    teamsCacheKeyRef.current = cacheKey;
+
+    if (cacheKey) {
+      const cached = readCache<Team[]>(cacheKey);
+      if (cached?.data?.length) {
+        setTeamsData(cached.data);
+        setStaleSavedAt(cached.savedAt);
+        setLoading(false);
+      }
+    }
+
     loadTeamsData();
   }, [clubTeams]);
 
@@ -91,6 +111,11 @@ export default function TeamManagementMobile() {
       }));
       
       setTeamsData(transformedTeams);
+      // Write fresh data to offline cache
+      if (teamsCacheKeyRef.current) {
+        writeCache(teamsCacheKeyRef.current, transformedTeams);
+      }
+      setStaleSavedAt(null);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -113,6 +138,13 @@ export default function TeamManagementMobile() {
 
   return (
     <MobileLayout>
+      {staleLabel(staleSavedAt ? staleMins({ data: teamsData, savedAt: staleSavedAt }) : null) && (
+        <div className="flex items-center justify-center gap-1.5 py-1 px-3 bg-amber-500/20 border-b border-amber-500/30">
+          <span className="text-xs text-amber-300">
+            {staleLabel(staleMins({ data: teamsData, savedAt: staleSavedAt! }))} · Offline mode
+          </span>
+        </div>
+      )}
       <div className="space-y-4">
         {/* Search and Actions */}
         <div className="flex gap-3">

@@ -1,5 +1,10 @@
+// OFFLINE CAPABLE — cached via localStorage, last updated 2026-06-08
+// Screen: Team Analytics (My Team). Cache key: offline_analytics_<teamId>_<season>
+// Strategy: serve localStorage instantly on mount, refresh in background.
+
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { readCache, writeCache, staleLabel, staleMins } from '@/lib/offlineCache';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -9,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTeamContext } from '@/contexts/TeamContext';
 import { useToast } from '@/hooks/use-toast';
@@ -113,6 +118,8 @@ export default function MyTeamMobile() {
   const { toast } = useToast();
   const [analytics, setAnalytics] = useState<AnalyticsData>(EMPTY_ANALYTICS);
   const [loading, setLoading] = useState(false);
+  const [staleSavedAt, setStaleSavedAt] = useState<number | null>(null);
+  const analyticsCacheKeyRef = useRef<string | null>(null);
   const [showSeasonList, setShowSeasonList] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
@@ -396,6 +403,29 @@ export default function MyTeamMobile() {
         captainAppearances,
         gameDayStats,
       });
+      // Write fresh analytics to offline cache
+      if (analyticsCacheKeyRef.current) {
+        writeCache(analyticsCacheKeyRef.current, {
+          totalWins: wins, totalDraws: draws, totalLosses: losses, totalGames,
+          winRate,
+          goalsScored: goalsFor, goalsConceded: goalsAgainst,
+          goalDifference: goalsFor - goalsAgainst,
+          avgGoalsPerGame: totalGames > 0 ? Math.round((goalsFor / totalGames) * 10) / 10 : 0,
+          recentResults: matchEvents.slice(0, 5),
+          topPerformers: allPlayerStats.filter(p => p.appearances > 0).sort((a, b) => b.appearances - a.appearances).slice(0, 3),
+          totalGoals: allPlayerStats.reduce((s, p) => s + p.goals, 0),
+          totalAssists: allPlayerStats.reduce((s, p) => s + p.assists, 0),
+          totalSaves: allPlayerStats.reduce((s, p) => s + p.saves, 0),
+          yellowCards: allPlayerStats.reduce((s, p) => s + p.yellowCards, 0),
+          redCards: allPlayerStats.reduce((s, p) => s + p.redCards, 0),
+          topScorers: allPlayerStats.filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 3),
+          topAssisters: allPlayerStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 3),
+          categoryStats: Array.from(categoryStatsMap.values()).filter(c => c.totalGames > 0).sort((a, b) => b.totalGames - a.totalGames),
+          matchResults, trainingCount, availableEventTypes,
+          totalAppearances, attendanceByType, captainAppearances, gameDayStats,
+        } as AnalyticsData);
+      }
+      setStaleSavedAt(null);
     } catch {
       toast({ title: 'Error', description: 'Failed to load analytics data', variant: 'destructive' });
     } finally {
@@ -405,6 +435,16 @@ export default function MyTeamMobile() {
 
   useEffect(() => {
     if (currentTeam && selectedSeason) {
+      const cacheKey = `offline_analytics_${currentTeam.id}_${selectedSeason.label}`;
+      analyticsCacheKeyRef.current = cacheKey;
+
+      // Serve cached analytics instantly while network loads
+      const cached = readCache<AnalyticsData>(cacheKey);
+      if (cached?.data) {
+        setAnalytics(cached.data);
+        setStaleSavedAt(cached.savedAt);
+      }
+
       loadAnalyticsData();
     }
   }, [loadAnalyticsData]);
@@ -508,6 +548,13 @@ export default function MyTeamMobile() {
 
   return (
     <MobileLayout>
+      {staleSavedAt && staleLabel(staleMins({ data: analytics, savedAt: staleSavedAt })) && (
+        <div className="flex items-center justify-center gap-1.5 py-1 px-3 bg-amber-500/20 border-b border-amber-500/30">
+          <span className="text-xs text-amber-300">
+            {staleLabel(staleMins({ data: analytics, savedAt: staleSavedAt }))} · Offline mode
+          </span>
+        </div>
+      )}
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center gap-2">

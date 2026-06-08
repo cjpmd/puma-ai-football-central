@@ -1,5 +1,11 @@
+// OFFLINE CAPABLE — cached via localStorage, last updated 2026-06-08
+// Screens: Event List + Individual Event detail (modal within this component).
+// Cache key: offline_events_<sorted-teamIds>
+// Strategy: serve localStorage instantly on mount, refresh in background.
+
 import { logger } from '@/lib/logger';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { readCache, writeCache, staleLabel, staleMins } from '@/lib/offlineCache';
 import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -221,6 +227,8 @@ export default function CalendarEventsMobile() {
   const [searchParams, setSearchParams] = React.useState(() => new URLSearchParams(window.location.search));
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [staleSavedAt, setStaleSavedAt] = useState<number | null>(null);
+  const eventsCacheKeyRef = useRef<string | null>(null);
   const [eventsToShow, setEventsToShow] = useState(5);
   const showMoreIncrement = 5;
   const eventsPageSize = 50;
@@ -284,6 +292,26 @@ export default function CalendarEventsMobile() {
   useEffect(() => {
     setEventsServerOffset(0);
     setHasMoreEventsServer(false);
+
+    // Build cache key from the same teams loadEvents will query
+    const teamsToQuery = viewMode === 'all'
+      ? (authTeams?.length ? authTeams : allTeams || [])
+      : (currentTeam ? [currentTeam] : []);
+    const cacheKey = teamsToQuery.length
+      ? `offline_events_${teamsToQuery.map(t => t.id).sort().join('_')}`
+      : null;
+    eventsCacheKeyRef.current = cacheKey;
+
+    // Serve cached events immediately so the list is visible before network returns
+    if (cacheKey) {
+      const cached = readCache<DatabaseEvent[]>(cacheKey);
+      if (cached?.data?.length) {
+        setEvents(cached.data);
+        setStaleSavedAt(cached.savedAt);
+        setLoading(false);
+      }
+    }
+
     loadEvents();
   }, [currentTeam, viewMode, availableTeams]);
 
@@ -459,6 +487,11 @@ export default function CalendarEventsMobile() {
 
       logger.log('Loaded events:', eventsResult.data?.length, 'View mode:', viewMode);
       setEvents(((eventsResult.data || []) as unknown) as DatabaseEvent[]);
+      // Write fresh events to offline cache and clear stale indicator
+      if (eventsCacheKeyRef.current && eventsResult.data?.length) {
+        writeCache(eventsCacheKeyRef.current, eventsResult.data);
+      }
+      setStaleSavedAt(null);
 
       // Group selections by event_id for easy lookup
       const selectionsByEvent: {[key: string]: any[]} = {};
@@ -1088,6 +1121,13 @@ export default function CalendarEventsMobile() {
 
   return (
     <MobileLayout>
+      {staleSavedAt && staleLabel(staleMins({ data: events, savedAt: staleSavedAt })) && (
+        <div className="flex items-center justify-center gap-1.5 py-1 px-3 bg-amber-500/20 border-b border-amber-500/30">
+          <span className="text-xs text-amber-300">
+            {staleLabel(staleMins({ data: events, savedAt: staleSavedAt }))} · Offline mode
+          </span>
+        </div>
+      )}
       <div className="space-y-4 pb-8 px-1">
         {/* Pending Availability - First Priority (filtered to exclude past events) */}
         {(() => {
