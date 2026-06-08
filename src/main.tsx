@@ -1,6 +1,9 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { logBundleLoadTime } from './lib/performanceMonitor'
+
+logBundleLoadTime();
 
 // Detect Lovable preview / iframe contexts where Service Worker registration
 // fails with "Failed to access storage" and produces a blank screen.
