@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/lib/queryKeys';
+import { fetchRoster } from '@/hooks/usePrefetch';
 
 export interface TeamPlayer {
   id: string;
@@ -29,46 +30,22 @@ export interface TeamPlayer {
   updated_at: string;
 }
 
-const PLAYER_FIELDS = [
-  'id','name','squad_number','team_id','type','availability','status',
-  'date_of_birth','photo_url','subscription_type','subscription_status',
-  'performance_category_id','attributes','objectives','comments','match_stats',
-  'kit_sizes','card_design_id','fun_stats','play_style','parent_id',
-  'leave_date','leave_comments','created_at','updated_at',
-].join(',');
-
 export function useTeamPlayers(teamId: string | undefined) {
-  const [players, setPlayers] = useState<TeamPlayer[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchPlayers = useCallback(async () => {
-    if (!teamId) {
-      setPlayers([]);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: queryError } = await supabase
-        .from('players')
-        .select(PLAYER_FIELDS)
-        .eq('team_id', teamId)
-        .neq('status', 'left')
-        .neq('status', 'inactive')
-        .order('squad_number', { ascending: true });
-      if (queryError) throw queryError;
-      setPlayers(((data as unknown) as TeamPlayer[]) || []);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load players'));
-    } finally {
-      setLoading(false);
-    }
-  }, [teamId]);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: teamId ? QUERY_KEYS.teamPlayers(teamId) : ['team_players_empty'],
+    queryFn: () => fetchRoster(teamId!),
+    enabled: !!teamId,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    meta: { persist: true },
+  });
 
-  useEffect(() => {
-    fetchPlayers();
-  }, [fetchPlayers]);
-
-  return { players, loading, error, refetch: fetchPlayers };
+  return {
+    players: (data as TeamPlayer[]) ?? [],
+    loading: isLoading,
+    error: error as Error | null,
+    refetch,
+  };
 }

@@ -17,6 +17,8 @@ import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
 import { attachQueryPersistence } from "@/lib/queryPersister";
+import { usePrefetch } from "@/hooks/usePrefetch";
+import { usePerformanceMonitor } from "@/lib/performanceMonitor";
 
 // ---------- Lazy page imports (code-split per route) ----------
 const Index                        = lazy(() => import("./pages/Index"));
@@ -79,7 +81,8 @@ const Settings                     = lazy(() => import("./pages/Settings"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000,
+      staleTime: 5 * 60_000,       // 5 minutes — cached screens feel instant
+      gcTime: 30 * 60_000,         // 30 minutes in memory between navigations
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -97,6 +100,8 @@ const Page = ({ children, name }: { children: React.ReactNode; name?: string }) 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(() => !sessionStorage.getItem('splashShown'));
   const handleSplashComplete = () => { sessionStorage.setItem('splashShown', 'true'); setShowSplash(false); };
+  usePrefetch();
+  usePerformanceMonitor();
 
   return (
     <>
