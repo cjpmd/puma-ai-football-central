@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:ios": "vite build && npx cap sync ios",
+    "build:android": "vite build && npx cap sync android",
+    "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -49,6 +52,8 @@
     "@radix-ui/react-toggle": "^1.1.0",
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.4",
+    "@sentry/capacitor": "^4.0.0",
+    "@sentry/react": "^10.43.0",
     "@supabase/supabase-js": "^2.49.8",
     "@tanstack/query-sync-storage-persister": "^5.96.1",
     "@tanstack/react-query": "^5.56.2",

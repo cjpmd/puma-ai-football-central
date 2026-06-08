@@ -204,6 +204,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [toast]);
 
+  // Proactive token refresh — fires 60 s before expiry so the user is never
+  // forced to re-login mid-match.  Supabase sessions expire after 1 hour by
+  // default; we poll every 45 minutes to refresh with headroom.
+  useEffect(() => {
+    if (!user) return;
+
+    const REFRESH_INTERVAL_MS = 45 * 60 * 1000; // 45 minutes
+    const intervalId = setInterval(async () => {
+      try {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          logger.error('Proactive session refresh failed:', error);
+        } else {
+          logger.log('Session refreshed proactively');
+        }
+      } catch (err) {
+        logger.error('Session refresh exception:', err);
+      }
+    }, REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [user]);
+
   const fetchProfile = async (userId: string) => {
     try {
       logger.log('Fetching profile for user:', userId);
