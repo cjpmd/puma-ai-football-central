@@ -1,3 +1,9 @@
+// OFFLINE CAPABLE — cached via localStorage, last updated 2026-06-08
+// Screen: Game Day (team sheet, formation, substitutions, live match).
+// Cache keys: game_day_event_<eventId>, game_day_selections_<eventId>
+// Strategy: serve localStorage instantly on mount via useOfflineAwareQuery,
+//           refresh in background; amber banner shown when serving stale data.
+
 import { logger } from '@/lib/logger';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
