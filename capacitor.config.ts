@@ -5,6 +5,9 @@ const config: CapacitorConfig = {
   appId: 'com.originsports.app',
   appName: 'Origin Sports',
   webDir: 'dist',
+  ios: {
+    backgroundColor: '#0d0d0d'
+  },
   // Only use server.url for development with hot reload
   // Remove this for production native builds
   ...(process.env.NODE_ENV === 'development' && {

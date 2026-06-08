@@ -927,31 +927,8 @@
   /* No transform on mobile for pitch */
 }
 
-/* Landscape mode adjustments */
-@media (orientation: landscape) and (max-height: 500px) {
-  /* No pitch transform */
-
-  .period-card {
-    flex-direction: row;
-  }
-
-  .substitute-bench {
-    flex-direction: column;
-    width: 80px;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  .player-image-container {
-    width: 38px;
-    height: 38px;
-  }
-
-  .player-info-rectangle {
-    min-width: 44px;
-    padding: 2px 4px;
-  }
-}
+/* Landscape mode adjustments — disabled: app is portrait-only */
+/* @media (orientation: landscape) and (max-height: 500px) { } */
 
 /* ============= LEGACY CIRCLE STYLES (for compatibility) ============= */
 
