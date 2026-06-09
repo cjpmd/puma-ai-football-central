@@ -768,45 +768,66 @@ export type Database = {
       drills: {
         Row: {
           age_group: string | null
+          coach_tips: string[] | null
           created_at: string | null
           created_by: string | null
           description: string | null
           difficulty_level: string | null
           duration_minutes: number | null
+          equipment: string[] | null
           external_url: string | null
+          how_to_play: string | null
           id: string
           is_public: boolean | null
           name: string
+          player_tips: string[] | null
+          practice_design: string | null
+          source: string | null
           team_id: string | null
           updated_at: string | null
+          variations: string[] | null
         }
         Insert: {
           age_group?: string | null
+          coach_tips?: string[] | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           difficulty_level?: string | null
           duration_minutes?: number | null
+          equipment?: string[] | null
           external_url?: string | null
+          how_to_play?: string | null
           id?: string
           is_public?: boolean | null
           name: string
+          player_tips?: string[] | null
+          practice_design?: string | null
+          source?: string | null
           team_id?: string | null
           updated_at?: string | null
+          variations?: string[] | null
         }
         Update: {
           age_group?: string | null
+          coach_tips?: string[] | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           difficulty_level?: string | null
           duration_minutes?: number | null
+          equipment?: string[] | null
           external_url?: string | null
+          how_to_play?: string | null
           id?: string
           is_public?: boolean | null
           name?: string
+          player_tips?: string[] | null
+          practice_design?: string | null
+          source?: string | null
           team_id?: string | null
           updated_at?: string | null
+          variations?: string[] | null
         }
         Relationships: [
           {
