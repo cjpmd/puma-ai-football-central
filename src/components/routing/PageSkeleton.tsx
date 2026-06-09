@@ -31,7 +31,7 @@ export const PageSkeleton = () => (
     {/* Tab row */}
     <div className="flex gap-2 px-4 py-2 border-b border-white/10">
       {[80, 60, 72].map((w) => (
-        <Shimmer key={w} className="h-7 rounded-full" style={{ width: w }} />
+        <Shimmer key={w} className={`h-7 rounded-full w-[${w}px]`} />
       ))}
     </div>
 
