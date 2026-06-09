@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DrillLibraryManager } from '@/components/training/DrillLibraryManager';
+import { DrillLibraryBrowser } from '@/components/training/drill-library/DrillLibraryBrowser';
 import { DrillCreator } from '@/components/training/DrillCreator';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { CoachTrainingDashboard } from '@/components/training/CoachTrainingDashboard';
