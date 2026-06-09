@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DrillLibraryManager } from '@/components/training/DrillLibraryManager';
+import { DrillLibraryBrowser } from '@/components/training/drill-library/DrillLibraryBrowser';
 import { DrillCreator } from '@/components/training/DrillCreator';
 import { CoachTrainingDashboard } from '@/components/training/CoachTrainingDashboard';
 import { MobileLayout } from '@/components/layout/MobileLayout';
@@ -356,10 +357,11 @@ export default function TrainingMobile() {
           <TabsContent value="library" className="space-y-4">
             <div className="ios-card p-4">
               <h3 className="text-base font-semibold text-white">Drill Library</h3>
-              <p className="text-xs text-white/60 mb-3">Manage your training drills</p>
-              <DrillLibraryManager />
+              <p className="text-xs text-white/60 mb-3">Browse drills with videos and tips</p>
+              <DrillLibraryBrowser />
             </div>
           </TabsContent>
+
 
           <TabsContent value="plans" className="space-y-4">
             <CoachTrainingDashboard

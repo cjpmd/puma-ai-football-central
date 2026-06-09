@@ -92,14 +92,15 @@ export default function Training() {
               <CardHeader>
                 <CardTitle>Drill Library</CardTitle>
                 <CardDescription>
-                  Manage your collection of training drills that can be used across different training sessions
+                  Browse drills with videos, coach tips, and equipment lists
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <DrillLibraryManager />
+                <DrillLibraryBrowser />
               </CardContent>
             </Card>
           </TabsContent>
+
 
           <TabsContent value="plans" className="space-y-4">
             <CoachTrainingDashboard 
