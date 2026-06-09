@@ -1,74 +1,23 @@
-## Drill Library for Training
+## Create `drill-video-url` edge function for Wasabi (eu-west-1)
 
-Add a player/coach-friendly Drill Library to the Training section. Read-only browsing experience (no edits — `DrillLibraryManager` already handles authoring).
+Wasabi credentials are saved. Create a single edge function that returns a pre-signed Wasabi GET URL so the drill detail modal can stream video.
 
-### Where it lives
+### New file: `supabase/functions/drill-video-url/index.ts`
 
-Add a new "Drill Library" entry in `src/pages/Training.tsx` (and `src/pages/TrainingMobile.tsx` for parity). Either:
-- Replace the existing "Drill Library" tab content with the new browser component, OR
-- Add it as an additional tab labelled "Browse Drills" so the existing manager stays for authors.
+- Region: `eu-west-1`, host: `s3.eu-west-1.wasabisys.com`, bucket: `originsportstrainingcontent`
+- POST `{ file_path: string }` → `{ url: string, expires_in: 3600 }`
+- Auth: require `Authorization: Bearer <jwt>`, verify with `supabase.auth.getClaims(token)`
+- Generates AWS SigV4 pre-signed GET URL using `crypto.subtle` (HMAC-SHA256) — no external SDK
+- Path segments RFC-3986 encoded, slashes preserved (handles `Drill Videos/...` keys)
+- Standard CORS headers on all responses, OPTIONS preflight handled
 
-Recommendation: add as a new first tab "Browse" and keep "Manage" (existing `DrillLibraryManager`) for staff.
+### No other changes
 
-### New files
+- Frontend already calls `supabase.functions.invoke('drill-video-url', { body: { file_path } })`
+- No DB, RLS, or client changes
 
-1. `src/components/training/drill-library/DrillLibraryBrowser.tsx`
-   - Fetches drills via React Query joining `drills`, `drill_tag_assignments(drill_tags(*))`, and `drill_media`.
-   - Tag filter chips row (multi-select, uses `drill_tags.color`).
-   - Search input over `name` + `description` (client-side filter after fetch).
-   - Responsive card grid. Each card: name, coloured tag pills, equipment count, media indicator.
-   - Empty state.
+### After deploy
 
-2. `src/components/training/drill-library/DrillDetailModal.tsx`
-   - Shadcn `Dialog` (desktop) / `Sheet` (mobile via `useIsMobile`).
-   - Sections: Description, Practice Design, How to Play, Coach Tips (ul), Player Tips (ul), Variations (ul), Equipment (ul).
-   - Video section: on open, if `drill_media[0]` exists, call `supabase.functions.invoke('drill-video-url', { body: { file_path: media.file_url } })`. Show `LoadingSpinner` while pending; render `<video controls>` with `data.url` on success; hide section entirely if no media or on error (with toast).
-   - Uses React Query keyed on `['drill-video-url', drillId]` so it fetches only on open and caches per session.
+If browser playback fails with a CORS error, the bucket needs a CORS rule allowing `GET` from the app origin. I'll guide you through it then.
 
-3. `src/components/training/drill-library/DrillCard.tsx` — presentational card.
-
-4. `src/components/training/drill-library/DrillTagPill.tsx` — small pill using `tag.color` as background (with alpha) and text.
-
-### Edits
-
-- `src/pages/Training.tsx`: add new tab + render `DrillLibraryBrowser`.
-- `src/pages/TrainingMobile.tsx`: same.
-
-### Data fetching shape
-
-```ts
-supabase
-  .from('drills')
-  .select(`
-    id, name, description, practice_design, how_to_play,
-    coach_tips, player_tips, variations, equipment,
-    drill_tag_assignments(drill_tags(id, name, color)),
-    drill_media(id, file_url, file_name, file_type)
-  `)
-  .order('name');
-```
-
-Flatten `drill_tag_assignments` → `tags[]` in the select callback.
-
-### Video URL fetch (only on modal open)
-
-```ts
-useQuery({
-  queryKey: ['drill-video-url', drill.id],
-  enabled: open && !!media?.file_url,
-  staleTime: 5 * 60 * 1000,
-  queryFn: async () => {
-    const { data, error } = await supabase.functions.invoke('drill-video-url', {
-      body: { file_path: media.file_url },
-    });
-    if (error) throw error;
-    return data.url as string;
-  },
-});
-```
-
-### Out of scope
-
-- No DB migrations, no RLS changes, no edge function changes (already deployed).
-- No edits to existing `DrillLibraryManager` / `DrillCreator` / `DrillEditModal`.
-- No "add to session" buttons in this view (separate flow).
+Switch to build mode to apply.
