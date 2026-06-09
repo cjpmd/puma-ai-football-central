@@ -1,53 +1,74 @@
-## Root cause
+## Drill Library for Training
 
-Two different concepts are conflated in the UI:
+Add a player/coach-friendly Drill Library to the Training section. Read-only browsing experience (no edits — `DrillLibraryManager` already handles authoring).
 
-- **Subscription tier** (`clubs.subscription_type`): `free / premium / pro / analytics_plus` — billing only.
-- **Club level** (`clubs.user_group_tier`): `grassroots_junior / amateur_professional` — gates the Academy module.
+### Where it lives
 
-Today, `ClubForm` only exposes Subscription Type with a "Professional" label. There's no UI anywhere to set `user_group_tier`, so every new club defaults to `grassroots_junior`. `ClubAcademySection` then refuses to enable Academy. (Confirmed in DB: Dundee FC has `subscription_type=pro`, `user_group_tier=grassroots_junior`.)
+Add a new "Drill Library" entry in `src/pages/Training.tsx` (and `src/pages/TrainingMobile.tsx` for parity). Either:
+- Replace the existing "Drill Library" tab content with the new browser component, OR
+- Add it as an additional tab labelled "Browse Drills" so the existing manager stays for authors.
 
-## Fix
+Recommendation: add as a new first tab "Browse" and keep "Manage" (existing `DrillLibraryManager`) for staff.
 
-### 1. Add a "Club Level" selector to `ClubForm`
+### New files
 
-New field above Subscription Type:
+1. `src/components/training/drill-library/DrillLibraryBrowser.tsx`
+   - Fetches drills via React Query joining `drills`, `drill_tag_assignments(drill_tags(*))`, and `drill_media`.
+   - Tag filter chips row (multi-select, uses `drill_tags.color`).
+   - Search input over `name` + `description` (client-side filter after fetch).
+   - Responsive card grid. Each card: name, coloured tag pills, equipment count, media indicator.
+   - Empty state.
 
-- Label: **Club Level**
-- Help text: "Grassroots / Junior clubs cannot host an Academy. Amateur / Professional clubs can create and manage an Academy."
-- Options:
-  - **Grassroots / Junior** → `grassroots_junior`
-  - **Amateur / Professional** → `amateur_professional`
-- Default: existing value, else `grassroots_junior` for new clubs.
+2. `src/components/training/drill-library/DrillDetailModal.tsx`
+   - Shadcn `Dialog` (desktop) / `Sheet` (mobile via `useIsMobile`).
+   - Sections: Description, Practice Design, How to Play, Coach Tips (ul), Player Tips (ul), Variations (ul), Equipment (ul).
+   - Video section: on open, if `drill_media[0]` exists, call `supabase.functions.invoke('drill-video-url', { body: { file_path: media.file_url } })`. Show `LoadingSpinner` while pending; render `<video controls>` with `data.url` on success; hide section entirely if no media or on error (with toast).
+   - Uses React Query keyed on `['drill-video-url', drillId]` so it fetches only on open and caches per session.
 
-Wire through:
-- `Club` type already has `userGroupTier?: UserGroupTier` — pass it in `formData`.
-- `handleCreateClub` and `handleUpdateClub` in `src/pages/ClubManagement.tsx` (and the mobile equivalent in `src/pages/ClubManagementMobile.tsx`) write `user_group_tier: clubData.userGroupTier ?? 'grassroots_junior'` on insert and only when set on update.
+3. `src/components/training/drill-library/DrillCard.tsx` — presentational card.
 
-### 2. Sanity-check existing entry points
+4. `src/components/training/drill-library/DrillTagPill.tsx` — small pill using `tag.color` as background (with alpha) and text.
 
-- `ClubSetupWizard` (`src/components/auth/ClubSetupWizard.tsx`), `ClubTeamLinking`, `SplitTeamWizard` — these still hard-code `subscription_type: 'free'` and don't touch tier. Leave subscription as-is; just allow tier to remain DB default. Out of scope to add the selector to those flows unless you want it everywhere — happy to do that as a follow-up.
+### Edits
 
-### 3. Keep the gate, improve the empty-state copy
+- `src/pages/Training.tsx`: add new tab + render `DrillLibraryBrowser`.
+- `src/pages/TrainingMobile.tsx`: same.
 
-In `ClubAcademySection`, when `userGroupTier !== 'amateur_professional'` and the user is a club admin, show an inline "Change Club Level" button that opens the Club edit form (or just sends them to Club Settings). Non-admins keep the current read-only message.
+### Data fetching shape
 
-### 4. One-off fix for Dundee FC
+```ts
+supabase
+  .from('drills')
+  .select(`
+    id, name, description, practice_design, how_to_play,
+    coach_tips, player_tips, variations, equipment,
+    drill_tag_assignments(drill_tags(id, name, color)),
+    drill_media(id, file_url, file_name, file_type)
+  `)
+  .order('name');
+```
 
-After deploy, you (global admin) edit Dundee FC in `/clubs` and pick **Amateur / Professional** — saves to `user_group_tier='amateur_professional'`. No data backfill is needed for other clubs because none are intended to be academies.
+Flatten `drill_tag_assignments` → `tags[]` in the select callback.
 
-## Out of scope
+### Video URL fetch (only on modal open)
 
-- Adding Club Level to every signup wizard.
-- Renaming or restructuring `subscription_type`.
-- Auto-deriving tier from subscription (they're orthogonal — a grassroots club can still be on a paid plan).
-- Any RLS/migration changes (column + enum already exist).
+```ts
+useQuery({
+  queryKey: ['drill-video-url', drill.id],
+  enabled: open && !!media?.file_url,
+  staleTime: 5 * 60 * 1000,
+  queryFn: async () => {
+    const { data, error } = await supabase.functions.invoke('drill-video-url', {
+      body: { file_path: media.file_url },
+    });
+    if (error) throw error;
+    return data.url as string;
+  },
+});
+```
 
-## Files touched
+### Out of scope
 
-- `src/components/clubs/ClubForm.tsx` — add Club Level field.
-- `src/pages/ClubManagement.tsx` — write `user_group_tier` on create/update.
-- `src/pages/ClubManagementMobile.tsx` — same.
-- `src/components/clubs/ClubAcademySection.tsx` — add "Change Club Level" hint for club admins in the disabled-state card.
-
-No database changes.
+- No DB migrations, no RLS changes, no edge function changes (already deployed).
+- No edits to existing `DrillLibraryManager` / `DrillCreator` / `DrillEditModal`.
+- No "add to session" buttons in this view (separate flow).
