@@ -43,7 +43,7 @@ export function useTeamPlayers(teamId: string | undefined) {
   });
 
   return {
-    players: (data as TeamPlayer[]) ?? [],
+    players: (data as unknown as TeamPlayer[]) ?? [],
     loading: isLoading,
     error: error as Error | null,
     refetch,

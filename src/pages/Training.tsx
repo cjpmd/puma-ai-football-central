@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DrillLibraryManager } from '@/components/training/DrillLibraryManager';
+import { DrillLibraryBrowser } from '@/components/training/drill-library/DrillLibraryBrowser';
 import { DrillCreator } from '@/components/training/DrillCreator';
 import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { CoachTrainingDashboard } from '@/components/training/CoachTrainingDashboard';
@@ -91,14 +92,15 @@ export default function Training() {
               <CardHeader>
                 <CardTitle>Drill Library</CardTitle>
                 <CardDescription>
-                  Manage your collection of training drills that can be used across different training sessions
+                  Browse drills with videos, coach tips, and equipment lists
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <DrillLibraryManager />
+                <DrillLibraryBrowser />
               </CardContent>
             </Card>
           </TabsContent>
+
 
           <TabsContent value="plans" className="space-y-4">
             <CoachTrainingDashboard 
