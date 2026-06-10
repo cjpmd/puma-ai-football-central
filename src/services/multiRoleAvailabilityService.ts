@@ -332,6 +332,43 @@ export const multiRoleAvailabilityService = {
     }
   },
 
+  async getInvitedEventIds(eventIds: string[], userId: string): Promise<Set<string>> {
+    try {
+      if (eventIds.length === 0) {
+        return new Set();
+      }
+
+      const [{ data: invitations, error: invError }, { data: userPlayers }, { data: userStaff }] = await Promise.all([
+        supabase
+          .from('event_invitations')
+          .select('event_id, user_id, player_id, staff_id, invitee_type')
+          .in('event_id', eventIds),
+        supabase.from('user_players').select('player_id').eq('user_id', userId),
+        supabase.from('user_staff').select('staff_id').eq('user_id', userId)
+      ]);
+      if (invError) throw invError;
+
+      const linkedPlayerIds = new Set((userPlayers || []).map((r: any) => r.player_id));
+      const linkedStaffIds = new Set((userStaff || []).map((r: any) => r.staff_id));
+
+      const invitedIds = new Set<string>();
+      (invitations || []).forEach((inv: any) => {
+        if (
+          (inv.player_id && linkedPlayerIds.has(inv.player_id)) ||
+          (inv.staff_id && linkedStaffIds.has(inv.staff_id)) ||
+          (inv.user_id === userId && inv.invitee_type === 'staff')
+        ) {
+          invitedIds.add(inv.event_id);
+        }
+      });
+
+      return invitedIds;
+    } catch (error) {
+      logger.error('Error checking event invitations:', error);
+      return new Set();
+    }
+  },
+
   async isUserInvitedToEvent(eventId: string, userId: string): Promise<boolean> {
     try {
       const { data: invitations, error: invError } = await supabase
