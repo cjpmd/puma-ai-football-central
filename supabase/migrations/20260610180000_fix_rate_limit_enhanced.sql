@@ -76,13 +76,19 @@ BEGIN
             UPDATE rate_limits
             SET attempt_count = attempts, blocked_until = block_until
             WHERE id = rl.id;
-            INSERT INTO rate_limit_violations (
-                action_type, user_id, ip_address, violation_count,
-                blocked_until, window_start
-            ) VALUES (
-                p_action_type, p_user_id, p_ip_address, attempts,
-                block_until, rl.window_start
-            );
+            -- Audit trail only — must never abort the block itself (e.g. the
+            -- user_id FK to auth.users fails for since-deleted users).
+            BEGIN
+                INSERT INTO rate_limit_violations (
+                    action_type, user_id, ip_address, violation_count,
+                    blocked_until, window_start
+                ) VALUES (
+                    p_action_type, p_user_id, p_ip_address, attempts,
+                    block_until, rl.window_start
+                );
+            EXCEPTION WHEN OTHERS THEN
+                NULL;
+            END;
         ELSE
             UPDATE rate_limits SET attempt_count = attempts WHERE id = rl.id;
         END IF;
