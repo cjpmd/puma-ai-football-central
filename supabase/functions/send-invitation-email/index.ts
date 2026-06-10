@@ -1,6 +1,12 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.1.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabaseAdmin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -22,7 +28,36 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log("Starting send-invitation-email function");
-    
+
+    // Per-user rate limit — verify_jwt is enabled, so a bearer token is present
+    const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const userId = userData?.user?.id;
+    if (userError || !userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized", success: false }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const { data: rateLimit, error: rateLimitError } = await supabaseAdmin.rpc("check_rate_limit_enhanced", {
+      p_action_type: "invitation_send",
+      p_user_id: userId,
+    });
+    if (rateLimitError) {
+      // Fail open: a limiter outage should not block invitations entirely
+      console.error("Rate limit check failed:", rateLimitError);
+    } else if (rateLimit?.is_blocked) {
+      return new Response(
+        JSON.stringify({
+          error: "Too many invitations sent. Please try again later.",
+          blocked_until: rateLimit.blocked_until,
+          success: false,
+        }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     if (!resendApiKey) {
