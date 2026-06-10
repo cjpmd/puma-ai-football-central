@@ -6,12 +6,18 @@
 --    facility_availability, team_kit_issues to use (select auth.uid())
 --    instead of auth.uid(), so Postgres evaluates it once per statement
 --    (initplan) instead of once per row.
--- 3) Consolidate overlapping permissive policies on the two worst tables:
---    club_teams (14 policies -> 4) and event_availability (10 -> 4).
---    The consolidated policies are the exact OR-union of the policies they
---    replace — no access is added or removed. facility_availability and
---    team_kit_issues keep their existing policy sets (same names, same
---    logic), only rewritten with the initplan-friendly form.
+-- 3) Consolidate overlapping permissive policies:
+--    club_teams (14 policies -> 4), event_availability (10 -> 4), and
+--    team_kit_issues (8 -> 4). club_teams is the exact OR-union of the
+--    policies it replaces. event_availability normalises the staff role
+--    list to the role names actually present in user_teams
+--    ('team_manager','team_assistant_manager','team_coach','coach') across
+--    SELECT/INSERT/DELETE — previously SELECT/INSERT used 'manager','coach'
+--    which matched almost nobody. team_kit_issues drops the dead
+--    "managed teams" duplicates and tightens writes to manager/coach roles
+--    instead of any team member. facility_availability keeps its existing
+--    policy set (same names, same logic), only rewritten with the
+--    initplan-friendly form.
 --
 -- All policies are declared TO authenticated: every replaced policy's
 -- predicate depends on auth.uid(), so anon matched nothing before and
@@ -152,12 +158,14 @@ CREATE POLICY "club_teams_delete" ON public.club_teams
 -- ===========================================================================
 -- 2 + 3b. event_availability: 10 overlapping policies -> 4 consolidated
 --
--- Union of replaced policies, per command (role lists preserved exactly as
--- they were, including the SELECT/INSERT vs DELETE inconsistency):
---   SELECT: own row OR linked player OR team staff ('manager','coach')
---   INSERT: own row OR linked player OR team staff ('manager','coach')
+-- Union of replaced policies, per command, with the staff role list
+-- normalised to the names actually present in user_teams:
+--   SELECT: own row OR linked player OR team staff
+--   INSERT: own row OR linked player OR team staff
 --   UPDATE: own row OR linked player
---   DELETE: own row OR team staff ('team_manager','team_assistant_manager')
+--   DELETE: own row OR team staff
+-- where team staff = role in ('team_manager','team_assistant_manager',
+-- 'team_coach','coach')
 -- ===========================================================================
 
 DROP POLICY IF EXISTS "Team managers can delete event availability"    ON public.event_availability;
@@ -186,7 +194,7 @@ CREATE POLICY "event_availability_select" ON public.event_availability
       JOIN public.user_teams ut ON e.team_id = ut.team_id
       WHERE e.id = event_availability.event_id
         AND ut.user_id = (SELECT auth.uid())
-        AND ut.role = ANY (ARRAY['manager','coach'])
+        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager','team_coach','coach'])
     )
   );
 
@@ -205,7 +213,7 @@ CREATE POLICY "event_availability_insert" ON public.event_availability
       JOIN public.user_teams ut ON e.team_id = ut.team_id
       WHERE e.id = event_availability.event_id
         AND ut.user_id = (SELECT auth.uid())
-        AND ut.role = ANY (ARRAY['manager','coach'])
+        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager','team_coach','coach'])
     )
   );
 
@@ -238,7 +246,7 @@ CREATE POLICY "event_availability_delete" ON public.event_availability
       JOIN public.user_teams ut ON e.team_id = ut.team_id
       WHERE e.id = event_availability.event_id
         AND ut.user_id = (SELECT auth.uid())
-        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager'])
+        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager','team_coach','coach'])
     )
   );
 
@@ -378,7 +386,10 @@ CREATE POLICY "Team managers can update their bookings" ON public.facility_avail
   );
 
 -- ===========================================================================
--- 2d. team_kit_issues: same 8 policies, initplan-friendly auth.uid()
+-- 2d + 3c. team_kit_issues: 8 overlapping policies -> 4 consolidated.
+-- Reads stay open to any team member; writes are tightened to manager/coach
+-- roles only (previously the "their teams" policies let any team member
+-- write, making the role-restricted "managed teams" duplicates dead weight).
 -- ===========================================================================
 
 DROP POLICY IF EXISTS "Users can delete kit issues for managed teams" ON public.team_kit_issues;
@@ -390,49 +401,7 @@ DROP POLICY IF EXISTS "Users can view kit issues for their teams"     ON public.
 DROP POLICY IF EXISTS "Users can update kit issues for managed teams" ON public.team_kit_issues;
 DROP POLICY IF EXISTS "Users can update kit issues for their teams"   ON public.team_kit_issues;
 
-CREATE POLICY "Users can delete kit issues for managed teams" ON public.team_kit_issues
-  FOR DELETE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.user_teams ut
-      WHERE ut.team_id = team_kit_issues.team_id
-        AND ut.user_id = (SELECT auth.uid())
-        AND ut.role = ANY (ARRAY['manager','assistant_manager','coach'])
-    )
-  );
-
-CREATE POLICY "Users can delete kit issues for their teams" ON public.team_kit_issues
-  FOR DELETE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.user_teams ut
-      WHERE ut.team_id = team_kit_issues.team_id
-        AND ut.user_id = (SELECT auth.uid())
-    )
-  );
-
-CREATE POLICY "Users can create kit issues for managed teams" ON public.team_kit_issues
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.user_teams ut
-      WHERE ut.team_id = team_kit_issues.team_id
-        AND ut.user_id = (SELECT auth.uid())
-        AND ut.role = ANY (ARRAY['manager','assistant_manager','coach'])
-    )
-  );
-
-CREATE POLICY "Users can create kit issues for their teams" ON public.team_kit_issues
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.user_teams ut
-      WHERE ut.team_id = team_kit_issues.team_id
-        AND ut.user_id = (SELECT auth.uid())
-    )
-  );
-
-CREATE POLICY "Users can view kit issues for accessible teams" ON public.team_kit_issues
+CREATE POLICY "team_kit_issues_select" ON public.team_kit_issues
   FOR SELECT TO authenticated
   USING (
     EXISTS (
@@ -442,33 +411,43 @@ CREATE POLICY "Users can view kit issues for accessible teams" ON public.team_ki
     )
   );
 
-CREATE POLICY "Users can view kit issues for their teams" ON public.team_kit_issues
-  FOR SELECT TO authenticated
-  USING (
+CREATE POLICY "team_kit_issues_insert" ON public.team_kit_issues
+  FOR INSERT TO authenticated
+  WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.user_teams ut
       WHERE ut.team_id = team_kit_issues.team_id
         AND ut.user_id = (SELECT auth.uid())
+        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager','team_coach','coach'])
     )
   );
 
-CREATE POLICY "Users can update kit issues for managed teams" ON public.team_kit_issues
+CREATE POLICY "team_kit_issues_update" ON public.team_kit_issues
   FOR UPDATE TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.user_teams ut
       WHERE ut.team_id = team_kit_issues.team_id
         AND ut.user_id = (SELECT auth.uid())
-        AND ut.role = ANY (ARRAY['manager','assistant_manager','coach'])
+        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager','team_coach','coach'])
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.user_teams ut
+      WHERE ut.team_id = team_kit_issues.team_id
+        AND ut.user_id = (SELECT auth.uid())
+        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager','team_coach','coach'])
     )
   );
 
-CREATE POLICY "Users can update kit issues for their teams" ON public.team_kit_issues
-  FOR UPDATE TO authenticated
+CREATE POLICY "team_kit_issues_delete" ON public.team_kit_issues
+  FOR DELETE TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.user_teams ut
       WHERE ut.team_id = team_kit_issues.team_id
         AND ut.user_id = (SELECT auth.uid())
+        AND ut.role = ANY (ARRAY['team_manager','team_assistant_manager','team_coach','coach'])
     )
   );
