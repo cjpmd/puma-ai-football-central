@@ -60,6 +60,35 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Per-user rate limit — every call costs a paid Gemini request.
+    // verify_jwt guarantees a bearer token is present.
+    const callerToken = (req.headers.get('Authorization') ?? '').replace('Bearer ', '');
+    const { data: callerData, error: callerError } = await supabase.auth.getUser(callerToken);
+    const callerId = callerData?.user?.id;
+    if (callerError || !callerId) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: rateLimit, error: rateLimitError } = await supabase.rpc('check_rate_limit_enhanced', {
+      p_action_type: 'ai_generation',
+      p_user_id: callerId,
+    });
+    if (rateLimitError) {
+      // Fail open: a limiter outage should not block AI generation entirely
+      console.error('ai-training-builder: rate limit check failed:', rateLimitError);
+    } else if (rateLimit?.is_blocked) {
+      return new Response(
+        JSON.stringify({
+          error: 'Too many AI requests. Please try again later.',
+          blocked_until: rateLimit.blocked_until,
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Fetch available drills from library
     const { data: drills } = await supabase
       .from('drills')

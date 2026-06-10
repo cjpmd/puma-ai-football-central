@@ -31,6 +31,35 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Per-caller rate limit — keyed on the JWT user, not the notification
+    // recipient in the request body. verify_jwt guarantees a bearer token.
+    const callerToken = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+    const { data: callerData, error: callerError } = await supabase.auth.getUser(callerToken);
+    const callerId = callerData?.user?.id;
+    if (callerError || !callerId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const { data: rateLimit, error: rateLimitError } = await supabase.rpc("check_rate_limit_enhanced", {
+      p_action_type: "notification_send",
+      p_user_id: callerId,
+    });
+    if (rateLimitError) {
+      // Fail open: a limiter outage should not block notifications entirely
+      console.error("Rate limit check failed:", rateLimitError);
+    } else if (rateLimit?.is_blocked) {
+      return new Response(
+        JSON.stringify({
+          error: "Too many notifications sent. Please try again later.",
+          blocked_until: rateLimit.blocked_until,
+        }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
     const {

@@ -84,6 +84,38 @@ serve(async (req) => {
     }
 
     // ----------------------------------------------------------
+    // Per-user rate limit on uncached generations — cache hits above are
+    // free, but each miss costs a paid Gemini call. verify_jwt guarantees
+    // a bearer token is present.
+    // ----------------------------------------------------------
+    const callerToken = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+    const { data: callerData, error: callerError } = await supabase.auth.getUser(callerToken);
+    const callerId = callerData?.user?.id;
+    if (callerError || !callerId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: rateLimit, error: rateLimitError } = await supabase.rpc("check_rate_limit_enhanced", {
+      p_action_type: "ai_generation",
+      p_user_id: callerId,
+    });
+    if (rateLimitError) {
+      // Fail open: a limiter outage should not block AI generation entirely
+      console.error("ai-team-builder: rate limit check failed:", rateLimitError);
+    } else if (rateLimit?.is_blocked) {
+      return new Response(
+        JSON.stringify({
+          error: "Too many AI requests. Please try again later.",
+          blocked_until: rateLimit.blocked_until,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ----------------------------------------------------------
     // Fetch squad players
     // ----------------------------------------------------------
     let playersQuery = supabase

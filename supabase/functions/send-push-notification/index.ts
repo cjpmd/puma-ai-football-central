@@ -493,6 +493,40 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Per-caller rate limit — verify_jwt guarantees a bearer token is present.
+    // Internal callers (enhanced-notification-scheduler) authenticate with the
+    // service role key and are trusted, so they bypass the per-user quota.
+    const callerToken = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
+    const isServiceRoleCaller = callerToken === (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+
+    if (!isServiceRoleCaller) {
+      const { data: callerData, error: callerError } = await supabaseClient.auth.getUser(callerToken)
+      const callerId = callerData?.user?.id
+      if (callerError || !callerId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { data: rateLimit, error: rateLimitError } = await supabaseClient.rpc('check_rate_limit_enhanced', {
+        p_action_type: 'push_notification_send',
+        p_user_id: callerId,
+      })
+      if (rateLimitError) {
+        // Fail open: a limiter outage should not block notifications entirely
+        console.error('[Push] Rate limit check failed:', rateLimitError)
+      } else if (rateLimit?.is_blocked) {
+        return new Response(
+          JSON.stringify({
+            error: 'Too many push notifications sent. Please try again later.',
+            blocked_until: rateLimit.blocked_until,
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     const { eventId, title, body, userIds }: NotificationPayload = await req.json()
     console.log('[Push] Notification request:', { eventId, title, userIds: userIds?.length || 0 });
 
