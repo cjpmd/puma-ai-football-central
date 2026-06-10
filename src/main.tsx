@@ -35,6 +35,26 @@ Sentry.init({
   },
 });
 
+// ── Global async error capture ────────────────────────────────────────────────
+// Promise rejections outside React (fire-and-forget calls, event handlers)
+// never reach an ErrorBoundary; without this they are silently dropped.
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[unhandledrejection]', event.reason);
+  Sentry.captureException(event.reason ?? new Error('Unhandled promise rejection'), {
+    mechanism: { type: 'onunhandledrejection', handled: false },
+  });
+});
+
+window.addEventListener('error', (event) => {
+  // Resource-load errors have no error object; skip those, Sentry's own
+  // instrumentation covers script errors with stack traces.
+  if (event.error) {
+    Sentry.captureException(event.error, {
+      mechanism: { type: 'onerror', handled: false },
+    });
+  }
+});
+
 logBundleLoadTime();
 
 // ── Service worker ────────────────────────────────────────────────────────────

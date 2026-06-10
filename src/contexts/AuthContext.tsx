@@ -1,6 +1,8 @@
 import { logger } from '@/lib/logger';
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { Team, Club, Profile, GameFormat, SubscriptionType } from '@/types';
@@ -204,6 +206,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [toast]);
 
+  // Guards against duplicate expiry handling when several 401s land at once
+  const sessionExpiredHandled = useRef(false);
+
+  useEffect(() => {
+    if (user) sessionExpiredHandled.current = false;
+  }, [user]);
+
+  const expireSession = () => {
+    if (sessionExpiredHandled.current) return;
+    sessionExpiredHandled.current = true;
+
+    logger.warn('Session expired, redirecting to login');
+    // Token is already invalid server-side; clear local storage best-effort
+    supabase.auth.signOut().catch(() => {});
+    setUser(null);
+    setSession(null);
+    setTeams([]);
+    setClubs([]);
+    setConnectedPlayers([]);
+    setAllTeams([]);
+    setProfile(null);
+    toast({
+      title: 'Session expired',
+      description: 'Please sign in again to continue.',
+      variant: 'destructive',
+    });
+    navigate('/auth');
+  };
+
+  // 401s detected outside this provider (e.g. react-query's global error
+  // handler) signal expiry through this window event.
+  useEffect(() => {
+    const onSessionExpired = () => {
+      if (user) expireSession();
+    };
+    window.addEventListener('auth:session-expired', onSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', onSessionExpired);
+  }, [user]);
+
   // Proactive token refresh — fires 60 s before expiry so the user is never
   // forced to re-login mid-match.  Supabase sessions expire after 1 hour by
   // default; we poll every 45 minutes to refresh with headroom.
@@ -216,6 +257,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { error } = await supabase.auth.refreshSession();
         if (error) {
           logger.error('Proactive session refresh failed:', error);
+          // Only force re-login on definitive auth failures; transient
+          // network errors will be retried on the next interval.
+          const status = (error as { status?: number }).status;
+          if (status === 400 || status === 401 || status === 403) {
+            expireSession();
+          }
         } else {
           logger.log('Session refreshed proactively');
         }
@@ -225,6 +272,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, REFRESH_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
+  }, [user]);
+
+  // Refresh the session when the native app returns to the foreground — the
+  // device may have been asleep past token expiry, and the 45-minute interval
+  // does not fire while backgrounded.
+  useEffect(() => {
+    if (!user || !Capacitor.isNativePlatform()) return;
+
+    const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) return;
+      supabase.auth
+        .refreshSession()
+        .then(({ error }) => {
+          if (error) {
+            logger.error('Session refresh on app resume failed:', error);
+            const status = (error as { status?: number }).status;
+            if (status === 400 || status === 401 || status === 403) {
+              expireSession();
+            }
+          } else {
+            logger.log('Session refreshed on app resume');
+          }
+        })
+        .catch(err => logger.error('Session refresh on resume exception:', err));
+    });
+
+    return () => {
+      listenerPromise.then(listener => listener.remove()).catch(() => {});
+    };
   }, [user]);
 
   const fetchProfile = async (userId: string) => {
