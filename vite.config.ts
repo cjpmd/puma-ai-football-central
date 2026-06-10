@@ -117,12 +117,11 @@ export default defineConfig(({ mode }) => ({
             '@radix-ui/react-popover',
             '@radix-ui/react-toast',
             '@radix-ui/react-scroll-area',
-            '@radix-ui/react-accordion',
           ],
           // Charts — heavy, only needed on analytics screens
           'charts-vendor': ['recharts'],
           // DnD — only needed on formation editor
-          'dnd-vendor': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/modifiers', '@dnd-kit/utilities'],
+          'dnd-vendor': ['@dnd-kit/core', '@dnd-kit/modifiers'],
           // Sentry — error tracking, isolated chunk
           'sentry-vendor': ['@sentry/react', '@sentry/capacitor'],
         },
