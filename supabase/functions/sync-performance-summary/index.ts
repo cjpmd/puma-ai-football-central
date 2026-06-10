@@ -17,7 +17,7 @@ serve(async (req) => {
 
     const { data: players } = await supabase
       .from("players")
-      .select("id, date_of_birth, status")
+      .select("id, name, date_of_birth, squad_number, type, team_id, status")
       .eq("status", "active");
 
     if (!players?.length) {
@@ -53,7 +53,7 @@ serve(async (req) => {
     const injuredSet = new Set((injuries ?? []).map((i: any) => i.player_id));
     const matMap = new Map((maturation ?? []).map((m: any) => [m.player_id, m.maturation_offset]));
 
-    let updated = 0;
+    const updates: Record<string, unknown>[] = [];
 
     for (const player of players) {
       const playerLoads = loadsMap.get(player.id) ?? [];
@@ -100,11 +100,25 @@ serve(async (req) => {
         synced_at: now.toISOString(),
       };
 
-      await supabase.from("players").update({ performance_summary: summary }).eq("id", player.id);
-      updated++;
+      // players has NOT NULL columns without defaults, so the upsert payload
+      // must carry them even though only performance_summary changes.
+      updates.push({
+        id: player.id,
+        name: player.name,
+        date_of_birth: player.date_of_birth,
+        squad_number: player.squad_number,
+        type: player.type,
+        team_id: player.team_id,
+        performance_summary: summary,
+      });
     }
 
-    return new Response(JSON.stringify({ updated, total: players.length }), {
+    const { error: upsertError } = await supabase
+      .from("players")
+      .upsert(updates, { onConflict: "id" });
+    if (upsertError) throw upsertError;
+
+    return new Response(JSON.stringify({ updated: updates.length, total: players.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

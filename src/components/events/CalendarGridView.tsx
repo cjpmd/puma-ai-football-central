@@ -17,7 +17,7 @@ import { TrainingPackView } from '../training/TrainingPackView';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { MultiRoleAvailabilityControls } from './MultiRoleAvailabilityControls';
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
-import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
+import { getUserContextsForEvents, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 import { useSmartView } from '@/contexts/SmartViewContext';
 import { EventActionButtons } from './EventActionButtons';
 
@@ -174,13 +174,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     if (!user?.id || events.length === 0) return;
 
     try {
-      const contexts: {[eventId: string]: UserTeamContext} = {};
-      
-      for (const event of events) {
-        const context = await getUserContextForEvent(event, user.id);
-        contexts[event.id] = context;
-      }
-      
+      const contexts = await getUserContextsForEvents(events, user.id);
       setEventTimeContexts(contexts);
     } catch (error) {
       logger.error('Error loading event time contexts:', error);

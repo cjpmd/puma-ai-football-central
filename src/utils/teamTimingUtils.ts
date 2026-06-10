@@ -88,67 +88,23 @@ export const getUserTeamConnections = async (userId: string, eventId: string): P
 };
 
 /**
- * Get the appropriate timing display for a user based on their team connections
+ * Build the timing display for an event from already-loaded connections and team times
  */
-export const getUserContextForEvent = async (
+const buildUserTeamContext = (
   event: DatabaseEvent,
-  userId: string
-): Promise<UserTeamContext> => {
-  try {
-    // Get user's team connections
-    const userTeamConnections = await getUserTeamConnections(userId, event.id);
-    
-    // Get event team times
-    const eventTeamTimes = await getEventTeamTimes(event.id);
-    
-    // Filter team times for teams the user is connected to
-    const relevantTeamTimes = eventTeamTimes.filter(tt => 
-      userTeamConnections.includes(event.team_id)
-    );
+  userTeamConnections: string[],
+  eventTeamTimes: TeamTimeInfo[]
+): UserTeamContext => {
+  // Filter team times for teams the user is connected to
+  const relevantTeamTimes = eventTeamTimes.filter(tt =>
+    userTeamConnections.includes(event.team_id)
+  );
 
-    // Determine display logic
-    if (relevantTeamTimes.length === 0) {
-      // User not connected to any teams in this event - show event defaults
-      return {
-        userTeamConnections,
-        isMultipleTeams: false,
-        displayTime: {
-          start_time: event.start_time,
-          meeting_time: event.meeting_time || null,
-          display_text: event.start_time || 'TBD'
-        }
-      };
-    } else if (relevantTeamTimes.length === 1) {
-      // User connected to one team - show that team's specific times
-      const teamTime = relevantTeamTimes[0];
-      return {
-        userTeamConnections,
-        isMultipleTeams: false,
-        displayTime: {
-          start_time: teamTime.startTime || event.start_time,
-          meeting_time: teamTime.meetingTime || event.meeting_time || null,
-          display_text: teamTime.startTime || event.start_time || 'TBD'
-        }
-      };
-    } else {
-      // User connected to multiple teams - instead of showing "Multiple Times", 
-      // prioritize the first team they're connected to or fall back to event default
-      const primaryTeamTime = relevantTeamTimes[0];
-      
-      return {
-        userTeamConnections,
-        isMultipleTeams: true,
-        displayTime: {
-          start_time: primaryTeamTime.startTime || event.start_time,
-          meeting_time: primaryTeamTime.meetingTime || event.meeting_time || null,
-          display_text: primaryTeamTime.startTime || event.start_time || 'TBD'
-        }
-      };
-    }
-  } catch (error) {
-    logger.error('Error getting user context for event:', error);
+  // Determine display logic
+  if (relevantTeamTimes.length === 0) {
+    // User not connected to any teams in this event - show event defaults
     return {
-      userTeamConnections: [],
+      userTeamConnections,
       isMultipleTeams: false,
       displayTime: {
         start_time: event.start_time,
@@ -156,7 +112,107 @@ export const getUserContextForEvent = async (
         display_text: event.start_time || 'TBD'
       }
     };
+  } else if (relevantTeamTimes.length === 1) {
+    // User connected to one team - show that team's specific times
+    const teamTime = relevantTeamTimes[0];
+    return {
+      userTeamConnections,
+      isMultipleTeams: false,
+      displayTime: {
+        start_time: teamTime.startTime || event.start_time,
+        meeting_time: teamTime.meetingTime || event.meeting_time || null,
+        display_text: teamTime.startTime || event.start_time || 'TBD'
+      }
+    };
+  } else {
+    // User connected to multiple teams - instead of showing "Multiple Times",
+    // prioritize the first team they're connected to or fall back to event default
+    const primaryTeamTime = relevantTeamTimes[0];
+
+    return {
+      userTeamConnections,
+      isMultipleTeams: true,
+      displayTime: {
+        start_time: primaryTeamTime.startTime || event.start_time,
+        meeting_time: primaryTeamTime.meetingTime || event.meeting_time || null,
+        display_text: primaryTeamTime.startTime || event.start_time || 'TBD'
+      }
+    };
   }
+};
+
+const defaultEventContext = (event: DatabaseEvent): UserTeamContext => ({
+  userTeamConnections: [],
+  isMultipleTeams: false,
+  displayTime: {
+    start_time: event.start_time,
+    meeting_time: event.meeting_time || null,
+    display_text: event.start_time || 'TBD'
+  }
+});
+
+/**
+ * Get the appropriate timing display for a user based on their team connections
+ */
+export const getUserContextForEvent = async (
+  event: DatabaseEvent,
+  userId: string
+): Promise<UserTeamContext> => {
+  try {
+    const userTeamConnections = await getUserTeamConnections(userId, event.id);
+    const eventTeamTimes = await getEventTeamTimes(event.id);
+    return buildUserTeamContext(event, userTeamConnections, eventTeamTimes);
+  } catch (error) {
+    logger.error('Error getting user context for event:', error);
+    return defaultEventContext(event);
+  }
+};
+
+/**
+ * Batched variant of getUserContextForEvent: loads the user's team connections
+ * once and every event's team times in a single query, instead of four queries
+ * per event.
+ */
+export const getUserContextsForEvents = async (
+  events: DatabaseEvent[],
+  userId: string
+): Promise<{ [eventId: string]: UserTeamContext }> => {
+  const contexts: { [eventId: string]: UserTeamContext } = {};
+  if (events.length === 0) return contexts;
+
+  try {
+    const [userTeamConnections, { data: teamTimes, error }] = await Promise.all([
+      getUserTeamConnections(userId, events[0].id),
+      supabase
+        .from('event_teams')
+        .select('event_id, team_number, start_time, meeting_time')
+        .in('event_id', events.map(e => e.id))
+        .order('team_number')
+    ]);
+    if (error) throw error;
+
+    const timesByEvent = new Map<string, TeamTimeInfo[]>();
+    teamTimes?.forEach(team => {
+      const list = timesByEvent.get(team.event_id) || [];
+      list.push({
+        teamNumber: team.team_number,
+        startTime: team.start_time,
+        meetingTime: team.meeting_time
+      });
+      timesByEvent.set(team.event_id, list);
+    });
+
+    events.forEach(event => {
+      contexts[event.id] = buildUserTeamContext(event, userTeamConnections, timesByEvent.get(event.id) || []);
+    });
+  } catch (error) {
+    logger.error('Error getting user contexts for events:', error);
+    events.forEach(event => {
+      contexts[event.id] = defaultEventContext(event);
+    });
+  }
+
+  return contexts;
 };
 
 /**

@@ -67,16 +67,15 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
 
     (async () => {
       if (!user?.id) return;
-      const invitedIds = new Set<string>();
-      for (const e of events) {
-        try {
-          const invited = await multiRoleAvailabilityService.isUserInvitedToEvent(e.id, user.id);
-          if (invited) invitedIds.add(e.id);
-        } catch (err) {
-          logger.error('Error determining invitations for event', e.id, err);
-        }
+      try {
+        const invitedIds = await multiRoleAvailabilityService.getInvitedEventIds(
+          events.map(e => e.id),
+          user.id
+        );
+        setInvitedEventIds(invitedIds);
+      } catch (err) {
+        logger.error('Error determining event invitations:', err);
       }
-      setInvitedEventIds(invitedIds);
     })();
   }, [events, user?.id]);
 

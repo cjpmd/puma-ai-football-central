@@ -2,7 +2,9 @@ import { useState, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
+import * as Sentry from "@sentry/react";
+import { logger } from "@/lib/logger";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
@@ -78,7 +80,31 @@ const SquadGrid                    = lazy(() => import("./pages/SquadGrid"));
 const Settings                     = lazy(() => import("./pages/Settings"));
 // --------------------------------------------------------------
 
+const isAuthExpiredError = (error: unknown): boolean => {
+  const err = error as { status?: number; code?: string; message?: string } | null;
+  return (
+    err?.status === 401 ||
+    err?.code === 'PGRST301' ||
+    /jwt expired|invalid jwt/i.test(err?.message ?? '')
+  );
+};
+
+const handleGlobalQueryError = (error: unknown, source: 'query' | 'mutation') => {
+  logger.error(`[react-query] unhandled ${source} error:`, error);
+  Sentry.captureException(error, { tags: { source: `react-query-${source}` } });
+  if (isAuthExpiredError(error)) {
+    // AuthContext listens for this and clears the session with a redirect
+    window.dispatchEvent(new Event('auth:session-expired'));
+  }
+};
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => handleGlobalQueryError(error, 'query'),
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => handleGlobalQueryError(error, 'mutation'),
+  }),
   defaultOptions: {
     queries: {
       staleTime: 5 * 60_000,       // 5 minutes — cached screens feel instant
@@ -222,25 +248,27 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AuthorizationProvider>
-            <ClubProvider>
-              <TeamProvider>
-                <SmartViewProvider>
-                  <AppContent />
-                </SmartViewProvider>
-              </TeamProvider>
-            </ClubProvider>
-          </AuthorizationProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary pageName="App">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AuthorizationProvider>
+              <ClubProvider>
+                <TeamProvider>
+                  <SmartViewProvider>
+                    <AppContent />
+                  </SmartViewProvider>
+                </TeamProvider>
+              </ClubProvider>
+            </AuthorizationProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
