@@ -1,0 +1,50 @@
+name: Edge Function Tests
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/**'
+      - 'scripts/test-edge-functions.sh'
+      - 'scripts/edge-test-summary.py'
+      - '.github/workflows/edge-function-tests.yml'
+  workflow_dispatch:
+    inputs:
+      side_effects:
+        description: 'Run Tier 2 side-effect tests (real emails, AI calls, DB writes)'
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    name: Test edge functions
+    runs-on: ubuntu-latest
+    # Tests hit the live Supabase project — never run them for forks.
+    if: github.event.pull_request.head.repo.fork != true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Create .env.test from secrets
+        run: |
+          cat > .env.test <<EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TEST_EMAIL_DOMAIN=${{ secrets.TEST_EMAIL_DOMAIN }}
+          TEST_INBOX_EMAIL=${{ secrets.TEST_INBOX_EMAIL }}
+          EOF
+
+      - name: Run edge function tests
+        env:
+          RUN_SIDE_EFFECT_TESTS: ${{ github.event_name == 'workflow_dispatch' && inputs.side_effects && '1' || '0' }}
+        run: bash scripts/test-edge-functions.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edge-function-test-results
+          path: test-results/
