@@ -38,3 +38,4 @@ dist-ssr
 # Edge function test credentials
 .env.test
 test-results/
+__pycache__/
