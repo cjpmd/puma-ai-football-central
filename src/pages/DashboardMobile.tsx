@@ -1013,7 +1013,8 @@ export default function DashboardMobile() {
             {stats.upcomingEvents.length > 0 ? (
               <>
                 {stats.upcomingEvents.map((event, index) => (
-                  <div key={event.id}>
+                  <div key={`${event.id}-${event.team_context?.id ?? ''}-${index}`}>
+
                     {index > 0 && <div className="h-px bg-white/10 mx-4" />}
                     <div 
                       className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors"
@@ -1092,7 +1093,8 @@ export default function DashboardMobile() {
                   const showScores = shouldShowScoresForEvent(event);
                   const result = showScores ? getResultFromScores(event.our_score, event.opponent_score) : null;
                   return (
-                    <div key={event.id}>
+                    <div key={`${event.id}-${index}`}>
+
                       {index > 0 && <div className="h-px bg-white/10 mx-4" />}
                       <div className="flex gap-3 px-4 py-3">
                         {/* Date column */}
