@@ -48,6 +48,9 @@ export default function TeamManagementMobile() {
 
     if (cacheKey) {
       const cached = readCache<Team[]>(cacheKey);
+      if (import.meta.env.DEV) {
+        console.debug(`[offline-cache] ${cacheKey}`, cached?.data?.length ? `HIT (${cached.data.length} teams)` : 'MISS');
+      }
       if (cached?.data?.length) {
         setTeamsData(cached.data);
         setStaleSavedAt(cached.savedAt);

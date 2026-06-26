@@ -440,6 +440,9 @@ export default function MyTeamMobile() {
 
       // Serve cached analytics instantly while network loads
       const cached = readCache<AnalyticsData>(cacheKey);
+      if (import.meta.env.DEV) {
+        console.debug(`[offline-cache] ${cacheKey}`, cached?.data ? 'HIT' : 'MISS');
+      }
       if (cached?.data) {
         setAnalytics(cached.data);
         setStaleSavedAt(cached.savedAt);
