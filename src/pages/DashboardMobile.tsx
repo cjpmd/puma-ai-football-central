@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { readCache, writeCache } from '@/lib/offlineCache';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { format, isToday, isTomorrow } from 'date-fns';
@@ -348,18 +349,35 @@ export default function DashboardMobile() {
   const handleViewStats = () => setStatsModalOpen(true);
   const handleViewHistory = () => setHistoryModalOpen(true);
 
+  // Build a stable cache key for the current dashboard scope
+  const dashboardCacheKey = user?.id
+    ? `offline_dashboard_${user.id}_${viewMode}_${currentTeam?.id ?? 'all'}`
+    : null;
+
   useEffect(() => {
-    // Reset team-scoped stats immediately on team/view change so previously
-    // loaded data from another team can't be visible while the new request
-    // is still in flight.
-    setStats(prev => ({
-      ...prev,
-      upcomingEvents: [],
-      recentResults: [],
-      pendingAvailability: [],
-    }));
+    // Hydrate instantly from localStorage if we have a cached snapshot for
+    // this exact scope, then kick off a fresh fetch in the background.
+    if (dashboardCacheKey) {
+      const cached = readCache<LiveStats>(dashboardCacheKey);
+      if (import.meta.env.DEV) {
+        console.debug(`[offline-cache] ${dashboardCacheKey}`, cached?.data ? 'HIT' : 'MISS');
+      }
+      if (cached?.data) {
+        setStats(cached.data);
+        setLoading(false);
+      } else {
+        // No cache for this scope — clear stale stats from another scope.
+        setStats(prev => ({
+          ...prev,
+          upcomingEvents: [],
+          recentResults: [],
+          pendingAvailability: [],
+        }));
+      }
+    }
     loadLiveData();
   }, [allTeams, connectedPlayers, currentTeam?.id, viewMode, availableTeams]);
+
 
   const loadLiveData = async () => {
     if (!user) return;
@@ -639,13 +657,17 @@ export default function DashboardMobile() {
       // Only the latest request may commit to state.
       if (seq !== loadSeqRef.current) return;
 
-      setStats({
+      const nextStats: LiveStats = {
         playersCount: playersCountResult.count || 0,
         eventsCount: eventsCountResult.count || 0,
         upcomingEvents: upcomingEvents || [],
         recentResults: limitedRecentResults || [],
         pendingAvailability: pendingAvailabilityData
-      });
+      };
+      setStats(nextStats);
+      if (dashboardCacheKey) {
+        writeCache(dashboardCacheKey, nextStats);
+      }
     } catch (error: any) {
       if (seq !== loadSeqRef.current) return;
       toast({
@@ -1013,7 +1035,8 @@ export default function DashboardMobile() {
             {stats.upcomingEvents.length > 0 ? (
               <>
                 {stats.upcomingEvents.map((event, index) => (
-                  <div key={event.id}>
+                  <div key={`${event.id}-${event.team_context?.id ?? ''}-${index}`}>
+
                     {index > 0 && <div className="h-px bg-white/10 mx-4" />}
                     <div 
                       className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors"
@@ -1092,7 +1115,8 @@ export default function DashboardMobile() {
                   const showScores = shouldShowScoresForEvent(event);
                   const result = showScores ? getResultFromScores(event.our_score, event.opponent_score) : null;
                   return (
-                    <div key={event.id}>
+                    <div key={`${event.id}-${index}`}>
+
                       {index > 0 && <div className="h-px bg-white/10 mx-4" />}
                       <div className="flex gap-3 px-4 py-3">
                         {/* Date column */}
