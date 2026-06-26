@@ -1,41 +1,31 @@
-## Problem
+## Two separate failures
 
-The GitHub Actions edge-function test job fails before running any test because `supabase/functions/tests/helpers/env.ts` throws at import time when `SUPABASE_URL` is not set. CI has no `.env.test` and no env vars exported, so all 15 test files fail with `Missing required env var SUPABASE_URL`.
+### 1. PR #68 (`claude/peaceful-thompson-iqfb4z`) — exit 127
+That branch was opened before `scripts/test-edge-functions.sh` was added to the repo, so the workflow can't find the script. No code fix needed: **either rebase the PR on `main` or close it.** Tell me which and I'll proceed; otherwise just close it in GitHub.
 
-The test files (`supabase/functions/tests/**`) and `scripts/test-edge-functions.sh` were added by Claude Code and exist on GitHub but are not present in the Lovable workspace yet, so I'll edit them in place once the next GitHub→Lovable sync brings them in (or you confirm they're there).
+### 2. `main` run — `Unable to validate email address: invalid format`
 
-## Fix
+Tests are actually executing now (secrets work). 10 suites fail at the same line in `supabase/functions/tests/helpers/auth.ts` — `supabase.auth.admin.createUser({ email: ... })` is being rejected by Supabase Auth's email validator.
 
-Two coordinated changes:
+Root cause: the helper generates emails on a TLD Supabase's GoTrue validator refuses (commonly `.test`, `.local`, `.invalid`, or a malformed `@example` form). The whole-module `Uncaught error` shape (10 of 10 affected modules) confirms it's the shared helper, not anything function-specific.
 
-### 1. Make the env helper CI-friendly
-
-Update `supabase/functions/tests/helpers/env.ts` so a missing `SUPABASE_URL`/`SUPABASE_ANON_KEY` does **not** throw at module load. Instead expose:
-
-- `hasTestEnv(): boolean` — true only when all required vars are present.
-- `getEnv(name)` — returns the value or `undefined`.
-- Keep `required(name)` but only call it from inside tests, not at top-level.
-
-Then in `helpers/test.ts`, wrap the Supabase client + shared fixtures in a lazy getter, and export a `describeIfEnv` / `testIfEnv` that calls `Deno.test.ignore` when `hasTestEnv()` is false. Result: locally with `.env.test` the suite runs; in CI without secrets it cleanly skips instead of erroring.
-
-### 2. Wire real secrets into GitHub Actions
-
-Add a `.github/workflows/edge-function-tests.yml` step (or update the existing one) to export the needed vars from repository secrets before `bash scripts/test-edge-functions.sh`:
-
-```yaml
-env:
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+**Fix:** change the synthetic email in `helpers/auth.ts` to use a real-looking domain. The safest, well-supported pattern in CI is:
+```ts
+const email = `lovable-ci+${crypto.randomUUID()}@example.com`;
 ```
+`example.com` is IANA-reserved, accepted by GoTrue, and the `+tag` keeps each run unique without polluting auth.users with reused addresses (suite teardown still deletes the user).
 
-You'll need to add those three values once in **GitHub → repo Settings → Secrets and variables → Actions**. Use the project URL `https://pdarngodvrzehnpvdrii.supabase.co`, the publishable/anon key already in `.env`, and the service-role key from the Supabase dashboard. Until those secrets are added the workflow will still pass (tests skip), and it will start actually executing tests as soon as they exist.
+If the helper is already on `example.com` and still failing, the next most likely cause is no `@` / empty local part — same one-line fix covers both.
 
-## Out of scope
+### Blocker
 
-No changes to edge-function runtime code, no changes to the `.env` used by the app, and no secret values committed to the repo.
+Both files I need to inspect/edit live only on GitHub right now (added by Claude Code, not yet synced into Lovable):
+- `supabase/functions/tests/helpers/auth.ts`
+- `scripts/test-edge-functions.sh`
 
-## Questions before I build
+I need one of:
+- Paste the current contents of `helpers/auth.ts` here, **or**
+- Trigger a GitHub → Lovable sync (any commit on `main` from GitHub should do it) so the files appear in the workspace, then approve this plan and I'll edit `auth.ts` in one line.
 
-1. Do you want CI to **skip** edge-function tests when secrets are absent (safer default), or **fail loudly** so you remember to add them? I've planned skip; say the word if you'd prefer fail.
-2. Confirm you're OK adding `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to GitHub Actions secrets so the tests can actually hit Supabase in CI.
+### Out of scope
+No changes to the workflow YAML, no changes to function runtime code, no new secrets.
