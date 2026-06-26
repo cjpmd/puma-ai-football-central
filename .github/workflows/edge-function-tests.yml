@@ -1,0 +1,33 @@
+name: Edge Function Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'scripts/test-edge-functions.sh'
+      - '.github/workflows/edge-function-tests.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/**'
+      - 'scripts/test-edge-functions.sh'
+      - '.github/workflows/edge-function-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Run edge function tests
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: bash scripts/test-edge-functions.sh
