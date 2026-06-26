@@ -1,72 +1,41 @@
-## Findings
+## Problem
 
-### Why scroll is broken in the preview (and likely on iOS too)
+The GitHub Actions edge-function test job fails before running any test because `supabase/functions/tests/helpers/env.ts` throws at import time when `SUPABASE_URL` is not set. CI has no `.env.test` and no env vars exported, so all 15 test files fail with `Missing required env var SUPABASE_URL`.
 
-`src/components/layout/MobileLayout.tsx` wraps everything in:
+The test files (`supabase/functions/tests/**`) and `scripts/test-edge-functions.sh` were added by Claude Code and exist on GitHub but are not present in the Lovable workspace yet, so I'll edit them in place once the next GitHub→Lovable sync brings them in (or you confirm they're there).
 
-```tsx
-<div className="min-h-screen flex flex-col">
-  <MobileHeader />
-  <div className="flex-1 overflow-y-auto ...">{children}</div>
-  <RoleAwareBottomNav />
-</div>
+## Fix
+
+Two coordinated changes:
+
+### 1. Make the env helper CI-friendly
+
+Update `supabase/functions/tests/helpers/env.ts` so a missing `SUPABASE_URL`/`SUPABASE_ANON_KEY` does **not** throw at module load. Instead expose:
+
+- `hasTestEnv(): boolean` — true only when all required vars are present.
+- `getEnv(name)` — returns the value or `undefined`.
+- Keep `required(name)` but only call it from inside tests, not at top-level.
+
+Then in `helpers/test.ts`, wrap the Supabase client + shared fixtures in a lazy getter, and export a `describeIfEnv` / `testIfEnv` that calls `Deno.test.ignore` when `hasTestEnv()` is false. Result: locally with `.env.test` the suite runs; in CI without secrets it cleanly skips instead of erroring.
+
+### 2. Wire real secrets into GitHub Actions
+
+Add a `.github/workflows/edge-function-tests.yml` step (or update the existing one) to export the needed vars from repository secrets before `bash scripts/test-edge-functions.sh`:
+
+```yaml
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 ```
 
-`min-h-screen` lets the outer flex container grow with its children, so the `flex-1 overflow-y-auto` inner div never gets a definite height. The browser then never activates the inner scroller, and on the Dashboard the bottom nav covers the spillover. The standard mobile shell pattern is to lock the outer container to the viewport so the inner div is the real scroll surface.
+You'll need to add those three values once in **GitHub → repo Settings → Secrets and variables → Actions**. Use the project URL `https://pdarngodvrzehnpvdrii.supabase.co`, the publishable/anon key already in `.env`, and the service-role key from the Supabase dashboard. Until those secrets are added the workflow will still pass (tests skip), and it will start actually executing tests as soon as they exist.
 
-### Local-storage / instant-load review
+## Out of scope
 
-I checked every page. The "instant load" cache (`readCache` / `writeCache` / `useOfflineAwareQuery`) is wired correctly on:
-- Game Day (`useOfflineAwareQuery`)
-- Calendar Mobile, Team Manager Mobile, My Team Mobile (manual cache + amber "Updated X min ago" banner)
+No changes to edge-function runtime code, no changes to the `.env` used by the app, and no secret values committed to the repo.
 
-It is **not** wired on `DashboardMobile`, which is why your current screen always spins on first load and feels like the cache isn't doing anything.
+## Questions before I build
 
-### Duplicate React key warning (console)
-
-Console shows `Encountered two children with the same key` originating from `DashboardMobile`. Two list items are being rendered with the same UUID. This is a real bug — it can cause flicker and wrong-card state on re-render. I'll find the offending `.map()` and make the key unique.
-
----
-
-## Plan
-
-### A. Fix scrolling for every mobile screen (one file)
-
-Edit `src/components/layout/MobileLayout.tsx`:
-
-```diff
-- <div className="min-h-screen flex flex-col" style={{...}}>
-+ <div className="h-[100dvh] flex flex-col overflow-hidden" style={{...}}>
-```
-
-This:
-- Pins the shell to the visible viewport (`dvh` handles iOS dynamic toolbars correctly).
-- Makes `flex-1 overflow-y-auto` a real bounded scroll container so mouse wheel **and** native touch momentum work.
-- Plays nicely with the safe-area padding we already have on the bottom nav.
-
-The inner scroll div already has `WebkitOverflowScrolling: 'touch'` and `overscrollBehaviorY: 'contain'` from the previous turn, so no change there.
-
-### B. Add instant-load cache to Dashboard
-
-Edit `src/pages/DashboardMobile.tsx`:
-- Import `readCache` / `writeCache` / `staleLabel` from `@/lib/offlineCache` (same module the other 3 screens use).
-- Cache key per user: `offline_dashboard_${user.id}`.
-- On mount: hydrate state from cache and immediately set `loading = false` if a hit is present.
-- After the existing fetch resolves: `writeCache(cacheKey, payload)`.
-- Show the same small amber "Updated X min ago · Offline mode" pill at the top while stale (matches Calendar/Team Manager).
-
-No DB or query changes — just localStorage hydration around the existing loader.
-
-### C. Fix duplicate-key warning in `DashboardMobile`
-
-Locate the `.map()` rendering the offending UUIDs (likely the events list, child-player chips, or the team-cards section) and change the key to a composite like `` `${item.id}-${context}` `` so two sources of the same record don't collide. Pure render fix, no business logic change.
-
-### Files touched
-
-- `src/components/layout/MobileLayout.tsx` — one-line height change.
-- `src/pages/DashboardMobile.tsx` — add cache hydration + fix duplicate key.
-
-### Out of scope
-
-- Caching Analytics / Player Management / Training (can follow if you want).
-- Any data-shape or RLS changes.
+1. Do you want CI to **skip** edge-function tests when secrets are absent (safer default), or **fail loudly** so you remember to add them? I've planned skip; say the word if you'd prefer fail.
+2. Confirm you're OK adding `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to GitHub Actions secrets so the tests can actually hit Supabase in CI.
