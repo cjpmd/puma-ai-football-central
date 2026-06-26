@@ -1,97 +1,72 @@
-## What I found
+## Findings
 
-### 1. iOS scroll is broken by the mobile lockdown CSS
+### Why scroll is broken in the preview (and likely on iOS too)
 
-In `src/index.css` (lines 117–125) the previous "stop the page bouncing" fix applies to **every touch device**, including the iOS WKWebView inside your Capacitor build:
+`src/components/layout/MobileLayout.tsx` wraps everything in:
 
-```css
-@media (hover: none) and (pointer: coarse) {
-  html, body {
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    overscroll-behavior: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-}
+```tsx
+<div className="min-h-screen flex flex-col">
+  <MobileHeader />
+  <div className="flex-1 overflow-y-auto ...">{children}</div>
+  <RoleAwareBottomNav />
+</div>
 ```
 
-`position: fixed` + `overflow: hidden` on `<body>` is the classic cause of "nothing scrolls in my Capacitor iOS app". The inner `MobileLayout` scroller (`flex-1 overflow-y-auto`) then has a fixed-height ancestor and momentum scrolling fails on WKWebView.
+`min-h-screen` lets the outer flex container grow with its children, so the `flex-1 overflow-y-auto` inner div never gets a definite height. The browser then never activates the inner scroller, and on the Dashboard the bottom nav covers the spillover. The standard mobile shell pattern is to lock the outer container to the viewport so the inner div is the real scroll surface.
 
-It worked in the browser because mouse scroll on the inner div doesn't need a scrollable body — touch on iOS does.
+### Local-storage / instant-load review
 
-### 2. Offline / instant-load cache — wired correctly, but only on 4 screens
+I checked every page. The "instant load" cache (`readCache` / `writeCache` / `useOfflineAwareQuery`) is wired correctly on:
+- Game Day (`useOfflineAwareQuery`)
+- Calendar Mobile, Team Manager Mobile, My Team Mobile (manual cache + amber "Updated X min ago" banner)
 
-Verified the cache plumbing is live:
-- `GameDayView` → `useOfflineAwareQuery` (placeholderData from localStorage, 0 ms render).
-- `CalendarEventsMobile`, `TeamManagementMobile`, `MyTeamMobile` → manual `readCache` / `writeCache` with the amber "Updated X min ago · Offline mode" banner.
+It is **not** wired on `DashboardMobile`, which is why your current screen always spins on first load and feels like the cache isn't doing anything.
 
-What is **not** cached today: Dashboard, Analytics, Player Management, Training, Staff, Welfare, etc. So pages like the Dashboard (your current screen) will always show a spinner first — that's likely why it feels like the cache "isn't working".
+### Duplicate React key warning (console)
 
-The cache only kicks in on the second visit to a screen (first visit has nothing to read). On iOS Capacitor, localStorage **is persisted** by WKWebView across launches, so once a screen has been visited it should hydrate instantly.
+Console shows `Encountered two children with the same key` originating from `DashboardMobile`. Two list items are being rendered with the same UUID. This is a real bug — it can cause flicker and wrong-card state on re-render. I'll find the offending `.map()` and make the key unique.
 
 ---
 
 ## Plan
 
-### A. Fix iOS scrolling (Capacitor + mobile web)
+### A. Fix scrolling for every mobile screen (one file)
 
-Replace the global lockdown in `src/index.css` with a version that keeps the body scrollable and only suppresses overscroll/bounce on the **scroll container**, not on `html`/`body`:
+Edit `src/components/layout/MobileLayout.tsx`:
 
-```css
-@media (hover: none) and (pointer: coarse) {
-  html, body {
-    /* Allow native WKWebView scrolling; just block rubber-band on the root */
-    overscroll-behavior: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-}
+```diff
+- <div className="min-h-screen flex flex-col" style={{...}}>
++ <div className="h-[100dvh] flex flex-col overflow-hidden" style={{...}}>
 ```
 
-Then in `src/components/layout/MobileLayout.tsx`, ensure the inner scroll container handles bounce locally:
+This:
+- Pins the shell to the visible viewport (`dvh` handles iOS dynamic toolbars correctly).
+- Makes `flex-1 overflow-y-auto` a real bounded scroll container so mouse wheel **and** native touch momentum work.
+- Plays nicely with the safe-area padding we already have on the bottom nav.
 
-```tsx
-<div
-  className="flex-1 overflow-y-auto pb-[...] ..."
-  style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
->
-```
+The inner scroll div already has `WebkitOverflowScrolling: 'touch'` and `overscrollBehaviorY: 'contain'` from the previous turn, so no change there.
 
-This restores native momentum scrolling inside the iOS app while still preventing the whole page from bouncing past content.
+### B. Add instant-load cache to Dashboard
 
-Also re-enable text selection / tap targets that the global `user-select: none` was suppressing (it can interfere with long-press and some input focus on iOS).
+Edit `src/pages/DashboardMobile.tsx`:
+- Import `readCache` / `writeCache` / `staleLabel` from `@/lib/offlineCache` (same module the other 3 screens use).
+- Cache key per user: `offline_dashboard_${user.id}`.
+- On mount: hydrate state from cache and immediately set `loading = false` if a hit is present.
+- After the existing fetch resolves: `writeCache(cacheKey, payload)`.
+- Show the same small amber "Updated X min ago · Offline mode" pill at the top while stale (matches Calendar/Team Manager).
 
-### B. Verify the offline cache is doing its job
+No DB or query changes — just localStorage hydration around the existing loader.
 
-1. Add a tiny dev-only console log in `useOfflineAwareQuery` and the manual `readCache` call-sites so we can confirm in Safari's web-inspector (attach to the Capacitor app) whether a hit / miss occurred on mount. Logged behind `import.meta.env.DEV` so it's stripped from production.
-2. Confirm the amber "Updated X min ago · Offline mode" banner shows on Calendar / Team Manager / My Team when offline — this is the user-visible proof.
-3. Document (no code) that the **Dashboard** is not cached today; if you want it instant-on-open too, that's an additive change I can do in a follow-up.
+### C. Fix duplicate-key warning in `DashboardMobile`
 
-### C. Test path
-
-After the CSS change you'll need to rebuild the native shell:
-
-```
-git pull
-npm run build
-npx cap sync ios
-npx cap run ios   # or run from Xcode
-```
-
-(Capacitor copies `dist/` into the iOS bundle on `cap sync`, so CSS-only fixes still need the rebuild.)
+Locate the `.map()` rendering the offending UUIDs (likely the events list, child-player chips, or the team-cards section) and change the key to a composite like `` `${item.id}-${context}` `` so two sources of the same record don't collide. Pure render fix, no business logic change.
 
 ### Files touched
 
-- `src/index.css` — replace the `(hover: none) and (pointer: coarse)` block.
-- `src/components/layout/MobileLayout.tsx` — add `WebkitOverflowScrolling` + `overscrollBehaviorY` on the inner scroll wrapper.
-- `src/hooks/useOfflineAwareQuery.ts` + the 3 manual cache sites — one-line dev-only `console.debug` for cache hit/miss.
+- `src/components/layout/MobileLayout.tsx` — one-line height change.
+- `src/pages/DashboardMobile.tsx` — add cache hydration + fix duplicate key.
 
-No business-logic, no DB, no API changes.
+### Out of scope
 
-### Out of scope (ask if you want these)
-
-- Adding offline cache to Dashboard / Analytics / Player Management.
-- Adding a global "you're offline" toast.
-- Switching the manifest/PWA service worker.
+- Caching Analytics / Player Management / Training (can follow if you want).
+- Any data-shape or RLS changes.
