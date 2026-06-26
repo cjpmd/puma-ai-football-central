@@ -25,6 +25,13 @@ export function useOfflineAwareQuery<T>({
 }: UseOfflineAwareQueryOptions<T>) {
   const cached = readCache<T>(cacheKey);
 
+  if (import.meta.env.DEV) {
+    console.debug(
+      `[offline-cache] ${cacheKey}`,
+      cached ? `HIT (age ${computeStaleMins(cached)} min)` : 'MISS',
+    );
+  }
+
   const result = useQuery<T>({
     ...queryOptions,
     // Serve stale localStorage data immediately while fresh data loads

@@ -1,28 +1,28 @@
-import { cfg } from './env.ts';
+// Shared test helpers. Re-exports a `testIfEnv` wrapper that skips
+// (via Deno.test.ignore) when required env vars are missing, so CI
+// without secrets doesn't crash at import time.
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { env, hasTestEnv, missingTestEnv } from "./env.ts";
 
-/**
- * Test registration wrapper.
- * - tier2 tests are ignored unless RUN_SIDE_EFFECT_TESTS=1
- * - slow tests are ignored when SKIP_SLOW_TESTS=1
- * - op/resource sanitizers are off: the supabase-js client keeps
- *   connections alive between tests, which is fine for integration tests.
- *
- * Ignored tests are reported as "skipped" in the JUnit output, which feeds
- * the per-function summary table.
- */
-export function test(
-  name: string,
-  fn: () => Promise<void> | void,
-  opts: { tier2?: boolean; slow?: boolean } = {},
-) {
-  const tags = `${opts.tier2 ? '[tier2] ' : ''}${opts.slow ? '[slow] ' : ''}`;
-  const ignore = (opts.tier2 === true && !cfg.sideEffects) ||
-    (opts.slow === true && cfg.skipSlow);
-  Deno.test({
-    name: `${tags}${name}`,
-    ignore,
-    sanitizeOps: false,
-    sanitizeResources: false,
-    fn,
-  });
+let _client: SupabaseClient | null = null;
+export function getSupabase(): SupabaseClient {
+  if (!_client) {
+    _client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+  }
+  return _client;
 }
+
+type TestFn = (t: Deno.TestContext) => void | Promise<void>;
+
+export function testIfEnv(name: string, fn: TestFn) {
+  if (hasTestEnv()) {
+    Deno.test(name, fn);
+  } else {
+    Deno.test.ignore(
+      `${name} [skipped: missing ${missingTestEnv().join(", ")}]`,
+      fn,
+    );
+  }
+}
+
+export { hasTestEnv, missingTestEnv, env };

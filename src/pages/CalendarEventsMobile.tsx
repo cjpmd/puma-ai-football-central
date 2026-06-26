@@ -305,6 +305,9 @@ export default function CalendarEventsMobile() {
     // Serve cached events immediately so the list is visible before network returns
     if (cacheKey) {
       const cached = readCache<DatabaseEvent[]>(cacheKey);
+      if (import.meta.env.DEV) {
+        console.debug(`[offline-cache] ${cacheKey}`, cached?.data?.length ? `HIT (${cached.data.length} events)` : 'MISS');
+      }
       if (cached?.data?.length) {
         setEvents(cached.data);
         setStaleSavedAt(cached.savedAt);
