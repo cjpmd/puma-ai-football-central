@@ -34,3 +34,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Edge function test credentials
+.env.test
+test-results/
+__pycache__/

@@ -11,7 +11,8 @@
     "build:android": "vite build && npx cap sync android",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:functions": "bash scripts/test-edge-functions.sh"
   },
   "dependencies": {
     "@capacitor/app": "^7.0.2",
