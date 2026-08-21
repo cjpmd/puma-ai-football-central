@@ -462,7 +462,7 @@ export default function CalendarEventsMobile() {
 
       // Run all three queries in parallel — previously 3 sequential round-trips
       console.time('[perf] CalendarEventsMobile.loadEvents');
-      const [privacyResult, eventsResult, selectionsResult] = await Promise.all([
+      const [privacyResult, eventsResult, selectionsResult, markersResult] = await Promise.all([
         supabase
           .from('team_privacy_settings')
           .select('team_id, show_scores_to_parents, show_scores_to_players')
@@ -484,7 +484,7 @@ export default function CalendarEventsMobile() {
           .order('date', { ascending: false })
           .range(0, eventsPageSize - 1),
 
-        // Scoped to the same 9-month window via a join filter so we don't load
+        // Scoped to the same window via a join filter so we don't load
         // all-time event_selections for the team on every mount.
         supabase
           .from('event_selections')
@@ -499,7 +499,16 @@ export default function CalendarEventsMobile() {
           .in('team_id', teamIds)
           .gte('events.date', startDateStr)
           .lte('events.date', endDateStr),
+
+        // Lightweight markers for the mini-calendar dots — unaffected by list paging
+        supabase
+          .from('events')
+          .select('date, event_type')
+          .in('team_id', teamIds)
+          .gte('date', startDateStr)
+          .lte('date', endDateStr),
       ]);
+
       console.timeEnd('[perf] CalendarEventsMobile.loadEvents');
 
       if (eventsResult.error) throw eventsResult.error;
