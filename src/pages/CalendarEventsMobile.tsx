@@ -527,6 +527,8 @@ export default function CalendarEventsMobile() {
         writeCache(eventsCacheKeyRef.current, eventsResult.data);
       }
       setStaleSavedAt(null);
+      setEventMarkers((markersResult.data || []) as { date: string; event_type: string }[]);
+
 
       // Group selections by event_id for easy lookup
       const selectionsByEvent: {[key: string]: any[]} = {};
