@@ -8,13 +8,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { readCache, writeCache } from '@/lib/offlineCache';
+import { staleLabel } from '@/lib/offlineCache';
+import { useDashboardData, EMPTY_DASHBOARD } from '@/hooks/useDashboardData';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { format, isToday, isTomorrow } from 'date-fns';
-import { getLinkedPlayerIds, getPlayerAvailabilityForEvents, getBestAvailabilityStatus } from '@/services/sharedAvailabilityService';
+import { getBestAvailabilityStatus } from '@/services/sharedAvailabilityService';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 import { EditProfileModal } from '@/components/users/EditProfileModal';
@@ -32,38 +33,17 @@ import { PlayerCommentsModal } from '@/components/players/mobile/PlayerCommentsM
 import { PlayerHistoryModal } from '@/components/players/mobile/PlayerHistoryModal';
 import { PlayerParentsModal } from '@/components/players/mobile/PlayerParentsModal';
 
-interface LiveStats {
-  playersCount: number;
-  eventsCount: number;
-  upcomingEvents: any[];
-  recentResults: any[];
-  pendingAvailability: any[];
-}
-
 export default function DashboardMobile() {
   const navigate = useNavigate();
   const { teams, allTeams, connectedPlayers, profile, user, clubs } = useAuth();
   const { currentTeam, viewMode, availableTeams, setCurrentTeam, setViewMode } = useTeamContext();
   const { toast } = useToast();
   const { hasStaffAccess, isRestrictedParent, isRestrictedPlayer } = useEffectiveRole();
-  const [stats, setStats] = useState<LiveStats>({
-    playersCount: 0,
-    eventsCount: 0,
-    upcomingEvents: [],
-    recentResults: [],
-    pendingAvailability: []
-  });
-  const [loading, setLoading] = useState(true);
-  // Sequence guard: only the latest loadLiveData() invocation may write to stats.
-  // Prevents stale data from a previous team's request from overwriting the
-  // current team's state (e.g. seeing Jags results while viewing Pumas).
-  const loadSeqRef = useRef(0);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
   const [selectedPlayerData, setSelectedPlayerData] = useState<any>(null);
   const [showPlayerCard, setShowPlayerCard] = useState(false);
-  const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   
   // Player action modal states for Dashboard FIFA card
@@ -75,12 +55,52 @@ export default function DashboardMobile() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [parentsModalOpen, setParentsModalOpen] = useState(false);
 
+  // Which teams this dashboard covers. In single-team mode a concrete
+  // currentTeam is required (no fallback to all teams); in all-mode use the
+  // user's actual availableTeams so teams they no longer belong to — but which
+  // linger in allTeams — cannot leak in.
+  const teamsToUse = useMemo(
+    () =>
+      viewMode === 'all'
+        ? (availableTeams?.length ? availableTeams : (teams?.length ? teams : (allTeams || [])))
+        : (currentTeam ? [currentTeam] : []),
+    [viewMode, availableTeams, teams, allTeams, currentTeam],
+  );
+
+  const teamIds = useMemo(() => teamsToUse.map(t => t.id), [teamsToUse]);
+
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    update: updateDashboard,
+    staleMins: dashboardStaleMins,
+  } = useDashboardData({
+    userId: user?.id,
+    teamIds,
+    scope: `${viewMode}_${currentTeam?.id ?? 'all'}`,
+  });
+
+  const stats = data ?? EMPTY_DASHBOARD;
+  const teamPrivacySettings = stats.teamPrivacy;
+
+  useEffect(() => {
+    if (isError) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard data',
+        variant: 'destructive',
+      });
+    }
+  }, [isError, toast]);
+
   // Helper to check if scores should be shown for an event's team
   const shouldShowScoresForEvent = (event: any) => {
     // Staff always see scores
     if (hasStaffAccess) return true;
     
-    const settings = teamPrivacySettings.get(event.team_id);
+    const settings = teamPrivacySettings[event.team_id];
     if (!settings) return true; // Default to showing if no settings loaded
     
     if (isRestrictedParent && !settings.show_scores_to_parents) return false;
@@ -90,12 +110,12 @@ export default function DashboardMobile() {
   };
 
   const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
-    setStats(prevStats => ({
-      ...prevStats,
-      upcomingEvents: prevStats.upcomingEvents.map(event =>
+    updateDashboard(previous => ({
+      ...previous,
+      upcomingEvents: previous.upcomingEvents.map(event =>
         event.id === eventId ? { ...event, user_availability: status } : event
       ),
-      pendingAvailability: prevStats.pendingAvailability.filter(availability =>
+      pendingAvailability: previous.pendingAvailability.filter(availability =>
         availability.event_id !== eventId
       )
     }));
@@ -108,7 +128,7 @@ export default function DashboardMobile() {
 
   const handleEventCreated = () => {
     setShowMobileEventForm(false);
-    loadLiveData();
+    refetch();
   };
 
   const handlePlayerClick = async (connectedPlayer: any) => {
@@ -337,7 +357,7 @@ export default function DashboardMobile() {
   const handlePlayerCardClose = () => {
     setShowPlayerCard(false);
     setSelectedPlayerData(null);
-    loadLiveData();
+    refetch();
   };
 
   // Player action handlers for FIFA card
@@ -353,334 +373,6 @@ export default function DashboardMobile() {
   const dashboardCacheKey = user?.id
     ? `offline_dashboard_${user.id}_${viewMode}_${currentTeam?.id ?? 'all'}`
     : null;
-
-  useEffect(() => {
-    // Hydrate instantly from localStorage if we have a cached snapshot for
-    // this exact scope, then kick off a fresh fetch in the background.
-    if (dashboardCacheKey) {
-      const cached = readCache<LiveStats>(dashboardCacheKey);
-      if (import.meta.env.DEV) {
-        console.debug(`[offline-cache] ${dashboardCacheKey}`, cached?.data ? 'HIT' : 'MISS');
-      }
-      if (cached?.data) {
-        setStats(cached.data);
-        setLoading(false);
-      } else {
-        // No cache for this scope — clear stale stats from another scope.
-        setStats(prev => ({
-          ...prev,
-          upcomingEvents: [],
-          recentResults: [],
-          pendingAvailability: [],
-        }));
-      }
-    }
-    loadLiveData();
-  }, [allTeams, connectedPlayers, currentTeam?.id, viewMode, availableTeams]);
-
-
-  const loadLiveData = async () => {
-    if (!user) return;
-
-    // Sequence guard: each invocation gets a unique id; only the latest may
-    // commit results to state.
-    const seq = ++loadSeqRef.current;
-
-    try {
-      // In single-team mode require a concrete currentTeam (no fallback to all teams).
-      // In all-mode use the user's actual availableTeams to avoid leaking data
-      // from teams cached in `allTeams` that the user no longer belongs to.
-      const teamsToUse = viewMode === 'all'
-        ? (availableTeams?.length ? availableTeams : (teams?.length ? teams : (allTeams || [])))
-        : (currentTeam ? [currentTeam] : []);
-
-      if (!teamsToUse.length) {
-        if (seq === loadSeqRef.current) {
-          setLoading(false);
-        }
-        return;
-      }
-
-      const teamIds = teamsToUse.map(team => team.id);
-      const today = new Date().toISOString().split('T')[0];
-
-      // ─── Batch 1: all independent queries fire in parallel ────────────────
-      console.time('[perf] DashboardMobile batch-1');
-      const [
-        privacyResult,
-        playersCountResult,
-        eventsCountResult,
-        upcomingEventsResult,
-        recentResultsResult,
-        staffCheckResult,
-        linkedPlayerIds,
-      ] = await Promise.all([
-        supabase
-          .from('team_privacy_settings')
-          .select('team_id, show_scores_to_parents, show_scores_to_players')
-          .in('team_id', teamIds),
-
-        supabase
-          .from('players')
-          .select('id', { count: 'exact', head: true })
-          .in('team_id', teamIds),
-
-        supabase
-          .from('events')
-          .select('id', { count: 'exact', head: true })
-          .in('team_id', teamIds)
-          .gte('date', today),
-
-        supabase
-          .from('events')
-          .select(`
-            id, title, date, start_time, event_type, opponent, is_home, team_id, scores,
-            teams!inner(
-              id, name, logo_url, kit_designs, club_id,
-              clubs!teams_club_id_fkey(name, logo_url)
-            )
-          `)
-          .in('team_id', teamIds)
-          .gte('date', today)
-          .order('date', { ascending: true })
-          .limit(5),
-
-        supabase
-          .from('events')
-          .select(`
-            id, title, date, start_time, event_type, opponent, team_id, scores,
-            teams!inner(
-              id, name, logo_url, kit_designs, club_id,
-              clubs!teams_club_id_fkey(name, logo_url)
-            )
-          `)
-          .in('team_id', teamIds)
-          .lt('date', today)
-          .not('scores', 'is', null)
-          .order('date', { ascending: false })
-          .limit(10),
-
-        supabase
-          .from('team_staff')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1),
-
-        getLinkedPlayerIds(user.id),
-      ]);
-      console.timeEnd('[perf] DashboardMobile batch-1');
-
-      const upcomingEventIds = upcomingEventsResult.data?.map(e => e.id) || [];
-      const recentEventIds   = recentResultsResult.data?.map(e => e.id) || [];
-
-      // ─── Batch 2: queries that depend on batch-1 IDs, also parallel ───────
-      console.time('[perf] DashboardMobile batch-2');
-      const [
-        playerAvailabilityData,
-        userAvailabilityResult,
-        eventSelectionsResult,
-      ] = await Promise.all([
-        getPlayerAvailabilityForEvents(linkedPlayerIds, upcomingEventIds),
-
-        upcomingEventIds.length > 0
-          ? supabase
-              .from('event_availability')
-              .select('event_id, status, role')
-              .eq('user_id', user.id)
-              .in('event_id', upcomingEventIds)
-          : Promise.resolve({ data: [] as Array<{ event_id: string; status: string; role: string }>, error: null }),
-
-        recentEventIds.length > 0
-          ? supabase
-              .from('event_selections')
-              .select('event_id, team_number, performance_category_id, performance_categories(name)')
-              .in('event_id', recentEventIds)
-          : Promise.resolve({ data: [] as any[], error: null }),
-      ]);
-      console.timeEnd('[perf] DashboardMobile batch-2');
-
-      // ─── Privacy settings map ─────────────────────────────────────────────
-      const settingsMap = new Map<string, any>();
-      privacyResult.data?.forEach(setting => {
-        settingsMap.set(setting.team_id, setting);
-      });
-      setTeamPrivacySettings(settingsMap);
-
-      // ─── Upcoming events + availability map ───────────────────────────────
-      const userAvailabilityData = userAvailabilityResult.data || [];
-
-      const availabilityMap = new Map<string, string>();
-      playerAvailabilityData.forEach(record => {
-        availabilityMap.set(record.event_id, record.status);
-      });
-      userAvailabilityData.forEach(record => {
-        if (!availabilityMap.has(record.event_id)) {
-          availabilityMap.set(record.event_id, record.status);
-        }
-      });
-
-      // Build per-event role map: which roles does the user already have an
-      // availability record for? Used to render the inline availability
-      // buttons even when an `event_invitations` row is missing.
-      const eventRolesMap = new Map<string, Set<'player' | 'staff'>>();
-      userAvailabilityData.forEach(record => {
-        const role = record.role === 'staff' ? 'staff' : 'player';
-        const set = eventRolesMap.get(record.event_id) ?? new Set<'player' | 'staff'>();
-        set.add(role);
-        eventRolesMap.set(record.event_id, set);
-      });
-      playerAvailabilityData.forEach(record => {
-        const set = eventRolesMap.get(record.event_id) ?? new Set<'player' | 'staff'>();
-        set.add('player');
-        eventRolesMap.set(record.event_id, set);
-      });
-
-      const upcomingEvents = upcomingEventsResult.data?.map(event => ({
-        ...event,
-        team_context: {
-          name: event.teams.name,
-          logo_url: event.teams.logo_url,
-          club_name: event.teams.clubs?.name,
-          club_logo_url: event.teams.clubs?.logo_url
-        },
-        user_availability: availabilityMap.get(event.id) || null,
-        assumed_roles: Array.from(eventRolesMap.get(event.id) ?? []) as Array<'player' | 'staff'>
-      })) || [];
-
-      // ─── Recent results ───────────────────────────────────────────────────
-      const eventSelectionsData = eventSelectionsResult.data || [];
-      const categoryMap: Record<string, Record<number, string>> = {};
-      eventSelectionsData.forEach(selection => {
-        if (!categoryMap[selection.event_id]) {
-          categoryMap[selection.event_id] = {};
-        }
-        const categoryName = (selection.performance_categories as any)?.name;
-        if (categoryName && selection.team_number) {
-          categoryMap[selection.event_id][selection.team_number] = categoryName;
-        }
-      });
-
-      const recentResults: any[] = [];
-      recentResultsResult.data?.forEach(event => {
-        const scores = event.scores as any;
-        const eventCategories = categoryMap[event.id] || {};
-        const teamContext = {
-          name: event.teams.name,
-          logo_url: event.teams.logo_url,
-          club_name: event.teams.clubs?.name,
-          club_logo_url: event.teams.clubs?.logo_url
-        };
-
-        let teamNumber = 1;
-        let hasMultiTeam = false;
-        while (scores && scores[`team_${teamNumber}`] !== undefined) {
-          hasMultiTeam = true;
-          const ourScore = scores[`team_${teamNumber}`];
-          const opponentScore = scores[`opponent_${teamNumber}`];
-          const categoryName = eventCategories[teamNumber];
-
-          recentResults.push({
-            id: `${event.id}_team_${teamNumber}`,
-            ...event,
-            team_number: teamNumber,
-            category_name: categoryName,
-            our_score: ourScore,
-            opponent_score: opponentScore,
-            team_context: teamContext,
-            display_name: categoryName
-              ? `${teamContext.name} - ${categoryName}`
-              : teamContext.name
-          });
-          teamNumber++;
-        }
-
-        if (!hasMultiTeam && scores) {
-          recentResults.push({
-            id: event.id,
-            ...event,
-            team_number: 1,
-            our_score: scores.home,
-            opponent_score: scores.away,
-            team_context: teamContext,
-            display_name: teamContext.name
-          });
-        }
-      });
-
-      recentResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      const limitedRecentResults = recentResults.slice(0, 6);
-
-      // ─── Pending availability (reuse batch-2 data, no extra round-trips) ──
-      // Mirror the same logic as CalendarEventsMobile: query by user_id across
-      // all roles, group by event, show as pending only when ALL roles pending.
-      const now = new Date();
-      const upcomingEventsForAvailability = upcomingEvents.filter(event =>
-        new Date(event.date) > now
-      );
-      const futureEventIds = new Set(upcomingEventsForAvailability.map(e => e.id));
-
-      // Group user's availability records by event_id (all roles, future events only)
-      const availabilityByEvent = new Map<string, string[]>();
-      userAvailabilityData
-        .filter(a => futureEventIds.has(a.event_id))
-        .forEach(a => {
-          const list = availabilityByEvent.get(a.event_id) ?? [];
-          list.push(a.status);
-          availabilityByEvent.set(a.event_id, list);
-        });
-
-      // Also merge player_id-based records (parent/multi-player scenario)
-      playerAvailabilityData
-        .filter(a => futureEventIds.has(a.event_id))
-        .forEach(a => {
-          if (!availabilityByEvent.has(a.event_id)) {
-            availabilityByEvent.set(a.event_id, [a.status]);
-          }
-        });
-
-      // An event needs a response only if the user has been invited (has records)
-      // AND every record for that event is still 'pending'
-      const pendingAvailabilityData = upcomingEventsForAvailability
-        .filter(event => {
-          const statuses = availabilityByEvent.get(event.id);
-          return statuses && statuses.length > 0 && statuses.every(s => s === 'pending');
-        })
-        .map(event => ({
-          id: `${event.id}_${user.id}`,
-          event_id: event.id,
-          user_id: user.id,
-          role: 'player',
-          status: 'pending',
-          events: { ...event, team_context: event.team_context }
-        }));
-
-      // Only the latest request may commit to state.
-      if (seq !== loadSeqRef.current) return;
-
-      const nextStats: LiveStats = {
-        playersCount: playersCountResult.count || 0,
-        eventsCount: eventsCountResult.count || 0,
-        upcomingEvents: upcomingEvents || [],
-        recentResults: limitedRecentResults || [],
-        pendingAvailability: pendingAvailabilityData
-      };
-      setStats(nextStats);
-      if (dashboardCacheKey) {
-        writeCache(dashboardCacheKey, nextStats);
-      }
-    } catch (error: any) {
-      if (seq !== loadSeqRef.current) return;
-      toast({
-        title: 'Error',
-        description: 'Failed to load dashboard data',
-        variant: 'destructive',
-      });
-    } finally {
-      if (seq === loadSeqRef.current) {
-        setLoading(false);
-      }
-    }
-  };
 
   const getResultFromScores = (ourScore: number | undefined, opponentScore: number | undefined) => {
     if (ourScore === undefined || opponentScore === undefined) return null;
@@ -727,7 +419,7 @@ export default function DashboardMobile() {
     return time ? `${format(eventDate, 'EEE d MMM')} at ${time}` : format(eventDate, 'EEE d MMM');
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <MobileLayout>
         <div className="flex items-center justify-center h-64">
@@ -744,6 +436,16 @@ export default function DashboardMobile() {
         style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
       >
         <div className="space-y-4 pb-safe-bottom">
+
+          {/* Serving the on-device snapshot — same banner as the other
+              offline-capable screens. Disappears once a live response lands. */}
+          {staleLabel(dashboardStaleMins) && (
+            <div className="-mx-4 flex items-center justify-center gap-1.5 py-1 px-3 bg-amber-500/20 border-b border-amber-500/30">
+              <span className="text-xs text-amber-300">
+                {staleLabel(dashboardStaleMins)} · Offline mode
+              </span>
+            </div>
+          )}
 
           {/* Condensed Header — date + greeting + avatar */}
           <div className="flex items-end justify-between pt-1 pb-1">
