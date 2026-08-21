@@ -2,7 +2,8 @@ import { useState, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
+import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import * as Sentry from "@sentry/react";
 import { logger } from "@/lib/logger";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -18,7 +19,7 @@ import { PageSkeleton } from "@/components/routing/PageSkeleton";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
-import { attachQueryPersistence } from "@/lib/queryPersister";
+import { applyPersistedQueryDefaults, persistOptions } from "@/lib/queryPersister";
 import { usePrefetch } from "@/hooks/usePrefetch";
 import { usePerformanceMonitor } from "@/lib/performanceMonitor";
 
@@ -115,7 +116,7 @@ const queryClient = new QueryClient({
   },
 });
 
-attachQueryPersistence(queryClient);
+applyPersistedQueryDefaults(queryClient);
 
 const Page = ({ children, name }: { children: React.ReactNode; name?: string }) => (
   <ErrorBoundary pageName={name}>
@@ -249,7 +250,7 @@ const AppContent = () => {
 
 const App = () => (
   <ErrorBoundary pageName="App">
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -267,7 +268,7 @@ const App = () => (
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </ErrorBoundary>
 );
 

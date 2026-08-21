@@ -22,8 +22,8 @@
  */
 
 import { QueryClient, QueryKey } from '@tanstack/react-query';
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import type { PersistedClient, Persister } from '@tanstack/react-query-persist-client';
+import { idbStorage, getItemMigrating } from '@/lib/idbStorage';
 import { logger } from '@/lib/logger';
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -67,42 +67,60 @@ const isPersistedKey = (queryKey: QueryKey): boolean =>
 let activePersister: { removeClient: () => Promise<void> | void } | undefined;
 
 /**
- * Attach storage persistence to the given QueryClient.
- * Call once during app initialisation, before rendering.
+ * Persister backed by IndexedDB rather than localStorage, which WebKit evicts
+ * under storage pressure — the cache this exists to provide was the first
+ * thing to disappear on the devices that needed it most.
  */
-export function attachQueryPersistence(queryClient: QueryClient) {
-  // localStorage can be unavailable in some Capacitor contexts, and throws
-  // rather than returning null when private browsing blocks writes.
-  let storage: Storage | undefined;
-  try {
-    localStorage.setItem('__puma_test__', '1');
-    localStorage.removeItem('__puma_test__');
-    storage = localStorage;
-  } catch {
-    // Storage unavailable — run without persistence rather than failing to boot
-    return;
-  }
+const persister: Persister = {
+  persistClient: async (client: PersistedClient) => {
+    try {
+      await idbStorage.setItem(STORAGE_KEY, JSON.stringify(client));
+    } catch (error) {
+      logger.error('Failed to persist query cache:', error);
+    }
+  },
+  restoreClient: async () => {
+    try {
+      // Migrating read: an install upgrading from the localStorage persister
+      // keeps its cache instead of starting cold.
+      const raw = await getItemMigrating(STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as PersistedClient) : undefined;
+    } catch (error) {
+      logger.error('Failed to restore query cache:', error);
+      return undefined;
+    }
+  },
+  removeClient: () => idbStorage.removeItem(STORAGE_KEY),
+};
 
-  // Give every persisted family a gcTime that covers the persistence window,
-  // so restored entries are not collected on the way in. Call sites that set
-  // gcTime explicitly still win, so they must not set a shorter one.
+/**
+ * Options for PersistQueryClientProvider.
+ *
+ * The provider is what makes an async persister safe: it holds queries in a
+ * restoring state until the cache is back, so a screen cannot fire a network
+ * request for data that is about to be handed to it a millisecond later.
+ */
+export const persistOptions = {
+  persister,
+  maxAge: CACHE_TTL_MS,
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query: { state: { status: string }; queryKey: QueryKey; meta?: Record<string, unknown> }) =>
+      query.state.status === 'success' &&
+      (isPersistedKey(query.queryKey) || query.meta?.persist === true),
+  },
+};
+
+/**
+ * Give every persisted family a gcTime covering the persistence window, so
+ * restored entries are not collected on the way in. Call sites that set gcTime
+ * explicitly still win, so they must not set a shorter one.
+ *
+ * Call once during app initialisation.
+ */
+export function applyPersistedQueryDefaults(queryClient: QueryClient) {
   for (const prefix of PERSISTED_QUERY_PREFIXES) {
     queryClient.setQueryDefaults(prefix, { gcTime: CACHE_TTL_MS });
   }
-
-  const persister = createSyncStoragePersister({ storage, key: STORAGE_KEY });
-  activePersister = persister;
-
-  persistQueryClient({
-    queryClient,
-    persister,
-    maxAge: CACHE_TTL_MS,
-    dehydrateOptions: {
-      shouldDehydrateQuery: (query) =>
-        query.state.status === 'success' &&
-        (isPersistedKey(query.queryKey) || query.meta?.persist === true),
-    },
-  });
 }
 
 /**
@@ -114,10 +132,7 @@ export function attachQueryPersistence(queryClient: QueryClient) {
  */
 export async function clearPersistedQueryCache(): Promise<void> {
   try {
-    await activePersister?.removeClient();
-    // Belt and braces: removeClient only clears the key the current persister
-    // owns, and an older build may have left a differently-keyed entry behind.
-    localStorage.removeItem(STORAGE_KEY);
+    await persister.removeClient();
   } catch (error) {
     logger.error('Failed to clear persisted query cache:', error);
   }
