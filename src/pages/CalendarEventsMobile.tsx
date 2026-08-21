@@ -254,6 +254,19 @@ export default function CalendarEventsMobile() {
   const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  // Loaded date range for events. Widens automatically when the user navigates
+  // the mini calendar to a month outside the range.
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>(() => {
+    const now = new Date();
+    const start = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 12, 1));
+    const end = endOfMonth(new Date(now.getFullYear(), now.getMonth() + 12, 1));
+    return { start, end };
+  });
+  const dateRangeRef = useRef(dateRange);
+  dateRangeRef.current = dateRange;
+  // Lightweight markers for the mini calendar dots (independent of list paging)
+  const [eventMarkers, setEventMarkers] = useState<{ date: string; event_type: string }[]>([]);
+
   const [editFormDirty, setEditFormDirty] = useState(false);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const pendingCloseActionRef = React.useRef<(() => void) | null>(null);
@@ -297,8 +310,9 @@ export default function CalendarEventsMobile() {
     const teamsToQuery = viewMode === 'all'
       ? (authTeams?.length ? authTeams : allTeams || [])
       : (currentTeam ? [currentTeam] : []);
+    const rangeKey = `${format(dateRange.start, 'yyyyMM')}-${format(dateRange.end, 'yyyyMM')}`;
     const cacheKey = teamsToQuery.length
-      ? `offline_events_${teamsToQuery.map(t => t.id).sort().join('_')}`
+      ? `offline_events_${teamsToQuery.map(t => t.id).sort().join('_')}_${rangeKey}`
       : null;
     eventsCacheKeyRef.current = cacheKey;
 
@@ -316,7 +330,60 @@ export default function CalendarEventsMobile() {
     }
 
     loadEvents();
-  }, [currentTeam, viewMode, availableTeams]);
+  }, [currentTeam, viewMode, availableTeams, dateRange]);
+
+  // Widen the loaded range when the user pages the mini calendar outside it
+  useEffect(() => {
+    const monthStart = startOfMonth(calendarMonth);
+    const monthEnd = endOfMonth(calendarMonth);
+    const { start, end } = dateRangeRef.current;
+    if (monthStart >= start && monthEnd <= end) return;
+    setDateRange({
+      start: monthStart < start ? startOfMonth(addMonths(monthStart, -6)) : start,
+      end: monthEnd > end ? endOfMonth(addMonths(monthEnd, 6)) : end,
+    });
+  }, [calendarMonth]);
+
+  // The list is server-paged (newest first), so a selected older day may have
+  // events that aren't loaded yet. Fetch that day on demand and merge them in.
+  useEffect(() => {
+    if (!selectedDate) return;
+    const dayKey = format(selectedDate, 'yyyy-MM-dd');
+    const alreadyLoaded = events.some(e => format(new Date(e.date), 'yyyy-MM-dd') === dayKey);
+    if (alreadyLoaded) return;
+
+    const teamsToQuery = viewMode === 'all'
+      ? (authTeams?.length ? authTeams : allTeams || [])
+      : (currentTeam ? [currentTeam] : []);
+    if (teamsToQuery.length === 0) return;
+    const teamIds = teamsToQuery.map(t => t.id);
+
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select(
+          'id, team_id, title, date, start_time, end_time, event_type, opponent, ' +
+          'is_home, scores, location, latitude, longitude, description, notes, ' +
+          'coach_notes, staff_notes, training_notes, kit_selection, game_format, ' +
+          'game_duration, meeting_time, recurring_group_id, teams, created_at, updated_at'
+        )
+        .in('team_id', teamIds)
+        .eq('date', dayKey);
+
+      if (error || cancelled || !data?.length) return;
+      setEvents(prev => {
+        const existing = new Set(prev.map(e => e.id));
+        const additions = ((data as unknown) as DatabaseEvent[]).filter(e => !existing.has(e.id));
+        return additions.length ? [...prev, ...additions] : prev;
+      });
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedDate, viewMode, currentTeam, authTeams, allTeams]);
+
+
+
 
   // Handle eventId from URL (e.g., from Dashboard click)
   useEffect(() => {
@@ -428,18 +495,14 @@ export default function CalendarEventsMobile() {
 
       const teamIds = teamsToQuery.map(t => t.id);
 
-      // Rolling window: 3 months back → 6 months forward (mobile shows a tighter range)
-      const now = new Date();
-      const windowStart = new Date(now);
-      windowStart.setMonth(windowStart.getMonth() - 3);
-      const windowEnd = new Date(now);
-      windowEnd.setMonth(windowEnd.getMonth() + 6);
-      const startDateStr = windowStart.toISOString().split('T')[0];
-      const endDateStr = windowEnd.toISOString().split('T')[0];
+      // Loaded window (widens as the user navigates the mini calendar)
+      const startDateStr = format(dateRangeRef.current.start, 'yyyy-MM-dd');
+      const endDateStr = format(dateRangeRef.current.end, 'yyyy-MM-dd');
+
 
       // Run all three queries in parallel — previously 3 sequential round-trips
       console.time('[perf] CalendarEventsMobile.loadEvents');
-      const [privacyResult, eventsResult, selectionsResult] = await Promise.all([
+      const [privacyResult, eventsResult, selectionsResult, markersResult] = await Promise.all([
         supabase
           .from('team_privacy_settings')
           .select('team_id, show_scores_to_parents, show_scores_to_players')
@@ -461,7 +524,7 @@ export default function CalendarEventsMobile() {
           .order('date', { ascending: false })
           .range(0, eventsPageSize - 1),
 
-        // Scoped to the same 9-month window via a join filter so we don't load
+        // Scoped to the same window via a join filter so we don't load
         // all-time event_selections for the team on every mount.
         supabase
           .from('event_selections')
@@ -476,7 +539,16 @@ export default function CalendarEventsMobile() {
           .in('team_id', teamIds)
           .gte('events.date', startDateStr)
           .lte('events.date', endDateStr),
+
+        // Lightweight markers for the mini-calendar dots — unaffected by list paging
+        supabase
+          .from('events')
+          .select('date, event_type')
+          .in('team_id', teamIds)
+          .gte('date', startDateStr)
+          .lte('date', endDateStr),
       ]);
+
       console.timeEnd('[perf] CalendarEventsMobile.loadEvents');
 
       if (eventsResult.error) throw eventsResult.error;
@@ -495,6 +567,8 @@ export default function CalendarEventsMobile() {
         writeCache(eventsCacheKeyRef.current, eventsResult.data);
       }
       setStaleSavedAt(null);
+      setEventMarkers((markersResult.data || []) as { date: string; event_type: string }[]);
+
 
       // Group selections by event_id for easy lookup
       const selectionsByEvent: {[key: string]: any[]} = {};
@@ -524,13 +598,9 @@ export default function CalendarEventsMobile() {
     if (teamsToQuery.length === 0) return;
 
     const teamIds = teamsToQuery.map(t => t.id);
-    const now = new Date();
-    const windowStart = new Date(now);
-    windowStart.setMonth(windowStart.getMonth() - 3);
-    const windowEnd = new Date(now);
-    windowEnd.setMonth(windowEnd.getMonth() + 6);
-    const startDateStr = windowStart.toISOString().split('T')[0];
-    const endDateStr = windowEnd.toISOString().split('T')[0];
+    const startDateStr = format(dateRangeRef.current.start, 'yyyy-MM-dd');
+    const endDateStr = format(dateRangeRef.current.end, 'yyyy-MM-dd');
+
     const nextOffset = eventsServerOffset + eventsPageSize;
 
     setIsLoadingMoreEvents(true);
@@ -1075,16 +1145,21 @@ export default function CalendarEventsMobile() {
   
   const groupedEvents = groupEventsByPeriod(paginatedEvents);
 
-  // Build event-types-by-date map for the mini grid (all events for current team scope)
+  // Build event-types-by-date map for the mini grid.
+  // Uses the lightweight markers query so dots appear for every event in the
+  // loaded range, independent of the paged list, falling back to loaded events.
   const eventTypesByDate = React.useMemo(() => {
     const map = new Map<string, Set<string>>();
-    filteredEvents.forEach((e) => {
-      const key = format(new Date(e.date), 'yyyy-MM-dd');
+    const add = (date: string, type: string) => {
+      const key = format(new Date(date), 'yyyy-MM-dd');
       if (!map.has(key)) map.set(key, new Set<string>());
-      map.get(key)!.add(e.event_type);
-    });
+      map.get(key)!.add(type);
+    };
+    filteredEvents.forEach((e) => add(e.date, e.event_type));
+    eventMarkers.forEach((m) => add(m.date, m.event_type));
     return map;
-  }, [filteredEvents]);
+  }, [filteredEvents, eventMarkers]);
+
 
   // Apply selected-date filter to ordered events when active
   const visibleEvents = selectedDate
