@@ -134,6 +134,17 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         aria-hidden="true"
       />
 
+      {/* Bottom safe-area fill: covers the iOS home indicator strip and the
+          Android gesture / navigation bar area behind the floating nav. */}
+      <div
+        className="absolute bottom-0 left-0 right-0 z-0"
+        style={{
+          height: 'env(safe-area-inset-bottom)',
+          background: '#070311',
+        }}
+        aria-hidden="true"
+      />
+
       {!hideHeader && <MobileHeader title={headerTitle} />}
 
       {showTabs && tabs.length > 0 && (

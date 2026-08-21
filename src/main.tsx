@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react'
 import App from './App.tsx'
 import './index.css'
 import { logBundleLoadTime } from './lib/performanceMonitor'
+import { setupNativeStatusBar } from './lib/nativeStatusBar'
 
 // ── Sentry error tracking ─────────────────────────────────────────────────────
 // DSN is injected via VITE_SENTRY_DSN env var.  If unset, Sentry initialises
@@ -57,6 +58,8 @@ window.addEventListener('error', (event) => {
 });
 
 logBundleLoadTime();
+
+void setupNativeStatusBar();
 
 // ── Service worker ────────────────────────────────────────────────────────────
 // Native builds serve their web assets from the app bundle, so a service worker
