@@ -1,31 +1,28 @@
-## Two separate failures
+## Verify GitHub sync and fix the broken preview
 
-### 1. PR #68 (`claude/peaceful-thompson-iqfb4z`) — exit 127
-That branch was opened before `scripts/test-edge-functions.sh` was added to the repo, so the workflow can't find the script. No code fix needed: **either rebase the PR on `main` or close it.** Tell me which and I'll proceed; otherwise just close it in GitHub.
+### Current state
 
-### 2. `main` run — `Unable to validate email address: invalid format`
+- The workspace is exactly on `origin/main` (`git rev-parse HEAD` matches `refs/heads/main`).
+- Recent PRs #69–#73 are merged and present: mobile scroll shell, cache correctness, dashboard query, mobile detection, and durable storage.
+- The preview is **not** showing the latest code. The runtime error `useAuth must be used within an AuthProvider` is being thrown from a stale Vite-transformed module (`src/contexts/AuthContext.tsx?t=1787315495296`). The stack-trace line numbers (AuthProvider at line 22, useAuth at line 744) do not match the current file (AuthProvider at line 44, useAuth at line 839), proving the browser is running cached code.
 
-Tests are actually executing now (secrets work). 10 suites fail at the same line in `supabase/functions/tests/helpers/auth.ts` — `supabase.auth.admin.createUser({ email: ... })` is being rejected by Supabase Auth's email validator.
+### Plan
 
-Root cause: the helper generates emails on a TLD Supabase's GoTrue validator refuses (commonly `.test`, `.local`, `.invalid`, or a malformed `@example` form). The whole-module `Uncaught error` shape (10 of 10 affected modules) confirms it's the shared helper, not anything function-specific.
+1. **Clear the Vite dev cache and restart the dev server**
+   - Kill the Vite process so the supervisor respawns it.
+   - Wait for `http://localhost:8080/` to respond.
+   - This forces the preview to load the files that are already in the workspace.
 
-**Fix:** change the synthetic email in `helpers/auth.ts` to use a real-looking domain. The safest, well-supported pattern in CI is:
-```ts
-const email = `lovable-ci+${crypto.randomUUID()}@example.com`;
-```
-`example.com` is IANA-reserved, accepted by GoTrue, and the `+tag` keeps each run unique without polluting auth.users with reused addresses (suite teardown still deletes the user).
+2. **Verify the browser loads without the auth error**
+   - Use the preview to confirm the dashboard renders and no `useAuth` error appears in the console.
 
-If the helper is already on `example.com` and still failing, the next most likely cause is no `@` / empty local part — same one-line fix covers both.
+3. **Cross-check the recent GitHub merges are visible**
+   - Confirm mobile scroll works on `/dashboard` and `/my-team`.
+   - Confirm the dashboard hydrates from localStorage (no spinner on reload).
 
-### Blocker
-
-Both files I need to inspect/edit live only on GitHub right now (added by Claude Code, not yet synced into Lovable):
-- `supabase/functions/tests/helpers/auth.ts`
-- `scripts/test-edge-functions.sh`
-
-I need one of:
-- Paste the current contents of `helpers/auth.ts` here, **or**
-- Trigger a GitHub → Lovable sync (any commit on `main` from GitHub should do it) so the files appear in the workspace, then approve this plan and I'll edit `auth.ts` in one line.
+4. **Clean up the stale plan file**
+   - The previous `.lovable/plan.md` relates to edge-function tests; overwrite it with this plan so the workspace reflects the current task.
 
 ### Out of scope
-No changes to the workflow YAML, no changes to function runtime code, no new secrets.
+
+No new features, no GitHub Actions changes, no database edits. This is purely a sync/cache verification pass.
