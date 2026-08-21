@@ -344,6 +344,46 @@ export default function CalendarEventsMobile() {
     });
   }, [calendarMonth]);
 
+  // The list is server-paged (newest first), so a selected older day may have
+  // events that aren't loaded yet. Fetch that day on demand and merge them in.
+  useEffect(() => {
+    if (!selectedDate) return;
+    const dayKey = format(selectedDate, 'yyyy-MM-dd');
+    const alreadyLoaded = events.some(e => format(new Date(e.date), 'yyyy-MM-dd') === dayKey);
+    if (alreadyLoaded) return;
+
+    const teamsToQuery = viewMode === 'all'
+      ? (authTeams?.length ? authTeams : allTeams || [])
+      : (currentTeam ? [currentTeam] : []);
+    if (teamsToQuery.length === 0) return;
+    const teamIds = teamsToQuery.map(t => t.id);
+
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select(
+          'id, team_id, title, date, start_time, end_time, event_type, opponent, ' +
+          'is_home, scores, location, latitude, longitude, description, notes, ' +
+          'coach_notes, staff_notes, training_notes, kit_selection, game_format, ' +
+          'game_duration, meeting_time, recurring_group_id, teams, created_at, updated_at'
+        )
+        .in('team_id', teamIds)
+        .eq('date', dayKey);
+
+      if (error || cancelled || !data?.length) return;
+      setEvents(prev => {
+        const existing = new Set(prev.map(e => e.id));
+        const additions = ((data as unknown) as DatabaseEvent[]).filter(e => !existing.has(e.id));
+        return additions.length ? [...prev, ...additions] : prev;
+      });
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedDate, viewMode, currentTeam, authTeams, allTeams]);
+
+
+
 
   // Handle eventId from URL (e.g., from Dashboard click)
   useEffect(() => {
