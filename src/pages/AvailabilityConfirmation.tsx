@@ -176,7 +176,7 @@ export default function AvailabilityConfirmation() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="safe-area-root min-h-dvh flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -184,7 +184,7 @@ export default function AvailabilityConfirmation() {
 
   if (!event) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="safe-area-root min-h-dvh flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="py-6">
             <div className="text-center">

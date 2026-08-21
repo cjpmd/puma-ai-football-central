@@ -115,9 +115,10 @@ export default function AuthMobile() {
   // Options View - Spond-style entry screen
   if (view === 'options') {
     return (
-      <div className="min-h-screen ios-wallpaper-twilight flex flex-col">
-        {/* Top Header with Logo */}
-        <div className="pt-safe px-6 pb-8 text-center" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+      <div className="safe-area-root min-h-dvh ios-wallpaper-twilight flex flex-col">
+        {/* Top Header with Logo — the root owns the status-bar inset, so this
+            is the design gap below it, not a safe-area compensation. */}
+        <div className="pt-12 px-6 pb-8 text-center">
           <div className="flex justify-center mb-3">
             <img 
               src="/brand/stopwatch-mark.svg" 
@@ -130,14 +131,14 @@ export default function AuthMobile() {
         </div>
         
         {/* Content */}
-        <div className="flex-1 flex flex-col px-6 pb-safe">
+        <div className="flex-1 flex flex-col px-6">
 
           {/* Option Cards */}
           <div className="w-full space-y-3">
             {/* Join Existing Team */}
             <button
               onClick={() => setShowJoinTeamWizard(true)}
-              className="w-full p-4 bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              className="w-full p-4 bg-white/[0.06] border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -156,7 +157,7 @@ export default function AuthMobile() {
             {/* Set Up New Team */}
             <button
               onClick={() => setShowTeamSetupWizard(true)}
-              className="w-full p-4 bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              className="w-full p-4 bg-white/[0.06] border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -175,7 +176,7 @@ export default function AuthMobile() {
             {/* Set Up New Club */}
             <button
               onClick={() => setShowClubSetupWizard(true)}
-              className="w-full p-4 bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              className="w-full p-4 bg-white/[0.06] border border-white/10 rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -233,7 +234,7 @@ export default function AuthMobile() {
 
   // Login View
   return (
-    <div className="min-h-screen ios-wallpaper-twilight flex items-center justify-center p-4">
+    <div className="safe-area-root min-h-dvh ios-wallpaper-twilight flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Back Button */}
         <Button
@@ -342,7 +343,7 @@ export default function AuthMobile() {
                       />
                     </div>
                   </div>
-                  <div className="flex gap-2 pb-safe">
+                  <div className="flex gap-2">
                     <Button
                       type="button"
                       variant="outline"

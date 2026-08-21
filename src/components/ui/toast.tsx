@@ -14,7 +14,10 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      // Mobile stacks from the top, desktop from the bottom-right: inset the
+      // edge each one actually touches so toasts clear the status bar /
+      // Dynamic Island and the home indicator.
+      "fixed top-0 z-[100] flex max-h-dvh w-full flex-col-reverse p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col sm:pt-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] md:max-w-[420px]",
       className
     )}
     {...props}
@@ -27,9 +30,9 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-white/12 bg-[#1a0d2e]/95 backdrop-blur-2xl text-white",
+        default: "border-white/12 bg-[#1a0d2e]/95 text-white",
         destructive:
-          "destructive group border-red-500/30 bg-red-950/90 backdrop-blur-2xl text-red-50",
+          "destructive group border-red-500/30 bg-red-950/90 text-red-50",
       },
     },
     defaultVariants: {

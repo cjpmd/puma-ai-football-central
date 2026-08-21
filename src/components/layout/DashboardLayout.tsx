@@ -136,7 +136,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const headerEntity = getHeaderEntity();
 
   const Sidebar = ({ className }: { className?: string }) => (
-    <div className={cn('flex h-full w-64 flex-col bg-white/[0.04] backdrop-blur-xl', className)}>
+    <div className={cn('flex h-full w-64 flex-col bg-white/[0.04] backdrop-blur-md', className)}>
       <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-6">
         <div className="flex items-center gap-3">
           <img 
@@ -234,7 +234,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="safe-area-root flex h-dvh overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:block">
         <Sidebar className="border-r border-white/10" />
@@ -259,7 +259,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top header with entity logo, name, and role switcher */}
-        <div className="h-16 border-b border-white/10 bg-white/[0.03] backdrop-blur-xl flex items-center px-6">
+        <div className="h-16 border-b border-white/10 bg-white/[0.03] backdrop-blur-md flex items-center px-6">
           <div className="flex-1 min-w-0">
             <HeaderEntitySwitcher variant="desktop" />
           </div>

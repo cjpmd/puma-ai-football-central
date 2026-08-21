@@ -339,7 +339,7 @@ export const TrainingPackView: React.FC<TrainingPackViewProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto">
-      <div className="min-h-screen py-8">
+      <div className="safe-area-root min-h-dvh py-8">
         {/* Control Bar */}
         <div className="no-print sticky top-0 bg-white border-b shadow-sm p-4 mb-6 z-10">
           <div className="container mx-auto flex justify-between items-center">

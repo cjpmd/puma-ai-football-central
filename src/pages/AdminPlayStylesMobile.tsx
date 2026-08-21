@@ -197,7 +197,7 @@ export default function AdminPlayStylesMobile() {
 
   if (authzLoading || profileLoading || !profile || loading) {
     return (
-      <div className="p-4">
+      <div className="safe-area-root p-4">
         <div className="flex items-center justify-center h-64">
           <p className="text-white/60">Loading...</p>
         </div>
@@ -206,7 +206,7 @@ export default function AdminPlayStylesMobile() {
   }
 
   return (
-    <div className="p-4 space-y-4 pb-20">
+    <div className="safe-area-root p-4 space-y-4 pb-20">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Play Styles</h1>

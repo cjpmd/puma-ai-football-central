@@ -107,8 +107,8 @@ export function RoleAwareBottomNav() {
         style={{
           height: 64,
           borderRadius: 32,
-          backdropFilter: 'blur(28px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+          backdropFilter: 'blur(12px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(12px) saturate(200%)',
           background: 'rgba(20, 10, 36, 0.72)',
           border: '0.5px solid rgba(255,255,255,0.14)',
           boxShadow:

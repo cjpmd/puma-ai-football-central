@@ -13,6 +13,17 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
+
+  /* Device safe-area insets for page roots that scroll the document.
+     Fixed-height app shells (MobileLayout, .game-day-container) must NOT use
+     this — they inset their own header/nav instead. Applying both makes the
+     document taller than the viewport and creates a second scroll root. */
+  .safe-area-root {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }
 
 @layer base {
@@ -123,15 +134,12 @@
 
   body {
     @apply text-foreground;
+    /* No safe-area padding here: page roots own their insets via
+       .safe-area-root, fixed shells via their own header/nav. */
     background:
       radial-gradient(ellipse 1100px 900px at 80% -10%, oklch(0.50 0.20 275 / 0.85), transparent 55%),
       radial-gradient(ellipse 800px 700px at 0% 60%, oklch(0.55 0.22 340 / 0.55), transparent 60%),
       linear-gradient(180deg, #120823 0%, #070311 100%);
-    background-attachment: fixed;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
   }
 
   /* Re-enable text selection in inputs and textareas */
@@ -181,11 +189,14 @@
     @apply border-puma-red border-2;
   }
 
-  /* iOS Liquid Glass — reusable surface */
+  /* iOS Liquid Glass — reusable surface.
+     Blur is capped at 12px app-wide: stacked backdrop filters are the most
+     expensive compositing work a mobile WebView does, and above ~12px the
+     cost climbs with no visible gain over this dark wallpaper. */
   .ios-glass {
     position: relative;
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
     background: rgba(255, 255, 255, 0.06);
     border: 0.5px solid rgba(255, 255, 255, 0.12);
     box-shadow:
@@ -194,8 +205,8 @@
   }
 
   .ios-glass-purple {
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
     background: oklch(0.45 0.18 295 / 0.35);
     border: 0.5px solid rgba(255, 255, 255, 0.14);
     box-shadow:
@@ -204,8 +215,8 @@
   }
 
   .ios-glass-strong {
-    backdrop-filter: blur(32px) saturate(200%);
-    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    backdrop-filter: blur(12px) saturate(200%);
+    -webkit-backdrop-filter: blur(12px) saturate(200%);
     background: rgba(255, 255, 255, 0.10);
     border: 0.5px solid rgba(255, 255, 255, 0.16);
     box-shadow:
@@ -214,12 +225,13 @@
       0 8px 32px rgba(0, 0, 0, 0.3);
   }
 
-  /* Mobile glass card surfaces — translucent over the dark purple wallpaper */
+  /* Mobile glass card surfaces — translucent over the dark purple wallpaper.
+     No backdrop-filter: these repeat down scrolling lists, and one blurred
+     layer per row is what makes the list scroll at a fraction of 60fps. The
+     translucent fill alone reads the same over the wallpaper. */
   .ios-card {
     border-radius: 1rem;
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 0.5px solid rgba(255, 255, 255, 0.12);
     color: #fff;
   }
@@ -227,8 +239,6 @@
   .ios-card-strong {
     border-radius: 1rem;
     background: rgba(255, 255, 255, 0.13);
-    backdrop-filter: blur(24px) saturate(200%);
-    -webkit-backdrop-filter: blur(24px) saturate(200%);
     border: 0.5px solid rgba(255, 255, 255, 0.18);
     color: #fff;
     box-shadow:
