@@ -133,7 +133,7 @@ export default function ClubDetailsMobile() {
         </button>
 
         {/* Club Header */}
-        <div className="flex items-center gap-4 p-4 bg-white/[0.06] backdrop-blur-xl rounded-xl shadow-sm">
+        <div className="flex items-center gap-4 p-4 bg-white/[0.06] rounded-xl shadow-sm">
           <Avatar className="h-16 w-16">
             {club.logoUrl ? (
               <AvatarImage src={club.logoUrl} alt={club.name} />

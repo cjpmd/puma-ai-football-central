@@ -1131,7 +1131,7 @@ return (
                     handlePeriodsChange(updatedPeriods);
                   }}
                 >
-                  <SelectTrigger className="rounded-2xl bg-primary/25 border border-primary/40 backdrop-blur-xl h-auto p-2 flex flex-col items-center justify-center text-center [&>svg]:hidden gap-0">
+                  <SelectTrigger className="rounded-2xl bg-primary/25 border border-primary/40 h-auto p-2 flex flex-col items-center justify-center text-center [&>svg]:hidden gap-0">
                     <div className="text-[9px] uppercase tracking-wider text-white/70 leading-tight mb-0.5">Formation</div>
                     <div className="text-base font-bold text-white leading-tight">
                       {currentTeam.periods[0]?.formation || '—'}
@@ -1144,7 +1144,7 @@ return (
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="rounded-2xl bg-primary/25 border border-primary/40 backdrop-blur-xl p-2 flex flex-col items-center justify-center text-center">
+                <div className="rounded-2xl bg-primary/25 border border-primary/40 p-2 flex flex-col items-center justify-center text-center">
                   <div className="text-[9px] uppercase tracking-wider text-white/70 leading-tight mb-0.5">Formation</div>
                   <div className="text-base font-bold text-white leading-tight">
                     {currentTeam.periods[0]?.formation || '—'}
@@ -1237,7 +1237,7 @@ return (
             return (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col w-full max-w-full">
                 <div className={`${isMobile ? 'px-2 pb-2 pt-2' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
-                  <TabsList className={`grid w-full grid-cols-${tabCount} ${isMobile ? 'bg-white/[0.06] border border-white/10 backdrop-blur-xl' : ''}`}>
+                  <TabsList className={`grid w-full grid-cols-${tabCount} ${isMobile ? 'bg-white/[0.06] border border-white/10' : ''}`}>
                     <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs text-white/70 data-[state=active]:bg-white/15 data-[state=active]:text-white' : ''}`}>
                       <Users className="h-3 w-3" />
                       Squad

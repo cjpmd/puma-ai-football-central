@@ -700,7 +700,7 @@ export default function PlayerManagementMobile() {
               onClick={() => handleSetViewModeSquad('cards')}
               className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'cards'
-                  ? 'bg-white/[0.06] backdrop-blur-xl text-primary shadow-sm'
+                  ? 'bg-white/[0.06] text-primary shadow-sm'
                   : 'text-white/70 hover:text-white'
               }`}
               aria-label="Card view"
@@ -713,7 +713,7 @@ export default function PlayerManagementMobile() {
               onClick={() => handleSetViewModeSquad('list')}
               className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 viewModeSquad === 'list'
-                  ? 'bg-white/[0.06] backdrop-blur-xl text-primary shadow-sm'
+                  ? 'bg-white/[0.06] text-primary shadow-sm'
                   : 'text-white/70 hover:text-white'
               }`}
               aria-label="List view"

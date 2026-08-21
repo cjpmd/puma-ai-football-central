@@ -10,10 +10,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      // Sonner anchors to the bottom by default; keep its toasts above the
+      // home indicator. Passed as a CSS string so env() resolves at paint.
+      offset="calc(1rem + env(safe-area-inset-bottom))"
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-[#1a0d2e]/95 group-[.toaster]:backdrop-blur-2xl group-[.toaster]:text-white group-[.toaster]:border-white/12 group-[.toaster]:shadow-2xl",
+            "group toast group-[.toaster]:bg-[#1a0d2e] group-[.toaster]:text-white group-[.toaster]:border-white/12 group-[.toaster]:shadow-2xl",
           description: "group-[.toast]:text-white/70",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",

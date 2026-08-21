@@ -228,7 +228,7 @@ export default function TeamSettingsMobile() {
 
   return (
     <MobileLayout headerTitle={`Settings: ${team.name}`}>
-      <div className="min-h-screen bg-white/5 -mx-4 -mt-4 px-4 pt-4">
+      <div className="min-h-full bg-white/5 -mx-4 -mt-4 px-4 pt-4">
         <div className="space-y-4 pb-safe-bottom">
           
           {/* Back to Dashboard */}
@@ -242,7 +242,7 @@ export default function TeamSettingsMobile() {
 
           {/* Settings Groups */}
           {Object.entries(groupedSections).map(([group, sections]) => (
-            <div key={group} className="bg-white/[0.06] backdrop-blur-xl rounded-2xl shadow-sm overflow-hidden">
+            <div key={group} className="bg-white/[0.06] rounded-2xl shadow-sm overflow-hidden">
               <div className="px-4 py-2 border-b border-white/10">
                 <h2 className="text-xs font-medium text-white/60 uppercase tracking-wide">{group}</h2>
               </div>
@@ -274,7 +274,8 @@ export default function TeamSettingsMobile() {
 
       {/* Settings Sheet */}
       <Sheet open={!!activeSection} onOpenChange={(open) => !open && setActiveSection(null)}>
-        <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl p-0 flex flex-col">
+        {/* p-0 opts out of the sheet's built-in insets, so re-add the bottom one */}
+        <SheetContent side="bottom" className="h-[90dvh] rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)] flex flex-col">
           <SheetHeader className="px-4 pt-4 pb-2 border-b flex-shrink-0">
             <SheetTitle className="text-left">{getActiveLabel()}</SheetTitle>
           </SheetHeader>

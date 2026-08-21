@@ -845,7 +845,7 @@ export default function DashboardMobile() {
                 </button>
 
                 <Sheet open={showTeamPicker} onOpenChange={setShowTeamPicker}>
-                  <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl overflow-y-auto pb-safe">
+                  <SheetContent side="bottom" className="h-auto max-h-[80dvh] rounded-t-3xl">
                     <SheetHeader className="pb-3">
                       <SheetTitle className="text-lg">Select Team</SheetTitle>
                     </SheetHeader>

@@ -215,7 +215,7 @@ export default function TrainingMobile() {
                       className={`w-full rounded-t-sm transition-all ${
                         hasSession
                           ? isCurrentDay
-                            ? 'bg-white/[0.06] backdrop-blur-xl'
+                            ? 'bg-white/[0.06]'
                             : 'bg-white/55'
                           : 'bg-white/10'
                       }`}
@@ -238,7 +238,7 @@ export default function TrainingMobile() {
             onClick={() => handleEventClick(todaysSession.id)}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/[0.06] backdrop-blur-xl text-primary">
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/[0.06] text-primary">
                 {isSameDay(parseISO(todaysSession.date), now) ? 'Today' : format(parseISO(todaysSession.date), 'EEE d MMM')}
               </span>
               <button
@@ -340,15 +340,15 @@ export default function TrainingMobile() {
         {/* Existing tabs - kept for power users */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-2">
           <TabsList className="grid w-full grid-cols-3 ios-card border-0 p-1">
-            <TabsTrigger value="library" className="text-xs text-white/70 data-[state=active]:bg-white/[0.06] backdrop-blur-xl data-[state=active]:text-primary">
+            <TabsTrigger value="library" className="text-xs text-white/70 data-[state=active]:bg-white/[0.06] data-[state=active]:text-primary">
               <BookOpen className="w-4 h-4 mr-1" />
               Library
             </TabsTrigger>
-            <TabsTrigger value="plans" className="text-xs text-white/70 data-[state=active]:bg-white/[0.06] backdrop-blur-xl data-[state=active]:text-primary">
+            <TabsTrigger value="plans" className="text-xs text-white/70 data-[state=active]:bg-white/[0.06] data-[state=active]:text-primary">
               <Users className="w-4 h-4 mr-1" />
               Plans
             </TabsTrigger>
-            <TabsTrigger value="sessions" className="text-xs text-white/70 data-[state=active]:bg-white/[0.06] backdrop-blur-xl data-[state=active]:text-primary">
+            <TabsTrigger value="sessions" className="text-xs text-white/70 data-[state=active]:bg-white/[0.06] data-[state=active]:text-primary">
               <Calendar className="w-4 h-4 mr-1" />
               Sessions
             </TabsTrigger>

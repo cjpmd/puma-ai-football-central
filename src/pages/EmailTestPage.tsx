@@ -7,7 +7,7 @@ import { InvitationResendPanel } from '@/components/users/InvitationResendPanel'
 const EmailTestPage = () => {
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="safe-area-root container mx-auto py-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Email Configuration Test</h1>
           <p className="text-white/60 mt-2">

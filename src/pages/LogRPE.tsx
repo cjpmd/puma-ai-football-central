@@ -73,7 +73,7 @@ export default function LogRPE() {
   }
 
   if (notFound) return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="safe-area-root min-h-dvh flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardContent className="p-6 text-center text-muted-foreground">Invalid or expired link.</CardContent>
       </Card>
@@ -81,13 +81,13 @@ export default function LogRPE() {
   );
 
   if (!player) return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="safe-area-root min-h-dvh flex items-center justify-center p-4">
       <p className="text-muted-foreground">Loading...</p>
     </div>
   );
 
   if (saved) return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="safe-area-root min-h-dvh flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardContent className="p-6 text-center">
           <p className="font-semibold text-emerald-400">Saved!</p>
@@ -98,7 +98,7 @@ export default function LogRPE() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <div className="safe-area-root min-h-dvh flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader><CardTitle>Log Training Load</CardTitle></CardHeader>
         <CardContent className="space-y-4">

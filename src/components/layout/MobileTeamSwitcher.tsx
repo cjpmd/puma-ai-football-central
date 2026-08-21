@@ -38,7 +38,7 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto pb-safe">
+      <SheetContent side="bottom" className="h-auto max-h-[85dvh] rounded-t-3xl">
         <SheetHeader className="pb-4">
           <SheetTitle className="text-xl">Switch Team</SheetTitle>
         </SheetHeader>

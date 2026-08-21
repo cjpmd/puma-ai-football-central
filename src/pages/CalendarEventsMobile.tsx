@@ -156,7 +156,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
             <button
               aria-label="Create event"
               onClick={onCreate}
-              className="h-7 w-7 flex items-center justify-center rounded-md bg-white/[0.06] backdrop-blur-xl text-primary hover:bg-white/90"
+              className="h-7 w-7 flex items-center justify-center rounded-md bg-white/[0.06] text-primary hover:bg-white/90"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -189,7 +189,7 @@ const MiniMonthGrid: React.FC<MiniMonthGridProps> = ({
           // Build tile classes with priority: selected > tint > hover
           let tileClasses = '';
           if (isSelected) {
-            tileClasses = 'bg-white/20 backdrop-blur-xl border border-white/30 text-white font-semibold';
+            tileClasses = 'bg-white/20 border border-white/30 text-white font-semibold';
           } else if (hasEvent) {
             tileClasses = `${tint!.tile} text-white font-medium`;
           } else if (isPastDay) {
@@ -1303,7 +1303,7 @@ export default function CalendarEventsMobile() {
                           
                           {/* NEXT badge - absolute top right */}
                           {isNextEvent && (
-                            <Badge className="bg-white/15 backdrop-blur-xl text-white text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white/20">
+                            <Badge className="bg-white/15 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2 hover:bg-white/20">
                               NEXT
                             </Badge>
                           )}

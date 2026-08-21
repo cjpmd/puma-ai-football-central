@@ -127,7 +127,8 @@ export const PlayerActionSheet: React.FC<PlayerActionSheetProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[80vh] p-0">
+      {/* p-0 opts out of the sheet's built-in insets, so re-add the bottom one */}
+      <SheetContent side="bottom" className="h-[80dvh] p-0 pb-[env(safe-area-inset-bottom)]">
         <SheetHeader className="px-6 py-4 border-b">
           <SheetTitle className="text-xl">Player Management</SheetTitle>
           <SheetDescription>
