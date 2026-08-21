@@ -21,6 +21,13 @@ const config: CapacitorConfig = {
     }
   }),
   plugins: {
+    StatusBar: {
+      // Draw the web view behind the status bar and tint that strip with the
+      // app background so the top of the screen is never a bare system colour.
+      overlaysWebView: true,
+      style: 'DARK',
+      backgroundColor: '#120823',
+    },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
       // iOS specific configurations
