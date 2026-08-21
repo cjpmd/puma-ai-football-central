@@ -58,6 +58,8 @@ window.addEventListener('error', (event) => {
 
 logBundleLoadTime();
 
+void setupNativeStatusBar();
+
 // ── Service worker ────────────────────────────────────────────────────────────
 // Native builds serve their web assets from the app bundle, so a service worker
 // adds nothing there: on iOS it never runs at all, and on Android it duplicates
