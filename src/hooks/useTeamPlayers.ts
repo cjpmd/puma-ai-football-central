@@ -38,7 +38,8 @@ export function useTeamPlayers(teamId: string | undefined) {
     queryFn: () => fetchRoster(teamId!),
     enabled: !!teamId,
     staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
+    // gcTime comes from the persisted-query defaults in queryPersister.ts —
+    // setting a shorter one here would override it and drop the restored cache.
     meta: { persist: true },
   });
 

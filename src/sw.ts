@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 import { logger } from '@/lib/logger';
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
-import { registerRoute } from 'workbox-routing';
+import { registerRoute, NavigationRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
@@ -15,12 +15,11 @@ precacheAndRoute(self.__WB_MANIFEST);
 // Clean up old caches
 cleanupOutdatedCaches();
 
-// Activate new SW immediately on install so users with stale precaches
-// (e.g. referencing the old favicon.ico) self-heal on next visit instead
-// of seeing a blank screen until all tabs close.
-self.addEventListener('install', () => {
-  self.skipWaiting();
-});
+// No skipWaiting on install: a worker that activates the moment it installs
+// takes over mid-session and reloads the page under the user, and it makes
+// PWAUpdatePrompt unreachable because there is never a waiting worker for it
+// to find. The update now waits for the user to accept it via the message
+// below (or for every tab to close).
 
 // Handle skip waiting message from PWAUpdatePrompt
 self.addEventListener('message', (event) => {
@@ -31,6 +30,16 @@ self.addEventListener('message', (event) => {
 
 // Claim clients immediately
 clientsClaim();
+
+// Serve the cached app shell for navigations that miss the network, so an
+// offline reload of a deep link (/calendar, /players/123) resolves instead of
+// failing — the router takes over from there.  Requests for files (anything
+// with an extension) and Supabase calls are left alone.
+registerRoute(
+  new NavigationRoute(createHandlerBoundToURL('/index.html'), {
+    denylist: [/^\/api\//, /\/[^/?]+\.[^/]+$/],
+  })
+);
 
 // Cache Supabase REST/Storage GET responses only.
 // Auth endpoints and all non-GET requests are excluded:
@@ -44,10 +53,17 @@ registerRoute(
     request.method === 'GET',
   new NetworkFirst({
     cacheName: 'supabase-cache',
+    // Fall back to cache after 3s rather than hanging on a network that is
+    // technically connected but going nowhere — the pitch-side case this
+    // cache exists for.
+    networkTimeoutSeconds: 3,
     plugins: [
       new ExpirationPlugin({
         maxEntries: 100,
-        maxAgeSeconds: 60 * 5 // 5 minutes — auth state can change frequently
+        // 24h: the network is still tried first on every request, so this only
+        // bounds how stale a fallback may be when the network fails. At 5m the
+        // cache had almost always expired by the time it was needed.
+        maxAgeSeconds: 60 * 60 * 24
       }),
       new CacheableResponsePlugin({
         statuses: [200]

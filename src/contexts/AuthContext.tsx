@@ -8,6 +8,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import { Team, Club, Profile, GameFormat, SubscriptionType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
+import { clearPersistedQueryCache } from '@/lib/queryPersister';
 
 interface ConnectedPlayer {
   id: string;
@@ -103,6 +104,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               logger.log('No user session, clearing data...');
               dataLoadStarted.current = false; // allow reload on next sign-in
+
+              // Persisted queries outlive the session that wrote them, so the
+              // next person to sign in on this device would otherwise restore
+              // the previous one's rosters and fixtures before their own load.
+              if (event === 'SIGNED_OUT') {
+                clearPersistedQueryCache().catch((err) =>
+                  logger.error('Failed clearing persisted cache on sign-out:', err),
+                );
+              }
               setUser(null);
               setSession(null);
               setTeams([]);
