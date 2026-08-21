@@ -254,6 +254,19 @@ export default function CalendarEventsMobile() {
   const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  // Loaded date range for events. Widens automatically when the user navigates
+  // the mini calendar to a month outside the range.
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>(() => {
+    const now = new Date();
+    const start = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 12, 1));
+    const end = endOfMonth(new Date(now.getFullYear(), now.getMonth() + 12, 1));
+    return { start, end };
+  });
+  const dateRangeRef = useRef(dateRange);
+  dateRangeRef.current = dateRange;
+  // Lightweight markers for the mini calendar dots (independent of list paging)
+  const [eventMarkers, setEventMarkers] = useState<{ date: string; event_type: string }[]>([]);
+
   const [editFormDirty, setEditFormDirty] = useState(false);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const pendingCloseActionRef = React.useRef<(() => void) | null>(null);
