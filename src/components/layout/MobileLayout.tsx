@@ -114,7 +114,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
 
   return (
     <div
-      className="h-[100dvh] flex flex-col overflow-hidden"
+      className="h-[100dvh] flex flex-col overflow-hidden relative"
       style={{
         background:
           'radial-gradient(ellipse 1100px 900px at 80% -10%, oklch(0.50 0.20 275 / 0.85), transparent 55%),' +
@@ -123,6 +123,17 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         color: '#FFFFFF',
       }}
     >
+      {/* Top safe-area fill: ensures the status-bar / dynamic-island strip
+          is always covered by the app background colour without moving content. */}
+      <div
+        className="absolute top-0 left-0 right-0 z-0"
+        style={{
+          height: 'env(safe-area-inset-top)',
+          background: '#120823',
+        }}
+        aria-hidden="true"
+      />
+
       {!hideHeader && <MobileHeader title={headerTitle} />}
 
       {showTabs && tabs.length > 0 && (

@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appName: 'Origin Sports',
   webDir: 'dist',
   ios: {
-    backgroundColor: '#0d0d0d',
+    backgroundColor: '#120823',
     limitsNavigationsToAppBoundDomain: true,
   },
   // Only use server.url for development with hot reload
