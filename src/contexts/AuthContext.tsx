@@ -9,6 +9,7 @@ import { Team, Club, Profile, GameFormat, SubscriptionType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
 import { clearPersistedQueryCache } from '@/lib/queryPersister';
+import { clearOfflineCache } from '@/lib/offlineCache';
 
 interface ConnectedPlayer {
   id: string;
@@ -112,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 clearPersistedQueryCache().catch((err) =>
                   logger.error('Failed clearing persisted cache on sign-out:', err),
                 );
+                clearOfflineCache();
               }
               setUser(null);
               setSession(null);

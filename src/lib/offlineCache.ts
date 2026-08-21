@@ -47,3 +47,24 @@ export function staleLabel(mins: number | null): string | null {
   if (mins === 1) return 'Updated 1 min ago';
   return `Updated ${mins} min ago`;
 }
+
+/**
+ * Drop every offline snapshot this device holds.
+ *
+ * Called on sign-out. These snapshots are written per user and per scope, but
+ * they outlive the session that wrote them, so without this the next person to
+ * sign in on a shared device (a coach handing a phone to an assistant) can be
+ * shown the previous account's fixtures and results while their own load runs.
+ */
+export function clearOfflineCache(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Storage unavailable — nothing cached, nothing to clear
+  }
+}
