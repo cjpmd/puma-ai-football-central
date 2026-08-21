@@ -310,8 +310,9 @@ export default function CalendarEventsMobile() {
     const teamsToQuery = viewMode === 'all'
       ? (authTeams?.length ? authTeams : allTeams || [])
       : (currentTeam ? [currentTeam] : []);
+    const rangeKey = `${format(dateRange.start, 'yyyyMM')}-${format(dateRange.end, 'yyyyMM')}`;
     const cacheKey = teamsToQuery.length
-      ? `offline_events_${teamsToQuery.map(t => t.id).sort().join('_')}`
+      ? `offline_events_${teamsToQuery.map(t => t.id).sort().join('_')}_${rangeKey}`
       : null;
     eventsCacheKeyRef.current = cacheKey;
 
@@ -329,7 +330,20 @@ export default function CalendarEventsMobile() {
     }
 
     loadEvents();
-  }, [currentTeam, viewMode, availableTeams]);
+  }, [currentTeam, viewMode, availableTeams, dateRange]);
+
+  // Widen the loaded range when the user pages the mini calendar outside it
+  useEffect(() => {
+    const monthStart = startOfMonth(calendarMonth);
+    const monthEnd = endOfMonth(calendarMonth);
+    const { start, end } = dateRangeRef.current;
+    if (monthStart >= start && monthEnd <= end) return;
+    setDateRange({
+      start: monthStart < start ? startOfMonth(addMonths(monthStart, -6)) : start,
+      end: monthEnd > end ? endOfMonth(addMonths(monthEnd, 6)) : end,
+    });
+  }, [calendarMonth]);
+
 
   // Handle eventId from URL (e.g., from Dashboard click)
   useEffect(() => {
