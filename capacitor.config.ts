@@ -9,6 +9,9 @@ const config: CapacitorConfig = {
     backgroundColor: '#120823',
     limitsNavigationsToAppBoundDomain: true,
   },
+  android: {
+    backgroundColor: '#120823',
+  },
   // Only use server.url for development with hot reload
   // Remove this for production native builds
   ...(process.env.NODE_ENV === 'development' && {
