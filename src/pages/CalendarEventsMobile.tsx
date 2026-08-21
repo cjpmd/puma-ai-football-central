@@ -1105,16 +1105,21 @@ export default function CalendarEventsMobile() {
   
   const groupedEvents = groupEventsByPeriod(paginatedEvents);
 
-  // Build event-types-by-date map for the mini grid (all events for current team scope)
+  // Build event-types-by-date map for the mini grid.
+  // Uses the lightweight markers query so dots appear for every event in the
+  // loaded range, independent of the paged list, falling back to loaded events.
   const eventTypesByDate = React.useMemo(() => {
     const map = new Map<string, Set<string>>();
-    filteredEvents.forEach((e) => {
-      const key = format(new Date(e.date), 'yyyy-MM-dd');
+    const add = (date: string, type: string) => {
+      const key = format(new Date(date), 'yyyy-MM-dd');
       if (!map.has(key)) map.set(key, new Set<string>());
-      map.get(key)!.add(e.event_type);
-    });
+      map.get(key)!.add(type);
+    };
+    filteredEvents.forEach((e) => add(e.date, e.event_type));
+    eventMarkers.forEach((m) => add(m.date, m.event_type));
     return map;
-  }, [filteredEvents]);
+  }, [filteredEvents, eventMarkers]);
+
 
   // Apply selected-date filter to ordered events when active
   const visibleEvents = selectedDate
