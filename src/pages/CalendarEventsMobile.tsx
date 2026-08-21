@@ -558,13 +558,9 @@ export default function CalendarEventsMobile() {
     if (teamsToQuery.length === 0) return;
 
     const teamIds = teamsToQuery.map(t => t.id);
-    const now = new Date();
-    const windowStart = new Date(now);
-    windowStart.setMonth(windowStart.getMonth() - 3);
-    const windowEnd = new Date(now);
-    windowEnd.setMonth(windowEnd.getMonth() + 6);
-    const startDateStr = windowStart.toISOString().split('T')[0];
-    const endDateStr = windowEnd.toISOString().split('T')[0];
+    const startDateStr = format(dateRangeRef.current.start, 'yyyy-MM-dd');
+    const endDateStr = format(dateRangeRef.current.end, 'yyyy-MM-dd');
+
     const nextOffset = eventsServerOffset + eventsPageSize;
 
     setIsLoadingMoreEvents(true);
