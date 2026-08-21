@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import { Capacitor } from '@capacitor/core'
 import * as Sentry from '@sentry/react'
 import App from './App.tsx'
 import './index.css'
@@ -58,6 +59,10 @@ window.addEventListener('error', (event) => {
 logBundleLoadTime();
 
 // ── Service worker ────────────────────────────────────────────────────────────
+// Native builds serve their web assets from the app bundle, so a service worker
+// adds nothing there: on iOS it never runs at all, and on Android it duplicates
+// the bundled assets in WebView storage and can serve the previous version's
+// precache over the new bundle after a store update. Register on the web only.
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }
 })();
@@ -69,11 +74,32 @@ const isPreviewHost =
     (window.location.hostname.includes('lovable.app') &&
       window.location.hostname.startsWith('id-preview--')));
 
+const isNative = Capacitor.isNativePlatform();
+
+/**
+ * Remove any service worker and Cache Storage this origin still holds.
+ *
+ * Existing Android installs already registered one, so shipping the gate alone
+ * would leave that worker in place forever. Runs on every native launch rather
+ * than behind a "done" flag: with nothing to remove it is two no-op lookups,
+ * and it self-heals if a cleanup is ever interrupted midway.
+ */
+const removeServiceWorkerAndCaches = async () => {
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((r) => r.unregister()));
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } catch {
+    // Nothing actionable — the app runs fine from the bundle either way
+  }
+};
+
 if ('serviceWorker' in navigator) {
-  if (isInIframe || isPreviewHost) {
-    navigator.serviceWorker.getRegistrations()
-      .then((regs) => regs.forEach((r) => r.unregister()))
-      .catch(() => {});
+  if (isNative || isInIframe || isPreviewHost) {
+    void removeServiceWorkerAndCaches();
   } else {
     window.addEventListener('load', () => {
       navigator.serviceWorker
