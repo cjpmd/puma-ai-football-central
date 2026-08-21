@@ -455,14 +455,10 @@ export default function CalendarEventsMobile() {
 
       const teamIds = teamsToQuery.map(t => t.id);
 
-      // Rolling window: 3 months back → 6 months forward (mobile shows a tighter range)
-      const now = new Date();
-      const windowStart = new Date(now);
-      windowStart.setMonth(windowStart.getMonth() - 3);
-      const windowEnd = new Date(now);
-      windowEnd.setMonth(windowEnd.getMonth() + 6);
-      const startDateStr = windowStart.toISOString().split('T')[0];
-      const endDateStr = windowEnd.toISOString().split('T')[0];
+      // Loaded window (widens as the user navigates the mini calendar)
+      const startDateStr = format(dateRangeRef.current.start, 'yyyy-MM-dd');
+      const endDateStr = format(dateRangeRef.current.end, 'yyyy-MM-dd');
+
 
       // Run all three queries in parallel — previously 3 sequential round-trips
       console.time('[perf] CalendarEventsMobile.loadEvents');
