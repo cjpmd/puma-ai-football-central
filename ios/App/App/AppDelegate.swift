@@ -6,8 +6,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
+    private let appBackgroundColor = UIColor(
+        red: 18.0 / 255.0,
+        green: 8.0 / 255.0,
+        blue: 35.0 / 255.0,
+        alpha: 1.0
+    )
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Paint every native layer behind the WebView. This prevents the
+        // status-bar safe area or a transparent/loading WebView from exposing
+        // UIKit's default white background.
+        window?.backgroundColor = appBackgroundColor
+        DispatchQueue.main.async { [weak self] in
+            guard
+                let self,
+                let bridgeViewController = self.window?.rootViewController as? CAPBridgeViewController
+            else { return }
+
+            bridgeViewController.view.backgroundColor = self.appBackgroundColor
+            bridgeViewController.webView?.backgroundColor = self.appBackgroundColor
+            bridgeViewController.webView?.scrollView.backgroundColor = self.appBackgroundColor
+        }
         return true
     }
 

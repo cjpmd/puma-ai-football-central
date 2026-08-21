@@ -25,7 +25,9 @@ const config: CapacitorConfig = {
       // Draw the web view behind the status bar and tint that strip with the
       // app background so the top of the screen is never a bare system colour.
       overlaysWebView: true,
-      style: 'DARK',
+      // Capacitor's LIGHT style means light system icons, which remain
+      // readable against the dark Origin Sports background.
+      style: 'LIGHT',
       backgroundColor: '#120823',
     },
     PushNotifications: {

@@ -1,6 +1,19 @@
 import { Capacitor } from '@capacitor/core';
 
 const APP_BACKGROUND = '#120823';
+let nativeStatusBarInitialized = false;
+
+async function applyNativeStatusBar(): Promise<void> {
+  const { StatusBar, Style } = await import('@capacitor/status-bar');
+  await StatusBar.setOverlaysWebView({ overlay: true });
+  await StatusBar.setStyle({ style: Style.Light });
+
+  if (Capacitor.getPlatform() === 'android') {
+    // Used by Android versions or navigation modes that still render an
+    // opaque system bar rather than the overlaid WebView background.
+    await StatusBar.setBackgroundColor({ color: APP_BACKGROUND });
+  }
+}
 
 /**
  * Native-only status bar setup.
@@ -13,17 +26,21 @@ const APP_BACKGROUND = '#120823';
  * Web builds are a no-op: the `theme-color` meta tag covers browsers/PWAs.
  */
 export async function setupNativeStatusBar(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!Capacitor.isNativePlatform() || nativeStatusBarInitialized) return;
+  nativeStatusBarInitialized = true;
 
   try {
-    const { StatusBar, Style } = await import('@capacitor/status-bar');
-    await StatusBar.setOverlaysWebView({ overlay: true });
-    await StatusBar.setStyle({ style: Style.Dark });
-    if (Capacitor.getPlatform() === 'android') {
-      // Ignored when overlaying, but set for devices/OS versions that still
-      // render an opaque bar.
-      await StatusBar.setBackgroundColor({ color: APP_BACKGROUND });
-    }
+    await applyNativeStatusBar();
+
+    // iOS and Android can restore their default system-bar appearance when
+    // returning from the background. Reapply our appearance on every resume.
+    const { App } = await import('@capacitor/app');
+    await App.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) return;
+      void applyNativeStatusBar().catch((error) => {
+        console.warn('[statusBar] resume setup skipped', error);
+      });
+    });
   } catch (error) {
     console.warn('[statusBar] setup skipped', error);
   }

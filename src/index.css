@@ -124,6 +124,13 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background-color: #120823;
+  }
+
   @media (hover: none) and (pointer: coarse) {
     html, body {
       /* Keep native WKWebView scrolling intact — just suppress root rubber-band */
